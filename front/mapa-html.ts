@@ -539,7 +539,8 @@ export const MAPA_HTML = `<!doctype html>
     <h2 id="inTitle" class="m-0 text-2xl font-extrabold"></h2>
   </header>
   <div id="inStage" class="relative min-h-0 flex-1"></div>
-  <div id="inInfo" class="m-3 flex flex-col gap-2 rounded-2xl border-4 border-black bg-yellow-200 p-3.5">
+  <div id="inInfo" class="m-3 flex flex-col gap-2 rounded-2xl border-4 border-black bg-yellow-200 p-3.5"
+       style="margin-bottom: max(4.5rem, env(safe-area-inset-bottom));">
     <p id="inRoom" class="m-0 text-[22px] font-extrabold"></p>
     <p id="inNote" class="m-0 text-base font-medium leading-snug"></p>
     <div class="flex gap-2">
