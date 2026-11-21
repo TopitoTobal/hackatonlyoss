@@ -53,7 +53,7 @@ function aPuntoPlano(
   const metrosPorGradoLng =
     111_320 * Math.cos((origen.latitude * Math.PI) / 180)
   const dx = ((longitude - origen.longitude) * metrosPorGradoLng) / METROS_POR_PIXEL
-  const dy = (-(latitude - origen.latitude) * metrosPorGradoLat) / METROS_POR_PIXEL
+  const dy = ((latitude - origen.latitude) * metrosPorGradoLat) / METROS_POR_PIXEL
   return { x: CENTRO.x + dx, y: CENTRO.y + dy }
 }
 
