@@ -407,6 +407,7 @@ export default function App() {
 
       <View style={styles.overlay} pointerEvents="box-none">
         <View style={styles.barra}>
+          <View style={styles.barraBotones}>
           <Pressable
             accessibilityRole="link"
             accessibilityLabel="Volver a elegir modo"
@@ -539,6 +540,7 @@ export default function App() {
             </View>
           )}
           </View>
+        </View>
         </View>
         </View>
       )}
@@ -717,10 +719,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   barra: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: 8,
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 6,
     backgroundColor: 'rgba(255, 255, 255, 0.96)',
     borderColor: '#cbd2d9',
     borderWidth: 1,
@@ -732,6 +733,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 2,
+  },
+  barraBotones: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
   },
   estado: {
     color: '#1c1c1c',
@@ -786,19 +793,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   info: {
-    backgroundColor: 'rgba(255, 255, 255, 0.96)',
-    borderColor: '#cbd2d9',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 10,
-    gap: 4,
-    alignSelf: 'flex-start',
-    maxWidth: '92%',
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    paddingTop: 6,
+    gap: 6,
   },
   infoBoton: {
     flexDirection: 'row',
