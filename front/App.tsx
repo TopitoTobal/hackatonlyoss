@@ -31,9 +31,10 @@ import { RUTAS, modoDeRuta, type Modo } from './modo'
 const PAREDES: WallSegment[] = []
 const CAMINO: RoutePath = { id: 'demo', points: [] }
 
-/* Prototipo: el primer fix GPS es el origen (0, 0) del plano. Los puntos
-   siguientes son desplazamientos relativos desde ahí, con la misma escala
-   de 0,75 m por píxel. No hay georreferenciación absoluta todavía. */
+/* Prototipo: el primer fix GPS preciso se ancla al centro del plano (690, 500).
+   Los puntos siguientes son desplazamientos relativos desde ahí, con la misma
+   escala de 0,75 m por píxel. No hay georreferenciación absoluta todavía. */
+const CENTRO = { x: 690, y: 500 }
 const METROS_POR_PIXEL = 0.75
 
 type Origen = { latitude: number; longitude: number }
@@ -48,7 +49,7 @@ function aPuntoPlano(
     111_320 * Math.cos((origen.latitude * Math.PI) / 180)
   const dx = ((longitude - origen.longitude) * metrosPorGradoLng) / METROS_POR_PIXEL
   const dy = (-(latitude - origen.latitude) * metrosPorGradoLat) / METROS_POR_PIXEL
-  return { x: dx, y: dy }
+  return { x: CENTRO.x + dx, y: CENTRO.y + dy }
 }
 
 function rutaActual(): string | undefined {
@@ -134,7 +135,10 @@ export default function App() {
   const monitorRef = useRef<SafetyMonitor | null>(null)
 
   const [modo, setModo] = useState<Modo | null>(() => modoActual())
-  const [punto, setPunto] = useState<PuntoPlano>({ x: 0, y: 0 })
+  const [punto, setPunto] = useState<PuntoPlano>({
+    x: CENTRO.x,
+    y: CENTRO.y,
+  })
   const [estado, setEstado] = useState('Detenido')
   const [ultimaPosicion, setUltimaPosicion] = useState('—')
   const [estadisticas, setEstadisticas] = useState('—')
@@ -182,7 +186,7 @@ export default function App() {
     setEstado('Solicitando permisos…')
     setMuestras(0)
     origenRef.current = null
-    setPunto({ x: 0, y: 0 })
+    setPunto({ x: CENTRO.x, y: CENTRO.y })
 
     try {
       const tracker = await startForegroundTracking({
@@ -230,14 +234,14 @@ export default function App() {
     setMuestras(0)
     setVelocidad('—')
     origenRef.current = null
-    setPunto({ x: 0, y: 0 })
+    setPunto({ x: CENTRO.x, y: CENTRO.y })
   }
 
   function irAModo(nuevo: Modo) {
     const win: any = globalThis as any
     if (win.history?.pushState) win.history.pushState({}, '', RUTAS[nuevo])
     origenRef.current = null
-    setPunto({ x: 0, y: 0 })
+    setPunto({ x: CENTRO.x, y: CENTRO.y })
     setModo(nuevo)
   }
 
