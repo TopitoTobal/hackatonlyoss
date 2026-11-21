@@ -3,46 +3,115 @@ export const MAPA_HTML = `<!doctype html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="theme-color" content="#e2e8f0">
 <title>Mapa accesible · Campus Casa Central UTFSM</title>
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <style>
-  html, body { margin: 0; height: 100%; }
-  button:focus-visible { outline: 4px solid #f97316; outline-offset: 2px; }
-  html, body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
-  body { -webkit-user-select: none; user-select: none; }
+  /* ---- Base estructural: el visor ocupa exactamente la pantalla ---- */
+  html, body { margin: 0; padding: 0; width: 100%; height: 100vh; height: 100dvh; overflow: hidden; background: #e2e8f0; }
+  body { position: fixed; inset: 0; height: 100vh; height: 100dvh; font-family: system-ui, sans-serif; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; }
+  #viewport { position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; touch-action: none; }
+  #world { position: absolute; left: 0; top: 0; width: 1312px; height: 985px; transform-origin: 0 0; }
+  #world svg { position: absolute; left: 0; top: 0; max-width: none; pointer-events: none; }
+  #buildings button { position: absolute; max-width: none; touch-action: manipulation; }
+  #dot, #dotHalo { position: absolute; border-radius: 9999px; box-sizing: border-box; pointer-events: none; }
+  #dot { background: #0284c7; border: 5px solid #fff; }
+  #dotHalo { background: rgba(14,165,233,.3); }
 
-  /* Celulares: respetar zonas seguras (notch / barra inferior) */
-  #hint { top: max(16px, env(safe-area-inset-top)); }
-  #sheet { bottom: max(10px, env(safe-area-inset-bottom)); max-height: calc(100dvh - 24px); overflow-y: auto; }
-  #interior { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+  /* Elementos flotantes: nunca deben salirse del área visible */
+  #hint {
+    position: fixed; left: 50%; transform: translateX(-50%); top: max(16px, env(safe-area-inset-top));
+    width: calc(100% - 32px); width: calc(100% - max(32px, env(safe-area-inset-left) + env(safe-area-inset-right)));
+    max-width: 24rem; box-sizing: border-box;
+  }
+  #sheet {
+    position: fixed; left: 10px; right: 10px; bottom: max(10px, env(safe-area-inset-bottom));
+    display: none; flex-direction: column; max-width: 28rem; margin: 0 auto; box-sizing: border-box; z-index: 10;
+    max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px);
+    overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  }
+  #sheet.flex { display: flex; }
+  #interior {
+    position: fixed; inset: 0; display: none; flex-direction: column; box-sizing: border-box; z-index: 20;
+    padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+    background: rgba(255,255,255,.94);
+  }
+  #interior.flex { display: flex; }
+  #hint.hidden { display: none; }
+  #inStage { flex: 1 1 auto; min-height: 0; min-width: 0; }
+  #inInfo {
+    flex: 0 0 auto; max-height: 45vh; max-height: 45dvh;
+    overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  }
   #sheetName { font-size: clamp(20px, 6.4vw, 26px); }
 
-  /* Pantallas bajas: botones y textos más compactos */
+  /* Foco muy visible, incluidos los botones del plano (el borde se dibuja hacia adentro) */
+  button:focus-visible {
+    outline: 4px solid #f97316; outline-offset: 3px; box-shadow: 0 0 0 7px #fff;
+  }
+  #buildings button:focus-visible { outline-offset: -5px; box-shadow: none; }
+
+  /* Texto solo para lectores de pantalla */
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+
+  /* Pantallas bajas: compactar sin ocultar información */
   @media (max-height: 700px) {
     #sheet { padding: 10px; gap: 6px; }
     #sheet button, #interior button { min-height: 48px; }
     #sheetDir { font-size: 17px; }
     #sheetWhere { font-size: 15px; }
+    #inInfo { max-height: 40vh; max-height: 40dvh; }
   }
-  /* Celular en horizontal: el panel pasa a un lado */
+  /* Celular en horizontal: el panel y el interior pasan a un lado */
   @media (max-height: 500px) and (orientation: landscape) {
-    #sheet { left: auto; right: max(10px, env(safe-area-inset-right)); top: 10px; bottom: 10px;
-             width: min(380px, 50vw); max-width: none; margin: 0; }
+    #sheet {
+      left: auto; right: max(10px, env(safe-area-inset-right)); top: max(10px, env(safe-area-inset-top)); bottom: 10px;
+      width: min(380px, 50vw); max-width: none; margin: 0;
+      max-height: calc(100dvh - 20px); padding: 8px; gap: 4px;
+    }
+    #sheet button, #interior button { min-height: 44px; }
+    #sheetName { font-size: 20px; }
+    #sheetDir { font-size: 16px; }
+    #sheetWhere { font-size: 14px; }
+    #sheet > div:first-child button { min-width: 56px; }
     #hint { max-width: 22rem; }
-    #inNote { display: none; }
-    #interior > div:first-child { padding: 6px 12px; }
+    #interior { flex-flow: row wrap; align-content: flex-start; }
+    #interior > header { flex: 0 0 100%; padding: 6px 12px; gap: 8px; }
+    #interior > header h2 { font-size: 1.25rem; }
+    #interior > header button { min-height: 44px; padding-left: 14px; padding-right: 14px; }
+    #inStage { flex: 1 1 56%; }
+    #inInfo { flex: 0 1 38%; margin: 8px; max-height: calc(100dvh - 76px); padding: 10px; }
+    #inRoom { font-size: 18px; }
+    #inNote { display: block; font-size: 14px; }
   }
   @media (max-width: 340px) {
     #sheet button { font-size: 15px; }
+    #hint { font-size: 14px; }
+  }
+  @media (forced-colors: active) {
+    button:focus-visible { outline-color: Highlight; box-shadow: none; }
+    #sheet, #inInfo, #interior > header button { border-color: CanvasText; }
   }
 </style>
 </head>
 <body class="h-full overflow-hidden bg-slate-200 font-sans text-black antialiased">
 
+<h1 class="sr-only">Mapa accesible del campus Casa Central UTFSM</h1>
+<div id="announcer" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+
 <main id="viewport" aria-label="Mapa del campus. Arrastra para mover y toca un edificio."
+      aria-describedby="mapa-instrucciones"
       class="relative h-full w-full cursor-grab touch-none overflow-hidden bg-slate-200">
+  <p id="mapa-instrucciones" class="sr-only">
+    Mapa interactivo del campus. Toca un edificio para escuchar hacia dónde dirigirte.
+    Con el teclado, usa las flechas izquierda y derecha para recorrer los edificios,
+    Enter para entrar al edificio seleccionado y Escape para salir.
+    Los botones de acercar y alejar están al final del panel de información.
+  </p>
   <div id="world" class="absolute left-0 top-0 origin-top-left" style="width:1312px;height:985px">
 
     <!-- Plano base: terreno, cancha, calles y pasillos -->
@@ -96,21 +165,22 @@ export const MAPA_HTML = `<!doctype html>
   </div>
 </main>
 
-<!-- Pista inicial -->
-<div id="hint" class="pointer-events-none absolute left-1/2 top-4 w-[calc(100%-32px)] max-w-sm -translate-x-1/2 rounded-full bg-black px-4 py-3 text-center text-[17px] font-bold text-white">
-  Arrastra el mapa · Toca un edificio
+<!-- Pista inicial ( decorativa: las instrucciones reales van en #mapa-instrucciones ) -->
+<div id="hint" aria-hidden="true"
+     class="pointer-events-none absolute left-1/2 top-4 w-[calc(100%-32px)] max-w-sm -translate-x-1/2 rounded-full bg-black px-4 py-3 text-center text-[15px] font-bold text-white sm:text-[17px]">
+  Toca un edificio · Usa ← →
 </div>
 
 <!-- Panel que aparece al elegir un edificio -->
-<section id="sheet" aria-live="polite"
+<section id="sheet" role="region" aria-label="Información del edificio seleccionado"
          class="absolute inset-x-2.5 bottom-2.5 mx-auto hidden max-w-md flex-col gap-2 rounded-2xl border-4 border-black bg-yellow-200 p-3.5">
   <div class="flex items-center justify-between gap-2">
-    <button id="btnPrev" class="flex min-h-14 min-w-16 flex-col items-center justify-center gap-0.5 rounded-[10px] border-[3px] border-black bg-black px-2 text-white">
+    <button id="btnPrev" aria-keyshortcuts="ArrowLeft" class="flex min-h-14 min-w-16 flex-col items-center justify-center gap-0.5 rounded-[10px] border-[3px] border-black bg-black px-2 text-white">
       <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
       <span id="prevId" class="text-sm font-extrabold leading-none"></span>
     </button>
-    <p id="sheetName" class="m-0 flex-1 text-center text-[26px] font-extrabold"></p>
-    <button id="btnNext" class="flex min-h-14 min-w-16 flex-col items-center justify-center gap-0.5 rounded-[10px] border-[3px] border-black bg-black px-2 text-white">
+    <h2 id="sheetName" tabindex="-1" class="m-0 flex-1 text-center text-[26px] font-extrabold"></h2>
+    <button id="btnNext" aria-keyshortcuts="ArrowRight" class="flex min-h-14 min-w-16 flex-col items-center justify-center gap-0.5 rounded-[10px] border-[3px] border-black bg-black px-2 text-white">
       <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
       <span id="nextId" class="text-sm font-extrabold leading-none"></span>
     </button>
@@ -119,24 +189,24 @@ export const MAPA_HTML = `<!doctype html>
   <p id="sheetWhere" class="m-0 text-base font-medium leading-snug"></p>
   <div class="mt-1 grid grid-cols-4 gap-2">
     <button id="btnEnter" class="col-span-4 min-h-14 rounded-[10px] border-[3px] border-black bg-blue-900 text-lg font-extrabold text-white">Entrar al edificio</button>
-    <button id="btnSpeak"  class="col-span-2 min-h-14 rounded-[10px] border-[3px] border-black bg-black text-lg font-extrabold text-white">Escuchar</button>
-    <button id="btnClose"  class="col-span-2 min-h-14 rounded-[10px] border-[3px] border-black bg-white text-lg font-extrabold text-black">Cerrar</button>
-    <button id="btnCenter" class="col-span-2 min-h-14 rounded-[10px] border-[3px] border-black bg-sky-900 text-[17px] font-extrabold text-white">Mi ubicación</button>
-    <button id="btnIn"  aria-label="Acercar" class="min-h-14 rounded-[10px] border-[3px] border-black bg-black text-3xl font-extrabold text-white">+</button>
-    <button id="btnOut" aria-label="Alejar"  class="min-h-14 rounded-[10px] border-[3px] border-black bg-black text-3xl font-extrabold text-white">−</button>
+    <button id="btnSpeak" aria-label="Escuchar información de este edificio" class="col-span-2 min-h-14 rounded-[10px] border-[3px] border-black bg-black text-lg font-extrabold text-white">Escuchar</button>
+    <button id="btnClose" aria-label="Cerrar información del edificio" class="col-span-2 min-h-14 rounded-[10px] border-[3px] border-black bg-white text-lg font-extrabold text-black">Cerrar</button>
+    <button id="btnCenter" aria-label="Centrar en mi ubicación y anunciar mi posición" class="col-span-2 min-h-14 rounded-[10px] border-[3px] border-black bg-sky-900 text-[17px] font-extrabold text-white">Mi ubicación</button>
+    <button id="btnIn" aria-label="Acercar" class="min-h-14 rounded-[10px] border-[3px] border-black bg-black text-3xl font-extrabold text-white">+</button>
+    <button id="btnOut" aria-label="Alejar" class="min-h-14 rounded-[10px] border-[3px] border-black bg-black text-3xl font-extrabold text-white">−</button>
     <button id="btnVoice" aria-pressed="true" class="col-span-4 min-h-12 rounded-[10px] border-[3px] border-black bg-white text-base font-extrabold text-black"></button>
   </div>
 </section>
 
 <!-- Vista interior: el resto del mapa queda desenfocado detrás -->
-<section id="interior" role="dialog" aria-modal="true" aria-labelledby="inTitle"
-         class="absolute inset-0 z-20 hidden flex-col bg-white/40 backdrop-blur-md">
-  <div class="flex items-center gap-3 p-3">
+<section id="interior" role="dialog" aria-modal="true" aria-labelledby="inTitle" aria-describedby="inNote"
+         class="absolute inset-0 z-20 hidden flex-col bg-white/95">
+  <header class="flex items-center gap-3 p-3">
     <button id="inExit" class="min-h-14 rounded-[10px] border-[3px] border-black bg-white px-5 text-lg font-extrabold text-black">Salir</button>
     <h2 id="inTitle" class="m-0 text-2xl font-extrabold"></h2>
-  </div>
+  </header>
   <div id="inStage" class="relative min-h-0 flex-1"></div>
-  <div aria-live="polite" class="m-3 flex flex-col gap-2 rounded-2xl border-4 border-black bg-yellow-200 p-3.5">
+  <div id="inInfo" class="m-3 flex flex-col gap-2 rounded-2xl border-4 border-black bg-yellow-200 p-3.5">
     <p id="inRoom" class="m-0 text-[22px] font-extrabold"></p>
     <p id="inNote" class="m-0 text-base font-medium leading-snug"></p>
     <button id="inSpeak" class="min-h-14 rounded-[10px] border-[3px] border-black bg-black text-lg font-extrabold text-white">Escuchar</button>
@@ -165,66 +235,119 @@ const BUILDINGS = [
   ['T', 1226, 830, 65, 70, 'Extremo sureste del campus.']
 ];
 const DIRS = ['norte','noreste','este','sureste','sur','suroeste','oeste','noroeste'];
+const METROS_POR_PIXEL = 0.75; /* el mismo valor que usa App.tsx para el GPS */
 
-/* Ubicación de la persona (simulada). Para conectar un GPS real, llama a
-   setUserPosition(x, y) con coordenadas ya convertidas al plano. */
+/* Ubicación de la persona (simulada). El GPS real llama a setUserPosition(x, y)
+   con coordenadas ya convertidas a píxeles del plano. */
 let dot = { x: 690, y: 500 };
 
 /* ---------- Estado ---------- */
 const $ = (id) => document.getElementById(id);
 const vp = $('viewport'), world = $('world');
-let ox = 0, oy = 0, z = 1, selected = null;
+let ox = 0, oy = 0, z = 1, selected = null, baseZ = 1;
 let autoVoice = true;   /* voz automática activada por defecto */
 try { if (localStorage.getItem('autoVoice') === 'off') autoVoice = false; } catch (e) {}
 const buttons = {};
 const ON  = ['bg-yellow-400','text-black','border-black','border-[5px]'];
 const OFF = ['bg-blue-900','text-white','border-slate-900','border-[3px]'];
 
+/* Un único punto de anuncio para lectores de pantalla. */
+let avisoTimer = null;
+function announce(text) {
+  const a = $('announcer');
+  a.textContent = '';
+  clearTimeout(avisoTimer);
+  avisoTimer = setTimeout(() => { a.textContent = text; }, 60);
+}
+function say(text) {
+  try {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'es-CL'; speechSynthesis.cancel(); speechSynthesis.speak(u);
+  } catch (e) {}
+}
+/* Si la voz automática está apagada, el lector de pantalla necesita el aviso. */
+function speakOrAnnounce(text) {
+  if (autoVoice) say(text); else announce(text);
+}
+
 /* ---------- Construcción ---------- */
 BUILDINGS.forEach(([id, cx, cy, w, h]) => {
   const W = Math.max(48, w), H = Math.max(48, h);
   const b = document.createElement('button');
   b.className = 'absolute box-border rounded-lg p-0 text-2xl font-extrabold ' + OFF.join(' ');
-  b.style.cssText = \`left:\${Math.round(cx - W/2)}px;top:\${Math.round(cy - H/2)}px;width:\${W}px;height:\${H}px\`;
+  b.style.cssText = 'left:' + Math.round(cx - W/2) + 'px;top:' + Math.round(cy - H/2) + 'px;width:' + W + 'px;height:' + H + 'px';
   b.textContent = id;
   b.setAttribute('aria-label', 'Edificio ' + id);
   b.setAttribute('aria-pressed', 'false');
-  b.addEventListener('click', () => { if (!justDragged) select(id); });
+  b.addEventListener('click', (e) => { if (!justDragged) select(id, { focus: e.detail === 0 }); });
   $('buildings').appendChild(b);
   buttons[id] = b;
 });
 
+/* El zoom base depende del tamaño de la pantalla; los elementos táctiles
+   mantienen un tamaño constante en pantalla sin importar el zoom. */
+const ZMIN = 0.6, ZMAX = 3;
+const clampZ = (v) => Math.min(ZMAX, Math.max(ZMIN, v));
+function computeBase() {
+  return Math.min(1.6, Math.max(ZMIN, Math.min(vp.clientWidth / 520, vp.clientHeight / 760)));
+}
 function placeDot() {
-  $('dot').style.cssText = \`left:\${dot.x - 14}px;top:\${dot.y - 14}px\`;
-  $('dotHalo').style.cssText = \`left:\${dot.x - 20}px;top:\${dot.y - 20}px\`;
+  const d = 28 / z, hh = 40 / z;
+  Object.assign($('dot').style, { left: (dot.x - d/2) + 'px', top: (dot.y - d/2) + 'px', width: d + 'px', height: d + 'px',
+    borderWidth: (5 / z) + 'px', boxShadow: '0 0 0 ' + (3 / z) + 'px #0c4a6e' });
+  Object.assign($('dotHalo').style, { left: (dot.x - hh/2) + 'px', top: (dot.y - hh/2) + 'px', width: hh + 'px', height: hh + 'px' });
+}
+function restyle() {
+  const px = (n) => (n / z).toFixed(2) + 'px';
+  BUILDINGS.forEach(([id, cx, cy, w, h]) => {
+    const W = Math.max(w, 48 / z), H = Math.max(h, 48 / z), st = buttons[id].style;
+    st.left = (cx - W/2) + 'px'; st.top = (cy - H/2) + 'px';
+    st.width = W + 'px'; st.height = H + 'px';
+    st.fontSize = px(22); st.borderRadius = px(8);
+    st.borderWidth = px(id === selected ? 5 : 3);
+  });
+  placeDot();
+  const g = $('guide');
+  g.setAttribute('stroke-width', 7 / z);
+  g.setAttribute('stroke-dasharray', (16 / z) + ' ' + (12 / z));
 }
 
 /* ---------- Mapa: posición y zoom ---------- */
+/* Si el plano cabe en la pantalla se centra; si no, se permite un margen
+   pequeño pero nunca se deja un vacío del tamaño de la mitad del celular. */
 function clamp(x, y, s) {
-  const m = 120, vw = vp.clientWidth, vh = vp.clientHeight;
-  return [Math.min(m, Math.max(vw - 1312*s - m, x)), Math.min(m, Math.max(vh - 985*s - m, y))];
+  const vw = vp.clientWidth, vh = vp.clientHeight;
+  const w = 1312 * s, h = 985 * s;
+  const mx = w <= vw ? (vw - w) / 2 : Math.min(96, vw * 0.12);
+  const my = h <= vh ? (vh - h) / 2 : Math.min(96, vh * 0.12);
+  const minX = vw - w - mx, maxX = mx, minY = vh - h - my, maxY = my;
+  return [
+    minX <= maxX ? Math.min(maxX, Math.max(minX, x)) : (vw - w) / 2,
+    minY <= maxY ? Math.min(maxY, Math.max(minY, y)) : (vh - h) / 2
+  ];
 }
-function apply() { world.style.transform = \`translate(\${ox}px,\${oy}px) scale(\${z})\`; }
+function apply() { world.style.transform = 'translate(' + ox + 'px,' + oy + 'px) scale(' + z + ')'; }
 const isLandscapeShort = () => matchMedia('(max-height:500px) and (orientation:landscape)').matches;
 function panelOpen() { return selected && !$('sheet').classList.contains('hidden'); }
 /* Centro visible del mapa: descuenta el panel (abajo en vertical, a un lado en horizontal) */
 function focusY() {
   if (!panelOpen() || isLandscapeShort()) return vp.clientHeight / 2;
-  return Math.max(100, (vp.clientHeight - $('sheet').offsetHeight - 10) / 2);
+  return Math.max(80, (vp.clientHeight - $('sheet').offsetHeight - 10) / 2);
 }
 function focusX() {
   if (!panelOpen() || !isLandscapeShort()) return vp.clientWidth / 2;
-  return Math.max(100, (vp.clientWidth - $('sheet').offsetWidth - 10) / 2);
+  return Math.max(80, (vp.clientWidth - $('sheet').offsetWidth - 10) / 2);
 }
 function centerOn(px, py) {
   [ox, oy] = clamp(focusX() - px*z, focusY() - py*z, z);
   apply();
 }
 function zoomBy(k) {
-  const nz = Math.min(2, Math.max(0.7, z * k)), r = nz / z;
+  const nz = clampZ(z * k), r = nz / z;
   const cx = focusX(), cy = focusY();
   [ox, oy] = clamp(cx - (cx - ox)*r, cy - (cy - oy)*r, nz);
-  z = nz; apply();
+  z = nz; restyle(); apply();
+  speakOrAnnounce('Zoom ' + Math.round((z / baseZ) * 100) + ' por ciento.');
 }
 
 /* ---------- Selección ---------- */
@@ -232,11 +355,14 @@ function info(id) {
   const [, cx, cy, , , where] = BUILDINGS.find(b => b[0] === id);
   const dx = cx - dot.x, dy = cy - dot.y, dist = Math.hypot(dx, dy);
   const ang = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
-  const dir = dist < 70 ? 'Ya estás junto a este edificio.'
-    : 'Desde tu ubicación, dirígete hacia el ' + DIRS[Math.round(ang/45) % 8] + '.';
-  return { cx, cy, where, dir, label: 'Edificio ' + id };
+  const metros = Math.round(dist * METROS_POR_PIXEL);
+  const dir = dist < 70
+    ? 'Ya estás junto a este edificio.'
+    : 'Desde tu ubicación, a ' + metros + ' metros hacia el ' + DIRS[Math.round(ang/45) % 8] + '.';
+  return { cx, cy, where, dir, metros, label: 'Edificio ' + id };
 }
-function select(id) {
+function select(id, opts) {
+  opts = opts || {};
   if (selected) {
     buttons[selected].classList.remove(...ON); buttons[selected].classList.add(...OFF);
     buttons[selected].setAttribute('aria-pressed', 'false');
@@ -256,7 +382,13 @@ function select(id) {
   g.setAttribute('x2', i.cx);  g.setAttribute('y2', i.cy);
   g.setAttribute('stroke-opacity', '0.9');
   centerOn((dot.x + i.cx)/2, (dot.y + i.cy)/2);
-  if (autoVoice) say(i.label);
+  restyle();
+
+  const texto = i.label + '. ' + i.dir + ' ' + i.where;
+  if (opts.focus) $('sheetName').focus({ preventScroll: true });
+  if (opts.silent) return;
+  if (opts.focus) announce(i.dir + ' ' + i.where);
+  else speakOrAnnounce(texto);
 }
 /* Flechas: recorren los edificios de oeste a este (izquierda / derecha) */
 const ORDER = BUILDINGS.slice().sort((a, b) => a[1] - b[1]).map(b => b[0]);
@@ -270,7 +402,7 @@ function updateArrows() {
   $('btnPrev').setAttribute('aria-label', 'Edificio anterior, a la izquierda: ' + p);
   $('btnNext').setAttribute('aria-label', 'Edificio siguiente, a la derecha: ' + n);
 }
-function step(d) { if (selected && !inside) select(neighbor(d)); }
+function step(d) { if (selected && !inside) select(neighbor(d), { focus: true }); }
 function closeSheet() {
   if (selected) {
     buttons[selected].classList.remove(...ON); buttons[selected].classList.add(...OFF);
@@ -280,22 +412,28 @@ function closeSheet() {
   $('sheet').classList.add('hidden'); $('sheet').classList.remove('flex');
   $('hint').classList.remove('hidden');
   $('guide').setAttribute('stroke-opacity', '0');
-}
-function say(text) {
-  try {
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'es-CL'; speechSynthesis.cancel(); speechSynthesis.speak(u);
-  } catch (e) {}
+  restyle();
+  announce('Panel cerrado. Toca un edificio para ver su información.');
 }
 function speak() {
   if (!selected) return;
   const i = info(selected);
-  say(i.label + '. ' + i.dir + ' ' + i.where);
+  const texto = i.label + '. ' + i.dir + ' ' + i.where;
+  say(texto); announce(texto);
+}
+function speakPosition() {
+  const i = selected ? info(selected) : null;
+  const texto = i
+    ? 'Tu ubicación. ' + i.dir + ' ' + i.where
+    : 'Tu ubicación en el mapa, en el centro del campus.';
+  say(texto); announce(texto);
 }
 function voiceLabel() {
   const b = $('btnVoice');
   b.textContent = 'Voz automática: ' + (autoVoice ? 'activada' : 'desactivada');
   b.setAttribute('aria-pressed', autoVoice ? 'true' : 'false');
+  b.setAttribute('aria-label', 'Voz automática: ' + (autoVoice ? 'activada' : 'desactivada') +
+    '. Si usas lector de pantalla, desactívala para evitar que dos voces hablen a la vez.');
 }
 $('btnVoice').onclick = () => {
   autoVoice = !autoVoice;
@@ -305,32 +443,32 @@ $('btnVoice').onclick = () => {
   else speechSynthesis.cancel();
 };
 voiceLabel();
-/* La app Expo envía la posición ya convertida a píxeles del plano.
-   Solo se actualizan el punto y la guía: no volvemos a llamar a select()
-   para que la voz automática no se repita en cada muestra del GPS. */
+
+/* ---------- GPS: puente con la app Expo ----------
+   App.tsx convierte lat/lng a píxeles y envía { type:'position', x, y }.
+   Solo movemos el punto y la guía: no llamamos a select() para que la voz
+   automática no se repita en cada muestra del GPS. */
 window.setUserPosition = (x, y) => {
   dot = { x, y };
   placeDot();
   if (!selected) return;
   const i = info(selected);
   $('sheetDir').textContent = i.dir;
+  $('sheetWhere').textContent = i.where;
   const g = $('guide');
   g.setAttribute('x1', x); g.setAttribute('y1', y);
   g.setAttribute('x2', i.cx); g.setAttribute('y2', i.cy);
 };
-
-/* Puente con la app Expo: recibe { type: 'position', x, y } desde App.tsx */
 window.addEventListener('message', (event) => {
   try {
     const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-    if (data && data.type === 'position' &&
-        Number.isFinite(data.x) && Number.isFinite(data.y)) {
+    if (data && data.type === 'position' && Number.isFinite(data.x) && Number.isFinite(data.y)) {
       window.setUserPosition(data.x, data.y);
     }
   } catch (e) {}
 });
 
-/* ---------- Arrastre y rueda ---------- */
+/* ---------- Arrastre, rueda y pellizco ---------- */
 let drag = null, justDragged = false;
 vp.addEventListener('pointerdown', (e) => { drag = { sx: e.clientX, sy: e.clientY, ox, oy, active: false }; });
 vp.addEventListener('pointermove', (e) => {
@@ -349,13 +487,40 @@ vp.addEventListener('pointerup', endDrag);
 vp.addEventListener('pointercancel', endDrag);
 vp.addEventListener('wheel', (e) => { e.preventDefault(); zoomBy(e.deltaY < 0 ? 1.1 : 0.9); }, { passive: false });
 
+const ptrs = new Map(); let pinch = null;
+vp.addEventListener('pointerdown', (e) => {
+  ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+  if (ptrs.size === 2) {
+    drag = null; justDragged = true;
+    const [a, b] = [...ptrs.values()];
+    pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), z };
+  }
+});
+vp.addEventListener('pointermove', (e) => {
+  if (!ptrs.has(e.pointerId)) return;
+  ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+  if (!pinch || ptrs.size !== 2) return;
+  const [a, b] = [...ptrs.values()], r0 = vp.getBoundingClientRect();
+  const mx = (a[0] + b[0]) / 2 - r0.left, my = (a[1] + b[1]) / 2 - r0.top;
+  const nz = clampZ(pinch.z * Math.hypot(a[0] - b[0], a[1] - b[1]) / pinch.d), r = nz / z;
+  [ox, oy] = clamp(mx - (mx - ox) * r, my - (my - oy) * r, nz);
+  z = nz; restyle(); apply();
+});
+const endPtr = (e) => {
+  ptrs.delete(e.pointerId);
+  if (ptrs.size < 2 && pinch) { pinch = null; setTimeout(() => { justDragged = false; }, 120); }
+};
+vp.addEventListener('pointerup', endPtr);
+vp.addEventListener('pointercancel', endPtr);
+
 /* ---------- Botones del panel ---------- */
 $('btnSpeak').onclick = speak;
 $('btnClose').onclick = closeSheet;
-$('btnCenter').onclick = () => centerOn(dot.x, dot.y);
+$('btnCenter').onclick = () => { centerOn(dot.x, dot.y); speakPosition(); };
 $('btnIn').onclick = () => zoomBy(1.25);
 $('btnOut').onclick = () => zoomBy(0.8);
 window.addEventListener('resize', () => {
+  const nb = computeBase(); z = clampZ(z * nb / baseZ); baseZ = nb; restyle();
   if (inside) { const b = BUILDINGS.find(x => x[0] === selected); buildPlan(b[3], b[4]); return; }
   if (selected) { const i = info(selected); centerOn((dot.x + i.cx)/2, (dot.y + i.cy)/2); return; }
   [ox, oy] = clamp(ox, oy, z); apply();
@@ -376,26 +541,27 @@ function roomInfo() {
 }
 function buildPlan(w, h) {
   const st = $('inStage'); st.innerHTML = ''; room = null;
-  const AW = st.clientWidth - 24, AH = st.clientHeight - 8;
+  const AW = Math.max(0, st.clientWidth - 24), AH = Math.max(0, st.clientHeight - 8);
   const asp = Math.min(2.2, Math.max(0.5, w / h));
   let cw = AW, ch = cw / asp; if (ch > AH) { ch = AH; cw = ch * asp; }
   const card = document.createElement('div');
   card.className = 'absolute box-border rounded-xl border-4 border-black bg-slate-100';
-  card.style.cssText = \`width:\${cw}px;height:\${ch}px;left:\${(st.clientWidth - cw)/2}px;top:\${(st.clientHeight - ch)/2}px\`;
-  const iw = cw - 8, ih = ch - 8, C = 40, g = 6, horiz = asp >= 1, rects = [];
+  card.style.cssText = 'width:' + cw + 'px;height:' + ch + 'px;left:' + ((st.clientWidth - cw)/2) + 'px;top:' + ((st.clientHeight - ch)/2) + 'px';
+  const iw = Math.max(0, cw - 8), ih = Math.max(0, ch - 8), C = 40, g = 6, horiz = asp >= 1, rects = [];
   const corr = document.createElement('div');
   corr.className = 'absolute flex items-center justify-center bg-slate-300 text-[13px] font-bold tracking-wide text-slate-700';
+  corr.setAttribute('aria-hidden', 'true');
   corr.textContent = 'PASILLO';
   let dx, dy;
   if (horiz) {
-    const n = Math.max(2, Math.round(iw / 92)), rw = (iw - g*(n + 1)) / n, rh = (ih - C - g*3) / 2;
-    corr.style.cssText = \`left:0;top:\${g + rh + g}px;width:\${iw}px;height:\${C}px\`;
+    const n = Math.max(2, Math.round(iw / 92)), rw = Math.max(30, (iw - g*(n + 1)) / n), rh = Math.max(30, (ih - C - g*3) / 2);
+    corr.style.cssText = 'left:0;top:' + (g + rh + g) + 'px;width:' + iw + 'px;height:' + C + 'px';
     for (let r = 0; r < 2; r++) for (let i = 0; i < n; i++)
       rects.push([g + i*(rw + g), r ? g + rh + g + C + g : g, rw, rh]);
     dx = 20; dy = g + rh + g + C/2;
   } else {
-    const n = Math.max(2, Math.round(ih / 92)), rh = (ih - g*(n + 1)) / n, rw = (iw - C - g*3) / 2;
-    corr.style.cssText = \`left:\${g + rw + g}px;top:0;width:\${C}px;height:\${ih}px;writing-mode:vertical-rl\`;
+    const n = Math.max(2, Math.round(ih / 92)), rh = Math.max(30, (ih - g*(n + 1)) / n), rw = Math.max(30, (iw - C - g*3) / 2);
+    corr.style.cssText = 'left:' + (g + rw + g) + 'px;top:0;width:' + C + 'px;height:' + ih + 'px;writing-mode:vertical-rl';
     for (let c = 0; c < 2; c++) for (let i = 0; i < n; i++)
       rects.push([c ? g + rw + g + C + g : g, g + i*(rh + g), rw, rh]);
     dx = g + rw + g + C/2; dy = ih - 20;
@@ -404,7 +570,7 @@ function buildPlan(w, h) {
   rects.forEach(([x, y, rw, rh], i) => {
     const b = document.createElement('button'), k = i + 1;
     b.className = 'absolute box-border rounded-lg border-[3px] p-0 text-base font-extrabold ' + ROOM_OFF.join(' ');
-    b.style.cssText = \`left:\${x}px;top:\${y}px;width:\${rw}px;height:\${rh}px\`;
+    b.style.cssText = 'left:' + x + 'px;top:' + y + 'px;width:' + rw + 'px;height:' + rh + 'px';
     b.textContent = 'Sala ' + k;
     b.setAttribute('aria-label', 'Sala ' + k + ', Edificio ' + selected);
     b.setAttribute('aria-pressed', 'false');
@@ -412,21 +578,21 @@ function buildPlan(w, h) {
       card.querySelectorAll('button').forEach(o => { o.classList.remove(...ROOM_ON); o.classList.add(...ROOM_OFF); o.setAttribute('aria-pressed', 'false'); });
       b.classList.remove(...ROOM_OFF); b.classList.add(...ROOM_ON); b.setAttribute('aria-pressed', 'true');
       room = k; roomInfo();
-      if (autoVoice) say('Sala ' + k);
+      speakOrAnnounce('Sala ' + k + '. ' + $('inNote').textContent);
     });
     card.appendChild(b);
   });
   const d = document.createElement('div');
   d.setAttribute('role', 'img'); d.setAttribute('aria-label', 'Tu ubicación');
   d.className = 'pointer-events-none absolute box-border h-7 w-7 rounded-full border-[5px] border-white bg-sky-600 shadow-[0_0_0_3px_#0c4a6e]';
-  d.style.cssText = \`left:\${dx - 14}px;top:\${dy - 14}px\`;
+  d.style.cssText = 'left:' + (dx - 14) + 'px;top:' + (dy - 14) + 'px';
   card.appendChild(d);
   st.appendChild(card);
   roomInfo();
 }
 function enterBuilding() {
   if (!selected) return;
-  const [id, cx, cy, w, h] = BUILDINGS.find(b => b[0] === id0());
+  const [id, cx, cy, w, h] = BUILDINGS.find(b => b[0] === selected);
   inside = true;
   [ox, oy] = clamp(vp.clientWidth/2 - cx*z, vp.clientHeight/2 - cy*z, z); apply();
   $('sheet').classList.add('hidden'); $('sheet').classList.remove('flex');
@@ -435,34 +601,44 @@ function enterBuilding() {
   $('inTitle').textContent = 'Edificio ' + id + ' · interior';
   buildPlan(w, h);
   $('inExit').focus();
-  if (autoVoice) say('Dentro del Edificio ' + id);
+  speakOrAnnounce('Dentro del Edificio ' + id + '. ' + $('inNote').textContent);
 }
-function id0() { return selected; }
 function exitBuilding() {
   if (!inside) return;
   inside = false; vp.inert = false;
   const el = $('interior'); el.classList.add('hidden'); el.classList.remove('flex');
-  select(selected);
+  select(selected, { silent: true });
   $('btnEnter').focus();
+  announce('Has salido del interior. Información del edificio ' + selected + '.');
 }
 $('btnEnter').onclick = enterBuilding;
 $('btnPrev').onclick = () => step(-1);
 $('btnNext').onclick = () => step(1);
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowLeft') step(-1);
-  if (e.key === 'ArrowRight') step(1);
-});
 $('inExit').onclick = exitBuilding;
 $('inSpeak').onclick = () => {
-  try {
-    const u = new SpeechSynthesisUtterance($('inRoom').textContent + '. ' + $('inNote').textContent);
-    u.lang = 'es-CL'; speechSynthesis.cancel(); speechSynthesis.speak(u);
-  } catch (e) {}
+  const texto = $('inRoom').textContent + '. ' + $('inNote').textContent;
+  say(texto); announce(texto);
 };
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') exitBuilding(); });
+
+/* Teclado: flechas para recorrer, Escape para salir y foco atrapado en el diálogo. */
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { exitBuilding(); return; }
+  if (!inside) {
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); step(-1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); step(1); }
+    return;
+  }
+  if (e.key === 'Tab') {
+    const f = [...$('interior').querySelectorAll('button:not([disabled])')];
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+});
 
 /* ---------- Inicio ---------- */
-placeDot();
+baseZ = computeBase(); z = baseZ; restyle();
 centerOn(dot.x, dot.y);
 </script>
 </body>

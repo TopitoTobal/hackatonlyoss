@@ -109,7 +109,7 @@ export default function App() {
   }
 
   return (
-    <View style={styles.contenedor}>
+    <View style={styles.contenedor} accessibilityRole="main">
       <StatusBar style="dark" />
 
       <Mapa posicion={punto} />
@@ -120,10 +120,10 @@ export default function App() {
             {estado} · muestras: {muestras}
           </Text>
           <View style={styles.boton}>
-            <Button title="GPS" onPress={iniciar} color="#34d399" />
+            <Button title="GPS" onPress={iniciar} color="#065f46" />
           </View>
           <View style={styles.boton}>
-            <Button title="Detener" onPress={detener} color="#f87171" />
+            <Button title="Detener" onPress={detener} color="#991b1b" />
           </View>
         </View>
 

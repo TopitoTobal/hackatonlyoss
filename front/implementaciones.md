@@ -12,6 +12,21 @@ y usa una referencia aproximada pendiente de georreferenciar.
 seleccionar el edificio, para no repetir la voz automática en cada muestra.
 El interior de los edificios es esquemático hasta que haya planos oficiales.
 
+### Accesibilidad y responsive
+
+- El mapa tiene un `<h1>` oculto, instrucciones para lectores de pantalla
+  (`#mapa-instrucciones`), una región `#announcer` (`role="status"`) y foco
+  visible con doble contorno. La voz automática se puede desactivar (guardado
+  en `localStorage`) para no duplicar la lectura de un lector de pantalla.
+- Las indicaciones incluyen **distancia en metros** (`METROS_POR_PIXEL = 0.75`,
+  el mismo valor de `App.tsx`) y dirección cardinal. "Mi ubicación" centra y
+  anuncia la posición.
+- El panel se desplaza internamente si no cabe y el interior pasa a un
+  diseño lateral en horizontal; nunca se sale del viewport. Se respetan zonas
+  seguras (`env(safe-area-inset-*)`) y `100dvh`.
+- En el diálogo interior el foco queda atrapado, `Escape` sale y el fondo se
+  marca `inert`. Lighthouse: accesibilidad y buenas prácticas 1.00.
+
 El componente `Mapa` tiene dos implementaciones: `Mapa.tsx` usa `WebView` en
 iOS/Android y `Mapa.web.tsx` usa un `<iframe>` en navegador, porque
 `react-native-webview` no está soportado en web. Ambas reciben la posición por
