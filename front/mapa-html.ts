@@ -1142,31 +1142,38 @@ function programarReintento() {
   }, 5000);
 }
 function mqttLeer(datos) {
+  /* Un frame WebSocket puede traer varios paquetes MQTT pegados. Procesar
+     solo el primero hacía que se perdieran pedidos de ayuda cuando llegaban
+     junto a un reporte de presencia. */
   let i = 0;
-  const tipo = datos[i++] >> 4;
-  let multiplicador = 1, longitud = 0, octeto;
-  do { octeto = datos[i++]; longitud += (octeto & 127) * multiplicador; multiplicador *= 128; } while (octeto & 128);
-  const fin = i + longitud;
-  if (tipo === 2) {
-    PRESENCIA.conectado = (datos[i + 1] & 1) === 0;
-    if (PRESENCIA.conectado && PRESENCIA.socket) {
-      PRESENCIA.socket.send(mqttPaquete(8, 2, [
-        0, 1,
-        ...mqttTexto(PRESENCIA_TOPIC), 0,
-        ...mqttTexto(AYUDA_TOPIC), 0,
-      ]));
-      publicarPresencia(true);
-      publicarAyuda(true);
+  while (i < datos.length) {
+    const tipo = datos[i++] >> 4;
+    let multiplicador = 1, longitud = 0, octeto;
+    do { octeto = datos[i++]; longitud += (octeto & 127) * multiplicador; multiplicador *= 128; } while (octeto & 128);
+    const fin = i + longitud;
+    if (fin > datos.length) break;
+    if (tipo === 2) {
+      PRESENCIA.conectado = (datos[i + 1] & 1) === 0;
+      if (PRESENCIA.conectado && PRESENCIA.socket) {
+        PRESENCIA.socket.send(mqttPaquete(8, 2, [
+          0, 1,
+          ...mqttTexto(PRESENCIA_TOPIC), 0,
+          ...mqttTexto(AYUDA_TOPIC), 0,
+        ]));
+        publicarPresencia(true);
+        publicarAyuda(true);
+      }
+      actualizarPresencia();
+    } else if (tipo === 3) {
+      const tam = (datos[i] << 8) | datos[i + 1];
+      i += 2;
+      const tema = new TextDecoder().decode(datos.slice(i, i + tam));
+      i += tam;
+      const mensaje = JSON.parse(new TextDecoder().decode(datos.slice(i, fin)));
+      if (tema === PRESENCIA_TOPIC) recibirPresencia(mensaje);
+      else if (tema === AYUDA_TOPIC) recibirAyuda(mensaje);
     }
-    actualizarPresencia();
-  } else if (tipo === 3) {
-    const tam = (datos[i] << 8) | datos[i + 1];
-    i += 2;
-    const tema = new TextDecoder().decode(datos.slice(i, i + tam));
-    i += tam;
-    const mensaje = JSON.parse(new TextDecoder().decode(datos.slice(i, fin)));
-    if (tema === PRESENCIA_TOPIC) recibirPresencia(mensaje);
-    else if (tema === AYUDA_TOPIC) recibirAyuda(mensaje);
+    i = fin;
   }
 }
 function publicarPresencia(fuerza = false) {
@@ -1570,7 +1577,6 @@ function publicarAyuda(fuerza = false) {
 }
 function recibirAyuda(mensaje) {
   if (!mensaje || !mensaje.id || mensaje.id === PRESENCIA.id) return;
-  if (!Number.isFinite(mensaje.lat) || !Number.isFinite(mensaje.lng)) return;
   const id = String(mensaje.id).slice(0, 12);
   if (!mensaje.activo) {
     if (AYUDA.pidiendo.delete(id)) {
