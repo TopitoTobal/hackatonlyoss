@@ -146,8 +146,9 @@ inspeccionar a pocos metros (de 1 a 10 m por píxel de pantalla según el zoom).
   visible con doble contorno. La voz automática se puede desactivar (guardado
   en `localStorage`) para no duplicar la lectura de un lector de pantalla.
 - Las indicaciones incluyen **distancia en metros** (`METROS_POR_PIXEL = 0.75`,
-  el mismo valor de `App.tsx`) y dirección cardinal. "Mi ubicación" centra y
-  anuncia la posición.
+  el mismo valor de `App.tsx`) y dirección cardinal. El panel ya no tiene
+  botones de "Mi ubicación" ni de zoom: se cierra con la **X** superior derecha,
+  tocando fuera de él o con `Escape`; el zoom se hace con rueda o pellizco.
 - El panel se desplaza internamente si no cabe; nunca se sale del viewport. Se
   respetan zonas seguras (`env(safe-area-inset-*)`) y `100dvh`.
 - Zoom estilo Google Maps: `minZoom()` es dinámico (`max(ancho/1312, alto/985)`)
@@ -179,6 +180,10 @@ inspeccionar a pocos metros (de 1 a 10 m por píxel de pantalla según el zoom).
   del GPS se proyecta sobre la ruta; `#sheetRoute` indica metros restantes y el
   próximo giro. Si el punto azul se sale más de 45 px, la ruta se recalcula; si
   llega a la entrada, se anuncia la llegada. El botón pasa a **Detener ruta**.
+  Los tres botones del panel son solo iconos (ruta, escuchar y voz automática,
+  de izquierda a derecha); al tocarlos, el TTS dice qué hace cada opción. El
+  glifo no intercepta el toque (`pointer-events: none`) para que todo el botón
+  responda, y el cierre por toque externo solo se aplica al mapa.
 - Queda pendiente una medición exacta en píxeles sobre el catastro original para
   los recintos pequeños y los giros de los senderos; las coordenadas actuales
   son una aproximación visual consistente con el lienzo de 1312×985. El puente

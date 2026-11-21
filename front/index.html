@@ -17,7 +17,9 @@
     white-space: nowrap; word-wrap: normal; direction: ltr;
     -webkit-font-feature-settings: 'liga'; -webkit-font-smoothing: antialiased;
     vertical-align: middle;
+    pointer-events: none; /* el toque siempre lo recibe el botón, no el glifo */
   }
+  #sheet button { cursor: pointer; }
   /* ---- Base estructural: el visor ocupa exactamente la pantalla ---- */
   html, body { margin: 0; padding: 0; width: 100%; height: 100vh; height: 100dvh; overflow: hidden; background: #e2e8f0; }
   body { position: fixed; inset: 0; height: 100vh; height: 100dvh; font-family: system-ui, sans-serif; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; }
@@ -102,7 +104,7 @@
     #sheetName { font-size: 20px; }
     #sheetDir { font-size: 16px; }
     #sheetWhere { font-size: 14px; }
-    #sheet > div:first-child button { min-width: 56px; }
+    #sheet > div:first-child button:not(#btnClose) { min-width: 56px; }
     #hint { max-width: 22rem; }
     #interior { flex-flow: row wrap; align-content: flex-start; }
     #interior > header { flex: 0 0 100%; padding: 6px 12px; gap: 8px; }
@@ -137,7 +139,8 @@
     El botón Generar ruta inicia la navegación por los senderos hasta la entrada del edificio.
     El punto azul es tu ubicación; el tramo ya recorrido aparece gris y el que falta, azul.
     El panel indica la distancia restante y el próximo giro. Pulsa el botón otra vez para detener la ruta.
-    Los botones de acercar y alejar están al final del panel de información.
+    Cierra el panel con la X de la esquina superior derecha, tocando fuera de él o con Escape.
+    Acerca y aleja el mapa con la rueda del ratón o pellizcando la pantalla.
   </p>
   <div id="world" class="absolute left-0 top-0 origin-top-left" style="width:1312px;height:985px">
 
@@ -313,27 +316,27 @@
 <section id="sheet" role="region" aria-label="Información del edificio seleccionado"
          class="absolute inset-x-2.5 bottom-2.5 mx-auto hidden max-w-md flex-col gap-2 rounded-2xl border-4 border-black bg-yellow-200 p-3.5">
   <div class="flex items-center justify-between gap-2">
-    <button id="btnPrev" aria-keyshortcuts="ArrowLeft" class="flex min-h-14 min-w-16 flex-col items-center justify-center gap-0.5 rounded-[10px] border-[3px] border-black bg-black px-2 text-white">
+    <button id="btnPrev" aria-keyshortcuts="ArrowLeft" class="flex min-h-14 min-w-14 flex-col items-center justify-center gap-0.5 rounded-[10px] border-[3px] border-black bg-black px-2 text-white">
       <span class="material-icons" aria-hidden="true" style="font-size:26px">chevron_left</span>
       <span id="prevId" class="text-sm font-extrabold leading-none"></span>
     </button>
     <h2 id="sheetName" tabindex="-1" class="m-0 flex-1 text-center text-[26px] font-extrabold"></h2>
-    <button id="btnNext" aria-keyshortcuts="ArrowRight" class="flex min-h-14 min-w-16 flex-col items-center justify-center gap-0.5 rounded-[10px] border-[3px] border-black bg-black px-2 text-white">
+    <button id="btnNext" aria-keyshortcuts="ArrowRight" class="flex min-h-14 min-w-14 flex-col items-center justify-center gap-0.5 rounded-[10px] border-[3px] border-black bg-black px-2 text-white">
       <span class="material-icons" aria-hidden="true" style="font-size:26px">chevron_right</span>
       <span id="nextId" class="text-sm font-extrabold leading-none"></span>
+    </button>
+    <button id="btnClose" aria-label="Cerrar información del edificio"
+            class="flex h-11 w-11 min-h-11 shrink-0 items-center justify-center rounded-[10px] border-[3px] border-black bg-white text-black">
+      <span class="material-icons" aria-hidden="true" style="font-size:26px">close</span>
     </button>
   </div>
   <p id="sheetDir" class="m-0 text-[19px] font-extrabold leading-tight text-sky-900"></p>
   <p id="sheetWhere" class="m-0 text-base font-medium leading-snug"></p>
   <p id="sheetRoute" class="m-0 text-[15px] font-bold leading-snug text-blue-900"></p>
-  <div class="mt-1 grid grid-cols-4 gap-2">
-    <button id="btnRoute" class="col-span-4 inline-flex min-h-14 items-center justify-center gap-2 rounded-[10px] border-[3px] border-black bg-blue-900 text-lg font-extrabold text-white"><span class="material-icons" aria-hidden="true">route</span>Generar ruta</button>
-    <button id="btnSpeak" aria-label="Escuchar información de este edificio" class="col-span-2 inline-flex min-h-14 items-center justify-center gap-2 rounded-[10px] border-[3px] border-black bg-black text-lg font-extrabold text-white"><span class="material-icons" aria-hidden="true">volume_up</span>Escuchar</button>
-    <button id="btnClose" aria-label="Cerrar información del edificio" class="col-span-2 inline-flex min-h-14 items-center justify-center gap-2 rounded-[10px] border-[3px] border-black bg-white text-lg font-extrabold text-black"><span class="material-icons" aria-hidden="true">close</span>Cerrar</button>
-    <button id="btnCenter" aria-label="Centrar en mi ubicación y anunciar mi posición" class="col-span-2 inline-flex min-h-14 items-center justify-center gap-2 rounded-[10px] border-[3px] border-black bg-sky-900 text-[17px] font-extrabold text-white"><span class="material-icons" aria-hidden="true">my_location</span>Mi ubicación</button>
-    <button id="btnIn" aria-label="Acercar" class="inline-flex min-h-14 items-center justify-center rounded-[10px] border-[3px] border-black bg-black text-white"><span class="material-icons" aria-hidden="true" style="font-size:30px">add</span></button>
-    <button id="btnOut" aria-label="Alejar" class="inline-flex min-h-14 items-center justify-center rounded-[10px] border-[3px] border-black bg-black text-white"><span class="material-icons" aria-hidden="true" style="font-size:30px">remove</span></button>
-    <button id="btnVoice" aria-pressed="true" class="col-span-4 inline-flex min-h-12 items-center justify-center gap-2 rounded-[10px] border-[3px] border-black bg-white text-base font-extrabold text-black"></button>
+  <div class="mt-1 grid grid-cols-3 gap-2">
+    <button id="btnRoute" aria-label="Generar ruta hacia el edificio seleccionado" class="inline-flex min-h-14 items-center justify-center rounded-[10px] border-[3px] border-black bg-blue-900 text-white"><span class="material-icons" aria-hidden="true" style="font-size:30px">route</span></button>
+    <button id="btnSpeak" aria-label="Escuchar información de este edificio" class="inline-flex min-h-14 items-center justify-center rounded-[10px] border-[3px] border-black bg-black text-white"><span class="material-icons" aria-hidden="true" style="font-size:30px">volume_up</span></button>
+    <button id="btnVoice" aria-pressed="true" aria-label="Voz automática: activada" class="inline-flex min-h-14 items-center justify-center rounded-[10px] border-[3px] border-black bg-white text-black"><span class="material-icons" aria-hidden="true" style="font-size:30px">volume_up</span></button>
   </div>
 </section>
 
@@ -451,6 +454,11 @@ function say(text) {
 /* Si la voz automática está apagada, el lector de pantalla necesita el aviso. */
 function speakOrAnnounce(text) {
   if (autoVoice) say(text); else announce(text);
+}
+/* Los botones solo tienen icono: al tocarlos siempre se dice qué hacen. */
+function hablarAccion(text) {
+  say(text);
+  announce(text);
 }
 
 /* ---------- Construcción ---------- */
@@ -725,10 +733,10 @@ function ocultarRuta() {
 function actualizarBotonRuta() {
   const b = $('btnRoute');
   if (navegacion) {
-    b.innerHTML = '<span class="material-icons" aria-hidden="true">stop</span>Detener ruta';
+    b.innerHTML = '<span class="material-icons" aria-hidden="true" style="font-size:30px">stop</span>';
     b.setAttribute('aria-label', 'Detener la navegación hacia el edificio ' + navegacion.id);
   } else {
-    b.innerHTML = '<span class="material-icons" aria-hidden="true">route</span>Generar ruta';
+    b.innerHTML = '<span class="material-icons" aria-hidden="true" style="font-size:30px">route</span>';
     b.setAttribute('aria-label', 'Generar ruta hacia el edificio seleccionado');
   }
 }
@@ -738,14 +746,14 @@ function detenerRuta(silent) {
   ocultarRuta();
   $('sheetRoute').textContent = '';
   actualizarBotonRuta();
-  if (!silent) announce('Navegación detenida.');
+  if (!silent) hablarAccion('Navegación detenida.');
 }
 function llegar(nav) {
   navegacion = null;
   ocultarRuta();
   actualizarBotonRuta();
   $('sheetRoute').textContent = 'Llegaste a la entrada del edificio ' + nav.id + '.';
-  speakOrAnnounce('Llegaste a la entrada del edificio ' + nav.id + '.');
+  hablarAccion('Llegaste a la entrada del edificio ' + nav.id + '.');
 }
 function iniciarNavegacion(id, r, silent) {
   navegacion = {
@@ -764,7 +772,7 @@ function iniciarNavegacion(id, r, silent) {
     Math.round(navegacion.total * METROS_POR_PIXEL) + ' m. ' + ins.texto;
   centerOn(dot.x, dot.y);
   if (!silent)
-    speakOrAnnounce('Ruta generada hacia el edificio ' + id + '. ' +
+    hablarAccion('Ruta generada hacia el edificio ' + id + '. ' +
       Math.round(navegacion.total * METROS_POR_PIXEL) + ' metros. Sigue el camino azul ' +
       'desde el punto azul. ' + ins.texto);
 }
@@ -773,7 +781,7 @@ function generarRuta(id) {
   if (destino === undefined) return;
   const r = mejorRuta(destino);
   if (!r) {
-    announce('No se pudo generar la ruta hacia el edificio ' + id + '.');
+    hablarAccion('No se pudo generar la ruta hacia el edificio ' + id + '.');
     return;
   }
   iniciarNavegacion(id, r);
@@ -880,8 +888,8 @@ function closeSheet() {
 function speak() {
   if (!selected) return;
   const i = info(selected);
-  const texto = i.label + '. ' + i.dir + ' ' + i.where;
-  say(texto); announce(texto);
+  const texto = 'Escuchar información de este edificio. ' + i.label + '. ' + i.dir + ' ' + i.where;
+  hablarAccion(texto);
 }
 function speakPosition() {
   const i = selected ? info(selected) : null;
@@ -892,9 +900,8 @@ function speakPosition() {
 }
 function voiceLabel() {
   const b = $('btnVoice');
-  b.innerHTML = '<span class="material-icons" aria-hidden="true">' +
-    (autoVoice ? 'volume_up' : 'volume_off') + '</span><span>Voz automática: ' +
-    (autoVoice ? 'activada' : 'desactivada') + '</span>';
+  b.innerHTML = '<span class="material-icons" aria-hidden="true" style="font-size:30px">' +
+    (autoVoice ? 'volume_up' : 'volume_off') + '</span>';
   b.setAttribute('aria-pressed', autoVoice ? 'true' : 'false');
   b.setAttribute('aria-label', 'Voz automática: ' + (autoVoice ? 'activada' : 'desactivada') +
     '. Si usas lector de pantalla, desactívala para evitar que dos voces hablen a la vez.');
@@ -903,8 +910,7 @@ $('btnVoice').onclick = () => {
   autoVoice = !autoVoice;
   try { localStorage.setItem('autoVoice', autoVoice ? 'on' : 'off'); } catch (e) {}
   voiceLabel();
-  if (autoVoice && selected) say('Voz activada. Edificio ' + selected);
-  else speechSynthesis.cancel();
+  hablarAccion('Voz automática ' + (autoVoice ? 'activada' : 'desactivada') + '.');
 };
 voiceLabel();
 actualizarBotonRuta();
@@ -1788,9 +1794,17 @@ vp.addEventListener('pointercancel', endPtr);
 /* ---------- Botones del panel ---------- */
 $('btnSpeak').onclick = speak;
 $('btnClose').onclick = closeSheet;
-$('btnCenter').onclick = () => { centerOn(dot.x, dot.y); speakPosition(); };
-$('btnIn').onclick = () => zoomBy(1.25);
-$('btnOut').onclick = () => zoomBy(0.8);
+/* Cerrar al tocar el mapa fuera del panel. Solo cerramos si el toque cayó en el
+   visor; así cualquier punto de los botones (incluidos sus iconos) ejecuta su
+   acción y nunca se interpreta como "fuera del panel". Tocar un edificio cambia
+   la selección en lugar de cerrar. */
+document.addEventListener('click', (e) => {
+  if (!selected || $('sheet').classList.contains('hidden') || justDragged || inside) return;
+  const t = e.target;
+  if (!t || typeof t.closest !== 'function') return;
+  if (!t.closest('#viewport') || t.closest('#buildings')) return;
+  closeSheet();
+});
 $('btnRoute').onclick = () => {
   if (navegacion) detenerRuta();
   else if (selected) generarRuta(selected);
@@ -1902,7 +1916,11 @@ $('inSpeak').onclick = () => {
 
 /* Teclado: flechas para recorrer, Escape para salir y foco atrapado en el diálogo. */
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { exitBuilding(); return; }
+  if (e.key === 'Escape') {
+    if (inside) exitBuilding();
+    else if (selected) closeSheet();
+    return;
+  }
   if (!inside) {
     if (e.key === 'ArrowLeft')  { e.preventDefault(); step(-1); }
     if (e.key === 'ArrowRight') { e.preventDefault(); step(1); }
