@@ -2,7 +2,7 @@ Orienta
 =======
 
 <p align="center">
-  <img src="front/public/icon-512.png" alt="Logo de Orienta" width="160" />
+  <img src="front/public/icon-512.png" alt="Logo de Orienta" width="280" />
 </p>
 
 Introducción
