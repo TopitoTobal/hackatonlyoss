@@ -544,10 +544,14 @@ export const MAPA_HTML = `<!doctype html>
     <h2 id="inTitle" class="m-0 text-2xl font-extrabold"></h2>
   </header>
   <div id="inStage" class="relative min-h-0 flex-1"></div>
-  <div id="inInfo" class="m-3 flex flex-col gap-2 rounded-2xl border-4 border-black bg-yellow-200 p-3.5">
+  <div id="inInfo" class="m-3 flex flex-col gap-2 rounded-2xl border-4 border-black bg-yellow-200 p-3.5"
+       style="margin-bottom: max(4.5rem, env(safe-area-inset-bottom));">
     <p id="inRoom" class="m-0 text-[22px] font-extrabold"></p>
     <p id="inNote" class="m-0 text-base font-medium leading-snug"></p>
-    <button id="inSpeak" class="inline-flex min-h-14 items-center justify-center gap-2 rounded-[10px] border-[3px] border-black bg-black text-lg font-extrabold text-white"><span class="material-icons" aria-hidden="true">volume_up</span>Escuchar</button>
+    <div class="flex gap-2">
+      <button id="inSpeak" type="button" class="inline-flex flex-1 min-h-14 items-center justify-center gap-2 rounded-[10px] border-[3px] border-black bg-black text-lg font-extrabold text-white"><span class="material-icons" aria-hidden="true">volume_up</span>Escuchar</button>
+      <button id="inMapa" type="button" aria-label="Volver a la vista de mapa para elegir otra ruta" class="inline-flex flex-1 min-h-14 items-center justify-center gap-2 rounded-[10px] border-[3px] border-black bg-white text-lg font-extrabold text-black"><span class="material-icons" aria-hidden="true">map</span>Ver mapa</button>
+    </div>
   </div>
 </section>
 
@@ -2690,6 +2694,7 @@ function salirInterior() {
   exitBuilding();
 }
 $('inExit').onclick = salirInterior;
+$('inMapa').onclick = salirInterior;
 $('inSpeak').onclick = () => {
   const texto = $('inRoom').textContent + '. ' + $('inNote').textContent;
   say(texto); announce(texto);

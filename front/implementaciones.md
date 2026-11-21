@@ -169,8 +169,10 @@ vuelve al mapa. La salida manual bloquea la reentrada automática por 15 s. En
 el interior, el punto azul del plano esquemático sigue el GPS real (anclado al
 entrar) y se anuncia cada 10 m recorridos. La card de acciones muestra un botón
 **Salir interior** sincronizado con el diálogo, porque el botón del mapa queda
-debajo de esa card. En el mapa del vidente, el edificio donde está cada par se
-resalta con un marco morado discontinuo.
+debajo de esa card. Junto a **Escuchar**, el botón **Ver mapa** hace lo mismo y
+devuelve el panel de edificios para poder elegir otra ruta. En el mapa del
+vidente, el edificio donde está cada par se resalta con un marco morado
+discontinuo.
 
 Cada dispositivo publica también su `latitude`/`longitude`/`accuracyM` crudos.
 El receptor convierte la posición ajena con **su propio primer fix como origen**
