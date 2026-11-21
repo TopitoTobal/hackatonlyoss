@@ -416,7 +416,7 @@ export default function App() {
           >
             <View style={styles.filaBoton}>
               <Icono name="arrow_back" size={18} color="#f8fafc" />
-              <Text style={styles.textoBoton}>Modo</Text>
+              <Text style={styles.textoBoton}>Volver</Text>
             </View>
           </Pressable>
           <Text style={styles.estado} accessibilityLiveRegion="polite">
