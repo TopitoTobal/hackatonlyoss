@@ -31,20 +31,24 @@ import { RUTAS, modoDeRuta, type Modo } from './modo'
 const PAREDES: WallSegment[] = []
 const CAMINO: RoutePath = { id: 'demo', points: [] }
 
-/* El plano del mapa mide 1312x985 px y su centro es (690, 500).
-   La referencia geográfica del centro es el campus (20.67, -103.35).
-   TODO: sustituir por una georreferenciación real del plano. */
-const PLANO = { centroX: 690, centroY: 500 }
-const REFERENCIA = { latitude: 20.67, longitude: -103.35 }
+/* Prototipo: el primer fix GPS es el origen (0, 0) del plano. Los puntos
+   siguientes son desplazamientos relativos desde ahí, con la misma escala
+   de 0,75 m por píxel. No hay georreferenciación absoluta todavía. */
 const METROS_POR_PIXEL = 0.75
 
-function aPuntoPlano(latitude: number, longitude: number): PuntoPlano {
+type Origen = { latitude: number; longitude: number }
+
+function aPuntoPlano(
+  latitude: number,
+  longitude: number,
+  origen: Origen,
+): PuntoPlano {
   const metrosPorGradoLat = 111_320
   const metrosPorGradoLng =
-    111_320 * Math.cos((REFERENCIA.latitude * Math.PI) / 180)
-  const dx = ((longitude - REFERENCIA.longitude) * metrosPorGradoLng) / METROS_POR_PIXEL
-  const dy = (-(latitude - REFERENCIA.latitude) * metrosPorGradoLat) / METROS_POR_PIXEL
-  return { x: PLANO.centroX + dx, y: PLANO.centroY + dy }
+    111_320 * Math.cos((origen.latitude * Math.PI) / 180)
+  const dx = ((longitude - origen.longitude) * metrosPorGradoLng) / METROS_POR_PIXEL
+  const dy = (-(latitude - origen.latitude) * metrosPorGradoLat) / METROS_POR_PIXEL
+  return { x: dx, y: dy }
 }
 
 function rutaActual(): string | undefined {
@@ -130,10 +134,7 @@ export default function App() {
   const monitorRef = useRef<SafetyMonitor | null>(null)
 
   const [modo, setModo] = useState<Modo | null>(() => modoActual())
-  const [punto, setPunto] = useState<PuntoPlano>({
-    x: PLANO.centroX,
-    y: PLANO.centroY,
-  })
+  const [punto, setPunto] = useState<PuntoPlano>({ x: 0, y: 0 })
   const [estado, setEstado] = useState('Detenido')
   const [ultimaPosicion, setUltimaPosicion] = useState('—')
   const [estadisticas, setEstadisticas] = useState('—')
@@ -141,6 +142,7 @@ export default function App() {
   const [muestras, setMuestras] = useState(0)
   const [velocidad, setVelocidad] = useState('—')
   const arrancandoRef = useRef(false)
+  const origenRef = useRef<Origen | null>(null)
 
   useEffect(() => {
     const win: any = globalThis as any
@@ -179,6 +181,8 @@ export default function App() {
     arrancandoRef.current = true
     setEstado('Solicitando permisos…')
     setMuestras(0)
+    origenRef.current = null
+    setPunto({ x: 0, y: 0 })
 
     try {
       const tracker = await startForegroundTracking({
@@ -190,7 +194,17 @@ export default function App() {
       trackerRef.current = tracker
 
       tracker.subscribe((muestra) => {
-        setPunto(aPuntoPlano(muestra.latitude, muestra.longitude))
+        if (muestra.isAccurate) {
+          if (!origenRef.current) {
+            origenRef.current = {
+              latitude: muestra.latitude,
+              longitude: muestra.longitude,
+            }
+          }
+          setPunto(
+            aPuntoPlano(muestra.latitude, muestra.longitude, origenRef.current),
+          )
+        }
         setVelocidad(formatSpeed(muestra.computedSpeedMps))
         setUltimaPosicion(
           `${muestra.latitude.toFixed(5)}, ${muestra.longitude.toFixed(5)} · ±${muestra.accuracyM?.toFixed(0) ?? '?'} m${muestra.isAccurate ? '' : ' (baja precisión)'}`,
@@ -215,12 +229,15 @@ export default function App() {
     setEstado('Detenido')
     setMuestras(0)
     setVelocidad('—')
+    origenRef.current = null
+    setPunto({ x: 0, y: 0 })
   }
 
   function irAModo(nuevo: Modo) {
     const win: any = globalThis as any
     if (win.history?.pushState) win.history.pushState({}, '', RUTAS[nuevo])
-    setPunto({ x: PLANO.centroX, y: PLANO.centroY })
+    origenRef.current = null
+    setPunto({ x: 0, y: 0 })
     setModo(nuevo)
   }
 

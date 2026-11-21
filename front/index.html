@@ -327,8 +327,8 @@ const DIRS = ['norte','noreste','este','sureste','sur','suroeste','oeste','noroe
 const METROS_POR_PIXEL = 0.75; /* el mismo valor que usa App.tsx para el GPS */
 
 /* Ubicación de la persona (simulada). El GPS real llama a setUserPosition(x, y)
-   con coordenadas ya convertidas a píxeles del plano. */
-let dot = { x: 690, y: 500 };
+   con coordenadas relativas al origen (0, 0) del plano. */
+let dot = { x: 0, y: 0 };
 
 /* ---------- Estado ---------- */
 const $ = (id) => document.getElementById(id);
@@ -564,7 +564,8 @@ function aplicarModo(modo) {
 window.setModo = aplicarModo;
 
 /* ---------- GPS: puente con la app Expo ----------
-   App.tsx convierte lat/lng a píxeles y envía { type:'position', x, y }.
+   App.tsx convierte lat/lng a desplazamientos desde el primer fix y envía
+   { type:'position', x, y }.
    Solo movemos el punto y la guía: no llamamos a select() para que la voz
    automática no se repita en cada muestra del GPS. */
 window.setUserPosition = (x, y) => {

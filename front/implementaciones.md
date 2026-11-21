@@ -6,8 +6,9 @@ todo lo que ya puedes consumir desde `front/`. El mapa vive en
 `front/index.html` y se carga desde `App.tsx` a través de `Mapa.tsx`
 (`WebView` en nativo, `Mapa.web.tsx` con `iframe` en web), enviándole la
 ubicación del GPS con `postMessage({ type: 'position', x, y })`.
-La conversión lat/lng → píxeles del plano está en `App.tsx` (`aPuntoPlano`)
-y usa una referencia aproximada pendiente de georreferenciar.
+La conversión lat/lng → píxeles del plano está en `App.tsx` (`aPuntoPlano`).
+En el prototipo el primer fix GPS preciso es el origen `(0, 0)` y los puntos
+siguientes son desplazamientos relativos desde ahí (0,75 m por píxel).
 `setUserPosition()` solo actualiza el punto y la guía, sin volver a
 seleccionar el edificio, para no repetir la voz automática en cada muestra.
 El interior de los edificios es esquemático hasta que haya planos oficiales.
