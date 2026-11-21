@@ -257,9 +257,9 @@ export const MAPA_HTML = `<!doctype html>
       <rect x="284" y="312" width="16" height="673" fill="#cbd2d9"/>
 
       <!-- 5. Cancha principal 8007 y tenis (zona inferior derecha) -->
-      <rect x="450" y="450" width="170" height="260" rx="8" fill="#cfe6c8"/>
-      <rect x="460" y="460" width="150" height="240" rx="6" fill="none" stroke="#ffffff" stroke-width="2" opacity=".8"/>
-      <line x1="535" y1="460" x2="535" y2="700" stroke="#ffffff" stroke-width="2" opacity=".8"/>
+      <rect x="440" y="460" width="150" height="240" rx="8" fill="#cfe6c8"/>
+      <rect x="448" y="470" width="134" height="220" rx="6" fill="none" stroke="#ffffff" stroke-width="2" opacity=".8"/>
+      <line x1="515" y1="470" x2="515" y2="690" stroke="#ffffff" stroke-width="2" opacity=".8"/>
       <rect x="1130" y="690" width="70" height="120" rx="6" fill="#ecd9c8"/>
       <line x1="1130" y1="750" x2="1200" y2="750" stroke="#ffffff" stroke-width="2" opacity=".8"/>
 
@@ -281,16 +281,23 @@ export const MAPA_HTML = `<!doctype html>
           <path d="M520 380 L430 380 L355 405 L270 355"/>
           <path d="M300 415 L415 440 L450 450"/>
           <path d="M450 450 L415 580 L450 710 L535 740"/>
-          <path d="M620 450 L650 580 L668 640 L600 740"/>
+          <path d="M740 445 L636 470 L636 600 L600 700 L590 780"/>
           <path d="M535 740 L590 780 L590 820 L590 985"/>
+          <path d="M636 600 L700 575"/>
+          <path d="M710 605 L745 605 L745 690 L740 690"/>
+          <path d="M755 690 L755 600 L925 600 L925 785"/>
+          <path d="M740 445 L980 510"/>
           <path d="M980 510 L1030 510 L1060 455 L1090 455"/>
           <path d="M980 372 L1040 372 L1102 340"/>
+          <path d="M1102 340 L1100 455"/>
           <path d="M1100 455 L1100 540"/>
-          <path d="M1100 580 L1140 620 L1140 860"/>
+          <path d="M1100 580 L1140 620 L1140 757 L1140 860"/>
           <path d="M1020 745 L1020 757"/>
+          <path d="M1020 757 L1140 757"/>
           <path d="M925 785 L941 785"/>
           <path d="M955 785 L955 860 L1050 860"/>
           <path d="M1050 802 L1050 860"/>
+          <path d="M1050 860 L1140 860"/>
           <path d="M1140 860 L1175 860 L1175 810"/>
         </g>
         <g stroke="#ffffff" stroke-width="16">
@@ -301,38 +308,36 @@ export const MAPA_HTML = `<!doctype html>
           <path d="M520 380 L430 380 L355 405 L270 355"/>
           <path d="M300 415 L415 440 L450 450"/>
           <path d="M450 450 L415 580 L450 710 L535 740"/>
-          <path d="M620 450 L650 580 L668 640 L600 740"/>
+          <path d="M740 445 L636 470 L636 600 L600 700 L590 780"/>
           <path d="M535 740 L590 780 L590 820 L590 985"/>
+          <path d="M636 600 L700 575"/>
+          <path d="M710 605 L745 605 L745 690 L740 690"/>
+          <path d="M755 690 L755 600 L925 600 L925 785"/>
+          <path d="M740 445 L980 510"/>
           <path d="M980 510 L1030 510 L1060 455 L1090 455"/>
           <path d="M980 372 L1040 372 L1102 340"/>
+          <path d="M1102 340 L1100 455"/>
           <path d="M1100 455 L1100 540"/>
-          <path d="M1100 580 L1140 620 L1140 860"/>
+          <path d="M1100 580 L1140 620 L1140 757 L1140 860"/>
           <path d="M1020 745 L1020 757"/>
+          <path d="M1020 757 L1140 757"/>
           <path d="M925 785 L941 785"/>
           <path d="M955 785 L955 860 L1050 860"/>
           <path d="M1050 802 L1050 860"/>
+          <path d="M1050 860 L1140 860"/>
           <path d="M1140 860 L1175 860 L1175 810"/>
         </g>
       </g>
 
       <!-- 7. Etiquetas -->
       <g font-family="system-ui, sans-serif" font-weight="700" text-anchor="middle">
-        <text x="535" y="585" font-size="20" fill="#334155">8007</text>
+        <text x="515" y="580" font-size="20" fill="#334155">8007</text>
         <text x="1165" y="755" font-size="16" fill="#334155">TENIS</text>
         <text x="660" y="301" font-size="20" fill="#334155">AVENIDA PLACERES</text>
         <text x="142" y="160" font-size="17" fill="#64748b">BARRIO NORTE</text>
         <text x="590" y="830" font-size="16" fill="#94a3b8">LADERA</text>
         <text x="1170" y="950" font-size="17" fill="#4d7c0f">SUBIDA SAN LUIS</text>
       </g>
-    </svg>
-
-    <!-- Ruta generada por los senderos hasta la entrada del edificio -->
-    <svg width="1312" height="985" viewBox="0 0 1312 985" aria-hidden="true" class="pointer-events-none absolute left-0 top-0">
-      <polyline id="routeDone" points="" fill="none" stroke="#94a3b8" stroke-width="7"
-                stroke-dasharray="14 10" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0"/>
-      <polyline id="routeLine" points="" fill="none" stroke="#1d4ed8" stroke-width="7"
-                stroke-dasharray="16 12" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0"/>
-      <circle id="routeEnd" cx="690" cy="500" r="8" fill="#1d4ed8" stroke="#ffffff" stroke-width="3" opacity="0"/>
     </svg>
 
     <!-- Botones de edificios (los crea el script) -->
@@ -356,6 +361,16 @@ export const MAPA_HTML = `<!doctype html>
       <g id="rutaLayer"></g>
       <g id="peerLayer"></g>
       <g id="ayudaLayer"></g>
+    </svg>
+
+    <!-- Ruta generada por los senderos. Va después de los edificios para que el
+         trazo pase por encima de ellos, pero no captura toques (pointer-events:none). -->
+    <svg width="1312" height="985" viewBox="0 0 1312 985" aria-hidden="true" class="pointer-events-none absolute left-0 top-0">
+      <polyline id="routeDone" points="" fill="none" stroke="#94a3b8" stroke-width="7"
+                stroke-dasharray="14 10" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0"/>
+      <polyline id="routeLine" points="" fill="none" stroke="#1d4ed8" stroke-width="7"
+                stroke-dasharray="16 12" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0"/>
+      <circle id="routeEnd" cx="690" cy="500" r="8" fill="#1d4ed8" stroke="#ffffff" stroke-width="3" opacity="0"/>
     </svg>
 
     <!-- Punto azul: ubicación de la persona -->
@@ -457,7 +472,7 @@ const BUILDINGS = [
   ['K', 1090, 420, 60, 70, 'Noreste, en Subida San Luis.'],
   ['J', 1120, 340, 48, 40, 'Norte de K.'],
   ['O', 1110, 560, 48, 40, 'Sur de K.'],
-  ['L', 644, 600, 48, 80, 'Oeste, junto a la cancha.'],
+  ['L', 600, 600, 48, 80, 'Oeste, junto a la cancha.'],
   ['U', 710, 690, 60, 170, 'Centro-oeste. Bloque alargado.'],
   ['A', 840, 720, 170, 210, 'Centro-sur. Bloque grande, junto a B.'],
   ['H', 590, 780, 60, 40, 'Suroeste, en la ladera.'],
@@ -468,7 +483,9 @@ const BUILDINGS = [
   ['T', 1210, 850, 70, 80, 'Sureste, en Subida San Luis.']
 ];
 
-/* Los mismos 18 senderos del plano, como polilíneas en píxeles. */
+/* Los mismos senderos dibujados en el plano, como polilíneas en píxeles.
+   Incluye los accesos que antes eran "enlaces" invisibles: ahora están
+   dibujados, así la ruta nunca inventa un atajo que no aparece en el mapa. */
 const PATHS = [
   [[740,312],[740,317]],
   [[740,427],[740,445]],
@@ -477,32 +494,31 @@ const PATHS = [
   [[520,380],[430,380],[355,405],[270,355]],
   [[300,415],[415,440],[450,450]],
   [[450,450],[415,580],[450,710],[535,740]],
-  [[620,450],[650,580],[668,640],[600,740]],
+  [[740,445],[636,470],[636,600],[600,700],[590,780]],
   [[535,740],[590,780],[590,820],[590,985]],
+  [[636,600],[700,575]],                    /* L → norte de U */
+  [[710,605],[745,605],[745,690],[740,690]],/* norte de U → oeste de A */
+  [[755,690],[755,600],[925,600],[925,785]],/* oeste de A → patio de E */
+  [[740,445],[980,510]],                    /* sur de C → acceso este de B */
   [[980,510],[1030,510],[1060,455],[1090,455]],
   [[980,372],[1040,372],[1102,340]],
+  [[1102,340],[1100,455]],                  /* J → K */
   [[1100,455],[1100,540]],
-  [[1100,580],[1140,620],[1140,860]],
+  [[1100,580],[1140,620],[1140,757],[1140,860]],
   [[1020,745],[1020,757]],
+  [[1020,757],[1140,757]],                  /* D → Subida San Luis */
   [[925,785],[941,785]],
   [[955,785],[955,860],[1050,860]],
   [[1050,802],[1050,860]],
+  [[1050,860],[1140,860]],
   [[1140,860],[1175,860],[1175,810]]
-];
-
-/* Accesos entre zonas que el plano dibuja separadas: permiten seguir por la
-   red de senderos en vez de cruzar edificios en línea recta. */
-const ENLACES = [
-  [[740,445],[980,510]],  /* sur de C → acceso este de B */
-  [[755,690],[925,785]],  /* acceso oeste de A → patio de E */
-  [[710,605],[740,690]]   /* norte de U → sur de U */
 ];
 
 /* Punto de entrada de cada edificio sobre el borde más cercano a un sendero. */
 const ENTRADAS = {
   C: [740,427],  R: [270,355],  R2: [355,395], M: [384,440],
   M2: [415,460], B: [980,510],  K: [1090,455], J: [1102,340],
-  O: [1100,560], L: [650,580],  U: [710,605],  A: [755,690],
+  O: [1100,560], L: [624,580],  U: [710,605],  A: [755,690],
   H: [590,780],  D: [1020,745], E: [975,785],  F2: [941,785],
   F: [1050,860], T: [1175,860]
 };
@@ -684,14 +700,9 @@ const GRAFO = (() => {
     const ns = path.map(([x, y]) => nodo(x, y));
     for (let i = 0; i < ns.length - 1; i++) unir(ns[i], ns[i + 1], 1);
   });
-  ENLACES.forEach(([a, b]) => unir(nodo(a[0], a[1]), nodo(b[0], b[1]), 1.6));
-  for (let i = 0; i < nodos.length; i++) {
-    for (let j = i + 1; j < nodos.length; j++) {
-      const d = Math.hypot(nodos[i].x - nodos[j].x, nodos[i].y - nodos[j].y);
-      if (d <= 36) unir(nodos[i], nodos[j], 1.8);
-      else if (d <= 140) unir(nodos[i], nodos[j], 2.6);
-    }
-  }
+  /* Solo se unen los puntos que están dibujados como sendero. Antes había
+     enlaces cortos entre cualquier par de nodos y la ruta "recortaba" por
+     encima de los edificios; ahora cada tramo del trazo existe en el plano. */
   const entradaNodo = {};
   Object.keys(ENTRADAS).forEach(id => {
     const [x, y] = ENTRADAS[id];
@@ -1389,7 +1400,7 @@ function construirRedCaminos() {
     }
     return indice.get(clave);
   }
-  document.querySelectorAll('g[stroke="#94a3b8"] path').forEach((p) => {
+  document.querySelectorAll('g[stroke="#94a3b8"][stroke-width="24"] path').forEach((p) => {
     const d = p.getAttribute('d') || '';
     const pts = [...d.matchAll(/[ML]\\s*(-?[\\d.]+)[ ,]+(-?[\\d.]+)/g)]
       .map((m) => ({ x: Number(m[1]), y: Number(m[2]) }));
