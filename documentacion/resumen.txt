@@ -1,0 +1,137 @@
+9:24 realizamos la idea, se piensa en desarrollar un mapa de movilización, se propone realizarlo por capas y con herramientas para personas con problemas de visión 
+
+9:32 se realiza la declaración de funciones de los participantes:
+
+-el equipo usar las herramientas: expo y react native
+
+-Cristóbal queda a cargo de desarrollar el codigo
+
+-Danko va a realizar el prototipo del mapa
+
+-Esteban va a realizar el readme
+
+9:39 se empieza a desarrollar el código
+
+9:45 se empieza a trabajar lo permisos y configuración tracking continuo, calculo del movimiento, geofences y rutas, tracking en segundo plano, exportación GeoJSON
+
+9:52 Cristóbal implementa el sistema gps ya se encuentra implementado
+backend/
+├── README.md          # instalación, app.json, integración con Metro y ejemplos
+├── package.json       # peerDeps: expo-location, expo-task-manager, react-native
+└── src/
+    ├── index.ts       # exports públicos
+    ├── types.ts       # GpsPoint, MovementSample, MovementStats, GeofenceRegion, etc.
+    ├── constants.ts   # nombres de tareas, límites y defaults
+    ├── permissions.ts # foreground/background + openLocationSettings()
+    ├── movement.ts    # Haversine, rumbo, MovementTracker, filtro por precisión
+    ├── tracker.ts     # startForegroundTracking()
+    ├── tasks.ts       # defineTask de background y geofencing (scope raíz)
+    ├── background.ts  # startBackgroundTracking(), startGeofencing(), stop...
+    ├── events.ts      # backgroundLocations / geofenceEvents
+    └── geojson.ts     # GeoJSON + textos accesibles en español
+
+10:00 se analiza la api de vibración
+
+10:14 se realiza el push de implementaciones y seguimos con el montaje expo
+
+10:19 se realiza el primer testeo
+
+10:26 Danko empieza cambios en la interfaz
+
+10:33 Cristóbal conecta los cambios realizados por Danko en el backend
+
+10:47 Cristóbal modifica el funcionamiento del gps para que se en la pagina se actualice
+
+10:56 Cristóbal realiza cambios para el gps
+
+11:03 Danko esta arreglando problemas con el reposit
+
+10:06 Cristóbal empieza a trabajar en un sistema de triangulación para mejorar la detección de ubicación
+
+11:11 Cristóbal realiza refinamiento de la triangulación
+
+11:13 Danko arreglo de manera superficial el reposit, empieza a refinar el mapa y su contenido
+
+11:18 Cristóbal empieza a intentar realizar deploys para verlo desde el celular en netlify
+
+11:23 Esteban empieza a generar mediante chat gpt ejemplos e ideas de logos 
+
+11:26 Cristóbal empieza a solucionar el error de la ubicación en la aplicación
+
+11:29 se encuentra el error de la ubicación, el error tenia origen en el mapa virtual y la ubicación real, provocando que el usuario aparezca a una distancia no existente en el mapa virtual
+
+11:33 Cristóbal esta implementando la triangulación
+
+11:35 Danko empieza a realizar la divisin de interfazes (videntes y no videntes)
+
+11:40 Esteban busca nombres para la aplicación
+
+11:42 El equipo decide usar el nombre de "Orienta"
+
+11:46 El equipo se decide por un logo
+
+11:50 Danko y Cristóbal pushean sus partes respectivamente para subirlas al gitub 
+
+11:57 Cristóbal empieza las pruebas para saber si la triangulación se ejecuta con éxito
+
+12:06 Cristóbal esta realizando que las personas videntes, puedan ver a las no videntes en el mapa
+
+12:15 Cristóbal esta solucionando el error que no permite el funcionamiento optimo en iPhone
+
+12:25 se realizan pruebas físicas, dejando un dispositivo móvil y moviendo otro al rededor
+
+12:28 Danko termina la uia de los edificios y empieza a trabajar con un generador de rutas
+
+12:37 Danko sigue mejorando uia, Cristóbal empieza a cambiar los polos del gps
+
+12:40 Cristóbal intenta arreglar un error que provocaba que cuando el usuario no vidente se aleja, arrastra a la gente vidente.
+
+12:46 El sistema de ubicación funciono de manera perfecta la prueba fue un ÉXITO 
+
+12:51 Danko esta mejorando la legibilidad de las opciones de la aplicación
+
+12:56 Cristóbal esta  para permitir la descarga por progresive web app
+
+13:08 Danko empieza a limpiar el espacio utilizado eliminando opciones o diseños como intuitivos 
+
+13:14 Cristóbal esta finalizando la opción de descargar la app
+
+13:30 ---
+
+descanso/almuerzo 
+
+---13:50
+
+13:52 Cristóbal trabaja en que aparezca el logo al abrir la app
+
+14:04 Danko Esta refinando la interfaz para los no videntes
+
+14:09 Cristóbal cambia los datos como la velocidad, a un apartado extensible bajo un icono que es intuitivo
+
+14:13 Cristóbal y Danko pulen la interfaz
+
+14:19 Danko implemento botones default para buscar de manera intuitiva los edificios y Cristóbal simplifica la información en pantalla para no sobrecargar al usuario
+
+14:26 Cristóbal esta adaptando el responsive para adaptarlo a todos los dispositivos
+
+14:31 Error detectado, cuando una persona no vidente usa la herramienta de pedir ayuda, no le llega a personas videntes cercanas.
+
+14:45 arreglando errores pequeños, como que al usuario no vidente no se le actualiza la pantalla
+
+14:56 corrigiendo errores pequeños de sincronia
+
+El código esta "completo", Comenzando pruebas y testeos para asegurar todo, También empezar a crear el pitch y presentación.
+
+15:10 Se detecta un error que invierte el movimiento del usuario no vidente.
+
+15:15 Se corrige un error que invierte el movimiento del usuario no vidente.
+
+15:20 Se detecta otro error, al entrar a un edificio el usuario no vidente se congela.
+
+15:25 Se corrige el error, al entrar a un edificio el usuario no vidente se congela.
+
+15:40 Se detecta otro error, donde el no vidente viaja mucha mas distancia de la que debería
+
+15:46 Se corrige el error se realizan otros testeos
+
+16:18 Esteban Termina la documentación.

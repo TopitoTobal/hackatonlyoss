@@ -1,0 +1,58 @@
+10:19 primera prueba de backend: 
+
+observaciones: el gps funciona de manera correcta en la consola, sin embargo la pagina muestra empty
+
+estado de prueba: ok
+
+10:44 primera prueba de frontend: 
+
+observaciones: El mapa virtual se encuentra operativo y da las indicaciones, sin embargo se encuentra en ingles y realiza las indicaciones de manera poco intuitiva, de la siguiente manera: dirección "slash" direccion
+
+estado de prueba: mish
+
+10:57 segunda prueba de backend: 
+
+observaciones: el gps funciona de manera correcta en la consola también señala que el usuario esta en movimiento sin embargo no actualizaba la velocidad del usuario.
+
+estado de prueba: ok
+
+11:22 primera prueba de deloy: 
+
+observaciones: El diploy se logra el usuario aparece y el mapa tambien, sin embargo el usuario desaparece en el mapa al activar el gps
+
+estado de prueba: ok
+
+
+11:57 primera prueba de la triangulacion: 
+
+observaciones: Los usuarios videntes pueden ver a los no videntes, sin embargo no logra triangular entre usuarios.
+estado de prueba: ok
+
+12:17 detectamos que en iPhone no funciona
+
+12:25 se realizan pruebas físicas, dejando un dispositivo móvil y moviendo otro al rededor
+
+observación: El movimiento sucede en el lado contrario al que debería
+estado: Ok
+
+12:33 Se realiza prueba física de la aplicación
+
+Observaciones: El sistema todavía no ve bien los polos, pero se mueve síncrono a movimiento real
+Estado: ok
+
+12:46 El sistema de ubicación funciono de manera perfecta la prueba fue un ÉXITO 
+
+14:31 Error detectado, cuando una persona no vidente usa la herramienta de pedir ayuda, no le llega a personas videntes cercanas.
+
+14:45 arreglando errores pequeños, como que al usuario no vidente no se le actualiza la pantalla
+
+14:56 corrigiendo errores pequeños de sincronia
+
+14:46 Se realiza prueba física de la aplicación
+
+Observaciones: El sistema no se actualiza para el no vidente, todo lo demás funcina perfecto
+Estado: ok
+
+15:10 Se detecta un error que invierte el movimiento del usuario no vidente. corrigiéndolo
+
+15:20 Se detecta otro error, al entrar a un edificio el usuario no vidente se congela.

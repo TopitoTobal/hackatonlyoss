@@ -1,0 +1,18 @@
+ideas
+
+que la persona con discapacidad disponga de un botón central que le diga donde se encuentra en ese momento exacto, permitiendo que la persona de oriente siempre que lo necesite.	
+
+que el mismo botón realice un centralizado en donde la persona de encuentra, también que cuente con zoom adaptable según si esta en interior o exterior
+
+cuando el usuario con discapacidad visual se encuentre cerca de una pared, o se separe del camino el celular vibre para que se detenga y sigas las nuevas instrucciones 
+
+que el usuario pueda decir el destino al que quiere llegar
+
+que el mapa cambie de ruta si es que una ruta esta bloqueada
+
+
+
+
+ideas de nombre:
+1- blindmap
+2- orienta
