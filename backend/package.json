@@ -1,0 +1,12 @@
+{
+  "name": "@hackatonlyoss/gps",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+  "description": "Módulo de GPS, movimiento, geofencing y GeoJSON para el mapa de movilización accesible.",
+  "peerDependencies": {
+    "expo-location": "*",
+    "expo-task-manager": "*",
+    "react-native": "*"
+  }
+}
