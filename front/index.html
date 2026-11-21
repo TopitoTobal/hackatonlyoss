@@ -1668,17 +1668,19 @@ window.setAyuda = (activo) => {
 
 function recibirPresencia(mensaje) {
   if (!mensaje || mensaje.id === PRESENCIA.id) return;
-  if (!Number.isFinite(mensaje.lat) || !Number.isFinite(mensaje.lng)) return;
   const observador = mensaje.id;
+  const conGeo = Number.isFinite(mensaje.lat) && Number.isFinite(mensaje.lng);
   PRESENCIA.roles.set(observador, mensaje.rol);
   const mapa = PRESENCIA.observaciones.get(observador) || new Map();
-  mapa.set(observador, {
-    lat: mensaje.lat,
-    lng: mensaje.lng,
-    acc: Number.isFinite(mensaje.acc) ? mensaje.acc : 15,
-    propio: true,
-    ts: mensaje.ts || Date.now(),
-  });
+  if (conGeo) {
+    mapa.set(observador, {
+      lat: mensaje.lat,
+      lng: mensaje.lng,
+      acc: Number.isFinite(mensaje.acc) ? mensaje.acc : 15,
+      propio: true,
+      ts: mensaje.ts || Date.now(),
+    });
+  }
   for (const o of (Array.isArray(mensaje.obs) ? mensaje.obs : [])) {
     if (!o || o.id === observador || o.id === PRESENCIA.id) continue;
     if (!Number.isFinite(o.lat) || !Number.isFinite(o.lng)) continue;
@@ -1700,8 +1702,11 @@ function recibirPresencia(mensaje) {
       lng: mensaje.lng,
       acc: Number.isFinite(mensaje.acc) ? mensaje.acc : 15,
       rol: mensaje.rol,
-      x: 0,
-      y: 0,
+      x: Number.isFinite(mensaje.x) ? mensaje.x : dot.x,
+      y: Number.isFinite(mensaje.y) ? mensaje.y : dot.y,
+      lat: conGeo ? mensaje.lat : null,
+      lng: conGeo ? mensaje.lng : null,
+      acc: Number.isFinite(mensaje.acc) ? mensaje.acc : 15,
       accFus: Number.isFinite(mensaje.acc) ? mensaje.acc : 15,
       n: 1,
       edificio: null,
@@ -1812,7 +1817,8 @@ setInterval(() => {
   for (const [id, p] of PRESENCIA.pares) {
     if (Date.now() - p.ts > 12000) PRESENCIA.pares.delete(id);
   }
-  if (PRESENCIA.pares.size !== antes) { pintarPares(); actualizarPresencia(); }
+  if (PRESENCIA.pares.size !== antes) actualizarPresencia();
+  pintarPares();
   for (const [observador, mapa] of PRESENCIA.observaciones) {
     for (const [id, o] of mapa) {
       if (Date.now() - o.ts > 20000) mapa.delete(id);
@@ -1888,6 +1894,7 @@ window.setUserPosition = (x, y, geo) => {
   PRESENCIA.x = dot.x;
   PRESENCIA.y = dot.y;
   recalcularPares();
+  pintarPares();
   verificarInteriorAuto();
   publicarPresencia();
   publicarAyuda();
