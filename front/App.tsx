@@ -51,6 +51,14 @@ function rutaActual(): string | undefined {
   return (globalThis as any).location?.pathname as string | undefined
 }
 
+function busquedaActual(): string | undefined {
+  return (globalThis as any).location?.search as string | undefined
+}
+
+function modoActual(): Modo | null {
+  return modoDeRuta(rutaActual(), busquedaActual())
+}
+
 /* Voz en web y aviso para lectores de pantalla en todas las plataformas. */
 function hablar(texto: string) {
   AccessibilityInfo.announceForAccessibility(texto)
@@ -121,7 +129,7 @@ export default function App() {
   const trackerRef = useRef<ForegroundTracker | null>(null)
   const monitorRef = useRef<SafetyMonitor | null>(null)
 
-  const [modo, setModo] = useState<Modo | null>(() => modoDeRuta(rutaActual()))
+  const [modo, setModo] = useState<Modo | null>(() => modoActual())
   const [punto, setPunto] = useState<PuntoPlano>({
     x: PLANO.centroX,
     y: PLANO.centroY,
@@ -137,7 +145,7 @@ export default function App() {
   useEffect(() => {
     const win: any = globalThis as any
     if (!win.addEventListener) return
-    const alCambiar = () => setModo(modoDeRuta(rutaActual()))
+    const alCambiar = () => setModo(modoActual())
     win.addEventListener('popstate', alCambiar)
     return () => win.removeEventListener('popstate', alCambiar)
   }, [])

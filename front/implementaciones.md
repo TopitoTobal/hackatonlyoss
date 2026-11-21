@@ -104,13 +104,16 @@ Hay un `netlify.toml` en la raíz. Netlify ejecuta `npm run build` en la raíz
 La portada (equivalente a `index (4).html`) vive en `/`: pregunta si la persona
 es vidente o no vidente y **no pide GPS** hasta que elige. Los enlaces llevan a:
 
-- `/vidente/index.html` → mapa visual, voz automática desactivada.
-- `/no-vidente/index.html` → mismo mapa con voz automática activada.
+- `/vidente/index.html` → redirige a `/?modo=vidente`: mapa visual, voz
+  automática desactivada.
+- `/no-vidente/index.html` → redirige a `/?modo=no-vidente`: mismo mapa con voz
+  automática activada.
 
-`netlify.toml` redirige cualquier ruta a `/index.html`, así que esos dos URLs
-cargan la app Expo y `App.tsx` decide qué modo mostrar leyendo
-`location.pathname`. El botón **← Modo** vuelve a la portada y el historial del
-navegador funciona con `popstate`. `Mapa.tsx` / `Mapa.web.tsx` envían al iframe
+Los dos archivos de redirección viven en `front/public/` y Expo los copia al
+`dist`, así que también funcionan en el servidor de desarrollo. `App.tsx` lee
+el modo de `location.search` (y también acepta `location.pathname` como
+compatibilidad). El botón **← Modo** vuelve a `/` y el historial funciona con
+`popstate`. `Mapa.tsx` / `Mapa.web.tsx` envían al iframe
 un mensaje `{ type: 'modo', modo }` antes de la primera posición GPS; el mapa
 ajusta `autoVoice` según el modo y el botón "Voz automática" sigue pudiendo
 cambiarlo.
