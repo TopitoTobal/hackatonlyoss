@@ -1392,6 +1392,10 @@ function recalcularPares() {
     if (!punto) return;
     p.x = punto.x;
     p.y = punto.y;
+    /* Guardamos también el geo crudo: la distancia real no debe depender
+       del ancla local de cada celular (dos anclas con error se restan). */
+    p.lat = f.lat;
+    p.lng = f.lng;
     p.accFus = f.acc;
     p.n = f.n;
     p.edificio = edificioEn(punto.x, punto.y);
@@ -1807,7 +1811,12 @@ function pintarPares() {
     texto.setAttribute('font-size', 14 / z);
     texto.setAttribute('font-weight', '800');
     texto.setAttribute('fill', '#4c1d95');
-    const dist = Math.round(Math.hypot(p.x - dot.x, p.y - dot.y) * METROS_POR_PIXEL);
+    const yoFus = PRESENCIA.filtro.get(PRESENCIA.id);
+    /* Haversine sobre lat/lng: así el error del ancla de cada dispositivo
+       no se suma a la distancia que se le muestra al vidente. */
+    const dist = yoFus && Number.isFinite(p.lat) && Number.isFinite(p.lng)
+      ? Math.round(distM(yoFus, p))
+      : Math.round(Math.hypot(p.x - dot.x, p.y - dot.y) * METROS_POR_PIXEL);
     texto.textContent = p.etiqueta + (z >= 2 ? ' · ' + dist + ' m' : '') +
       (p.n > 1 ? ' · ' + p.n + ' señales' : '');
     capa.appendChild(circulo);

@@ -684,7 +684,12 @@ type SafetyAlert = {
   emitiendo (para que la UI no se quede frozen), pero no cuentan para la ruta
   ni las estadísticas; vienen con `isAccurate: false`. El mapa además
   publica los que están hasta 150 m para que los demás usuarios vean el
-  movimiento aunque la persona esté dentro de un edificio.
+  movimiento aunque la persona esté dentro de un edificio, pero antes
+  `suavizarMuestra()` limita el salto a 2,5 m/s + 3 m de margen y pondera
+  la corrección según la precisión. Así un fix ruidoso no se publica como
+  un teletransporte de 150 m. La distancia que ve el vidente se calcula con
+  haversine sobre lat/lng (no sobre el plano local), para que el error del
+  ancla de cada celular no inflé la separación real.
 - La velocidad se calcula en **m/s**; multiplica por 3.6 para km/h
   (`formatSpeed()` ya lo hace).
 - En iOS la vibración puede no producirse con modo de bajo consumo, Taptic
