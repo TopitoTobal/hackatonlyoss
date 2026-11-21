@@ -87,12 +87,14 @@ window.registrarGeneradorRutas(function (args) {
 
 También se detectan `window.generarRuta`, `window.generarRutaHacia` y
 `window.rutas.generar`, con las mismas dos firmas aceptadas
-(`fn({ desde, hasta })` o `fn(desde, hasta)`). Si ninguno está disponible,
-`rutaPorSenderos()` arma un grafo con los 51 vértices de los senderos del plano
-(`g[stroke="#475569"] path`), hace Dijkstra y une el punto propio y el destino
-con el camino más corto; así la función ya funciona antes de que llegue el
-módulo de Danko. El hook y el fallback viven en `front/index.html`; no hay que
-cambiar el contrato de `postMessage`.
+(`fn({ desde, hasta })` o `fn(desde, hasta)`). **Con el módulo de Danko ya
+subido**, `rutaHaciaPunto()` usa preferentemente su grafo (`GRAFO` y
+`mejorRuta()`): elige el nodo más cercano a la persona que pidió ayuda y
+concatena el destino real, así el recorrido va por los mismos senderos que la
+ruta azul a edificios. El gancho `window.registrarGeneradorRutas(fn)` sigue
+disponible para un generator externo. Como respaldo final, `rutaPorSenderos()`
+arma un grafo con los vértices de `g[stroke="#475569"] path` y hace Dijkstra.
+El contrato de `postMessage` no cambia.
 
 La precisión se fusiona entre pares siguiendo el RFC, con un **árbol de
 confianza** que evita el arrastre entre personas:
@@ -138,6 +140,77 @@ con una barra de escala métrica arriba a la izquierda. Al acercar, cada par
 muestra un anillo discontinuo con su precisión GPS (`accuracyM`) y la distancia
 al punto propio en metros. Con esto el salón de la hackathon se puede
 inspeccionar a pocos metros (de 1 a 10 m por píxel de pantalla según el zoom).
+
+## Instalación como app web (PWA)
+
+Para no depender de compilar el APK, el export web queda listo para
+**instalar desde el navegador** como una app más en el teléfono.
+
+- `front/public/manifest.webmanifest`: nombre `Campus Accesible · UTFSM`,
+  `display: standalone`, orientación vertical, colores del mapa e íconos
+  192/512 px con `purpose: any maskable`.
+- `front/public/icon-192.png`, `icon-180.png` e `icon-512.png`: generados con
+  `python3 front/scripts/generate-icons.py` (pin morado + insignia roja de
+  ayuda). El ícono de 180 px es el `apple-touch-icon`.
+- `front/public/sw.js`: service worker con caché del cascarón
+  (`/`, `/index.html`, manifest e íconos). La navegación usa red primero y el
+  `index.html` cacheado como respaldo; los assets usan caché primero. MQTT/WSS
+  no se intercepta.
+- `front/scripts/postbuild-web.js`: después de `expo export` inyecta en los
+  `index.html` de `front/dist` el `<link rel="manifest">`, los meta de tema,
+  el `apple-touch-icon`, los `apple-touch-startup-image`, el título en español
+  y el registro del service worker. Se ejecuta solo desde
+  `npm --prefix front run build:web`, así que Netlify (`npm run build` en la
+  raíz) lo incluye sin cambios.
+
+#### Splash
+
+Los splash tienen **fondo blanco**, la palabra **Orienta** con las letras en
+amarillo/rojo/azul (`#f59e0b`, `#b91c1c`, `#1d4ed8`) y el subtítulo
+`Campus accesible · UTFSM`. Se generan con
+`python3 front/scripts/generate-splash.py` en cuatro tamaños:
+`1242x2688`, `1284x2778`, `1290x2796` (iOS) y `1080x1920` (Android/nativo).
+
+El script busca una foto del app en `front/public/splash-foto.webp` (también
+acepta `.png`, `.jpg` o `.jpeg`), la mete centrada con bordes redondeados y
+compone el texto debajo. Si no hay foto, dibuja un pin morado de respaldo para
+que el build nunca falle. Para usar la foto real: copiarla a esa ruta, correr
+el generador y `npm --prefix front run build:web`. `front/app.json` apunta el
+splash nativo a `public/splash-1080x1920.png` con fondo blanco.
+
+Además del splash del sistema, `front/App.tsx` muestra un **splash interno**
+durante 1,8 s apenas se abre la app, **antes de elegir vidente o no vidente**
+(en web y en nativo), con el mismo PNG `/splash-1080x1920.png`. Se puede tocar
+para saltarlo. El `<Splash />` está en el `View` raíz, por fuera del condicional
+de modo, para que cubra también la pantalla de selección. Esto evita el problema
+de que una PWA **ya instalada** conserva el `apple-touch-startup-image` con el
+que se instaló: el overlay siempre muestra la versión nueva. El service worker
+subió a `campus-accesible-v3` y ahora cachea también el splash y la foto con
+un URL versionado (`/splash-1080x1920.png?v=3`), para que un PWA instalado con
+el pin de respaldo no siga sirviendo esa imagen vieja desde el caché.
+
+Si el splash del sistema no cambia después de un deploy, hay que **borrar la
+app de la pantalla de inicio y volver a agregarla** (iOS guarda ese archivo al
+instalar). El splash interno, en cambio, aparece con solo recargar.
+
+En **Android**, Chrome no usa un PNG de splash: pinta el fondo con
+`theme_color` del manifest y encima el ícono. Por eso `theme_color` y
+`background_color` son `#ffffff`; el splash con la foto y la palabra Orienta
+lo aporta el overlay interno de `App.tsx`, que se ve después del splash de
+Chrome. Si la PWA ya estaba instalada, hay que desinstalarla y volver a
+instalarla desde la URL de Netlify para que Chrome tome el manifest nuevo.
+
+En la portada aparece el botón **Instalar app web**:
+
+- En Chrome/Android dispara el prompt nativo `beforeinstallprompt`.
+- En iOS Safari muestra: *Compartir → Agregar a pantalla de inicio*. No se
+  puede disparar el prompt desde JS en Safari, por eso son instrucciones.
+
+Después de instalar se abre en pantalla completa, sin barras del navegador, y
+sigue pidiendo ubicación por HTTPS igual que la web. Requiere Netlify (o
+cualquier servidor HTTPS): el service worker y la geolocalización no funcionan
+por `http://IP-local`. Si el usuario ya tiene la pestaña abierta, debe recargar
+una vez después de cada deploy para tomar el service worker nuevo.
 
 ### Accesibilidad y responsive
 

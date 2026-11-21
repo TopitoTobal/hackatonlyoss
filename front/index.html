@@ -1318,6 +1318,23 @@ function rutaHaciaPunto(desde, hasta) {
       return puntos.map((q) => ({ x: q.x, y: q.y }));
     }
   }
+  /* El grafo de Danko (mejorRuta/GRAFO) es la fuente preferida: la ruta de
+     ayuda usa exactamente los mismos senderos que la ruta a edificios. */
+  if (typeof mejorRuta === 'function' && typeof GRAFO !== 'undefined' && GRAFO.nodos.length) {
+    let destino = -1, menor = Infinity;
+    GRAFO.nodos.forEach((n, i) => {
+      const d = Math.hypot(n.x - hasta.x, n.y - hasta.y);
+      if (d < menor) { menor = d; destino = i; }
+    });
+    if (destino >= 0) {
+      const r = mejorRuta(destino);
+      if (r && Array.isArray(r.puntos) && r.puntos.length) {
+        return [{ x: desde.x, y: desde.y }]
+          .concat(r.puntos.map((q) => ({ x: q.x, y: q.y })))
+          .concat([{ x: hasta.x, y: hasta.y }]);
+      }
+    }
+  }
   return rutaPorSenderos(desde, hasta);
 }
 window.registrarGeneradorRutas = (fn) => {

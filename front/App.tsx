@@ -7,6 +7,7 @@ import * as Location from 'expo-location'
 import { useEffect, useRef, useState } from 'react'
 import {
   AccessibilityInfo,
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -145,7 +146,90 @@ function Selector({
           <Text style={styles.escucharTexto}>Escuchar las opciones</Text>
         </View>
       </Pressable>
+
+      <InstalarWeb />
     </View>
+  )
+}
+
+/* Instalación como app web (PWA). En Chrome/Android usamos el prompt nativo;
+   en iOS Safari mostramos las instrucciones de “Agregar a pantalla de inicio”. */
+function InstalarWeb() {
+  const [evento, setEvento] = useState<any>(null)
+  const [instrucciones, setInstrucciones] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.addEventListener) return
+    const alAntes = (e: Event) => {
+      e.preventDefault()
+      setEvento(e)
+    }
+    window.addEventListener('beforeinstallprompt', alAntes)
+    return () => window.removeEventListener('beforeinstallprompt', alAntes)
+  }, [])
+
+  if (typeof document === 'undefined') return null
+
+  const esIOS =
+    typeof navigator !== 'undefined' && /iPhone|iPad|iPod/.test(navigator.userAgent)
+
+  async function instalar() {
+    if (evento && typeof evento.prompt === 'function') {
+      await evento.prompt()
+      setEvento(null)
+      return
+    }
+    setInstrucciones(true)
+  }
+
+  return (
+    <View style={styles.instalar}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Instalar la app web en la pantalla de inicio"
+        onPress={() => void instalar()}
+        style={({ pressed }) => [
+          styles.instalarBoton,
+          pressed && styles.opcionPresionada,
+        ]}
+      >
+        <Text style={styles.instalarTexto}>
+          {evento ? 'Instalar app' : esIOS ? 'Cómo instalar en iPhone' : 'Instalar app web'}
+        </Text>
+      </Pressable>
+      {instrucciones && (
+        <Text style={styles.instalarAyuda} accessibilityLiveRegion="polite">
+          En Safari, toca Compartir → Agregar a pantalla de inicio. Luego ábrela
+          desde la pantalla de inicio: funciona como una app, sin APK.
+        </Text>
+      )}
+    </View>
+  )
+}
+
+/* Splash dentro de la app: el splash nativo del SO queda guardado al instalar
+   la PWA, así que una versión ya instalada no verá los cambios. Este overlay
+   usa el mismo PNG y se muestra siempre al abrir, en web y en nativo. */
+function Splash() {
+  const [visible, setVisible] = useState(true)
+  useEffect(() => {
+    const temporizador = setTimeout(() => setVisible(false), 1800)
+    return () => clearTimeout(temporizador)
+  }, [])
+  if (!visible || typeof document === 'undefined') return null
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Continuar a la app"
+      onPress={() => setVisible(false)}
+      style={styles.splash}
+    >
+      <Image
+        source={{ uri: '/splash-1080x1920.png?v=3' }}
+        style={styles.splashImagen}
+        resizeMode="contain"
+      />
+    </Pressable>
   )
 }
 
@@ -297,11 +381,14 @@ export default function App() {
     )
   }
 
-  if (!modo) return <Selector onElegir={irAModo} onPedirGPS={() => void pedirGPS()} />
-
   return (
-    <View style={styles.contenedor} accessibilityRole="main">
-      <StatusBar style="dark" />
+    <View style={styles.raiz}>
+      <Splash />
+      {!modo ? (
+        <Selector onElegir={irAModo} onPedirGPS={() => void pedirGPS()} />
+      ) : (
+        <View style={styles.contenedor} accessibilityRole="main">
+          <StatusBar style="dark" />
 
       <Mapa posicion={punto} modo={modo} ayuda={pidiendoAyuda} />
 
@@ -397,13 +484,58 @@ export default function App() {
                 : 'Sin petición de ayuda.'}
             </Text>
           )}
+          </View>
         </View>
-      </View>
+        </View>
+      )}
     </View>
   )
 }
 
 const styles = StyleSheet.create({
+  raiz: {
+    flex: 1,
+  },
+  splash: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 100,
+  },
+  splashImagen: {
+    width: '100%',
+    height: '100%',
+  },
+  instalar: {
+    marginTop: 10,
+    alignItems: 'center',
+    gap: 6,
+  },
+  instalarBoton: {
+    minHeight: 44,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#065f46',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  instalarTexto: {
+    color: '#065f46',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  instalarAyuda: {
+    color: '#334155',
+    fontSize: 13,
+    textAlign: 'center',
+    maxWidth: 320,
+  },
   selector: {
     flex: 1,
     backgroundColor: '#ffffff',
