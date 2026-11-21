@@ -5,6 +5,21 @@ Este archivo es el handoff para quien construye el mapa con Tailwind: aquí est�
 todo lo que ya puedes consumir desde `front/`. Todavía no hay código de mapa;
 este módulo solo produce datos.
 
+## Ver avances en local
+
+Ya hay una app Expo mínima en esta misma carpeta con un panel que muestra
+estado del GPS, última posición, estadísticas y alertas:
+
+```sh
+cd front
+npm install
+npm run dev
+```
+
+El servidor arranca en `http://localhost:19006` (opción **web**) y también
+puedes abrirlo en Android/iOS con `npm run android` / `npm run ios`.
+`App.tsx` es el punto de entrada; el mapa de Danko se conectará ahí.
+
 ---
 
 ## 1. Qué ya existe

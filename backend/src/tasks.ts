@@ -19,7 +19,7 @@ const canDefineTasks =
  * raíz de la app (por ejemplo `app/_layout.tsx`).
  */
 if (canDefineTasks && !TaskManager.isTaskDefined(BACKGROUND_LOCATION_TASK)) {
-  TaskManager.defineTask(BACKGROUND_LOCATION_TASK, ({ data, error }) => {
+  TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
     if (error) {
       console.warn('[gps] error en tarea de ubicación:', error.message)
       return
@@ -35,7 +35,7 @@ if (canDefineTasks && !TaskManager.isTaskDefined(BACKGROUND_LOCATION_TASK)) {
 }
 
 if (canDefineTasks && !TaskManager.isTaskDefined(GEOFENCING_TASK)) {
-  TaskManager.defineTask(GEOFENCING_TASK, ({ data, error }) => {
+  TaskManager.defineTask(GEOFENCING_TASK, async ({ data, error }) => {
     if (error) {
       console.warn('[gps] error en tarea de geofencing:', error.message)
       return
