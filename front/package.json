@@ -11,7 +11,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build": "npm run build:web",
-    "build:web": "expo export --platform web",
+    "build:web": "expo export --platform web && node scripts/postbuild-web.js",
     "build:mapa": "node scripts/generate-mapa.js"
   },
   "dependencies": {

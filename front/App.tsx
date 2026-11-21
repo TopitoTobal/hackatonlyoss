@@ -145,6 +145,63 @@ function Selector({
           <Text style={styles.escucharTexto}>Escuchar las opciones</Text>
         </View>
       </Pressable>
+
+      <InstalarWeb />
+    </View>
+  )
+}
+
+/* Instalación como app web (PWA). En Chrome/Android usamos el prompt nativo;
+   en iOS Safari mostramos las instrucciones de “Agregar a pantalla de inicio”. */
+function InstalarWeb() {
+  const [evento, setEvento] = useState<any>(null)
+  const [instrucciones, setInstrucciones] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.addEventListener) return
+    const alAntes = (e: Event) => {
+      e.preventDefault()
+      setEvento(e)
+    }
+    window.addEventListener('beforeinstallprompt', alAntes)
+    return () => window.removeEventListener('beforeinstallprompt', alAntes)
+  }, [])
+
+  if (typeof document === 'undefined') return null
+
+  const esIOS =
+    typeof navigator !== 'undefined' && /iPhone|iPad|iPod/.test(navigator.userAgent)
+
+  async function instalar() {
+    if (evento && typeof evento.prompt === 'function') {
+      await evento.prompt()
+      setEvento(null)
+      return
+    }
+    setInstrucciones(true)
+  }
+
+  return (
+    <View style={styles.instalar}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Instalar la app web en la pantalla de inicio"
+        onPress={() => void instalar()}
+        style={({ pressed }) => [
+          styles.instalarBoton,
+          pressed && styles.opcionPresionada,
+        ]}
+      >
+        <Text style={styles.instalarTexto}>
+          {evento ? 'Instalar app' : esIOS ? 'Cómo instalar en iPhone' : 'Instalar app web'}
+        </Text>
+      </Pressable>
+      {instrucciones && (
+        <Text style={styles.instalarAyuda} accessibilityLiveRegion="polite">
+          En Safari, toca Compartir → Agregar a pantalla de inicio. Luego ábrela
+          desde la pantalla de inicio: funciona como una app, sin APK.
+        </Text>
+      )}
     </View>
   )
 }
@@ -404,6 +461,31 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  instalar: {
+    marginTop: 10,
+    alignItems: 'center',
+    gap: 6,
+  },
+  instalarBoton: {
+    minHeight: 44,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#065f46',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  instalarTexto: {
+    color: '#065f46',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  instalarAyuda: {
+    color: '#334155',
+    fontSize: 13,
+    textAlign: 'center',
+    maxWidth: 320,
+  },
   selector: {
     flex: 1,
     backgroundColor: '#ffffff',

@@ -139,6 +139,39 @@ muestra un anillo discontinuo con su precisión GPS (`accuracyM`) y la distancia
 al punto propio en metros. Con esto el salón de la hackathon se puede
 inspeccionar a pocos metros (de 1 a 10 m por píxel de pantalla según el zoom).
 
+## Instalación como app web (PWA)
+
+Para no depender de compilar el APK, el export web queda listo para
+**instalar desde el navegador** como una app más en el teléfono.
+
+- `front/public/manifest.webmanifest`: nombre `Campus Accesible · UTFSM`,
+  `display: standalone`, orientación vertical, colores del mapa e íconos
+  192/512 px con `purpose: any maskable`.
+- `front/public/icon-192.png`, `icon-180.png` e `icon-512.png`: generados con
+  `python3 front/scripts/generate-icons.py` (pin morado + insignia roja de
+  ayuda). El ícono de 180 px es el `apple-touch-icon`.
+- `front/public/sw.js`: service worker con caché del cascarón
+  (`/`, `/index.html`, manifest e íconos). La navegación usa red primero y el
+  `index.html` cacheado como respaldo; los assets usan caché primero. MQTT/WSS
+  no se intercepta.
+- `front/scripts/postbuild-web.js`: después de `expo export` inyecta en los
+  `index.html` de `front/dist` el `<link rel="manifest">`, los meta de tema,
+  el `apple-touch-icon`, el título en español y el registro del service worker.
+  Se ejecuta solo desde `npm --prefix front run build:web`, así que Netlify
+  (`npm run build` en la raíz) lo incluye sin cambios.
+
+En la portada aparece el botón **Instalar app web**:
+
+- En Chrome/Android dispara el prompt nativo `beforeinstallprompt`.
+- En iOS Safari muestra: *Compartir → Agregar a pantalla de inicio*. No se
+  puede disparar el prompt desde JS en Safari, por eso son instrucciones.
+
+Después de instalar se abre en pantalla completa, sin barras del navegador, y
+sigue pidiendo ubicación por HTTPS igual que la web. Requiere Netlify (o
+cualquier servidor HTTPS): el service worker y la geolocalización no funcionan
+por `http://IP-local`. Si el usuario ya tiene la pestaña abierta, debe recargar
+una vez después de cada deploy para tomar el service worker nuevo.
+
 ### Accesibilidad y responsive
 
 - El mapa tiene un `<h1>` oculto, instrucciones para lectores de pantalla
