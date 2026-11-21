@@ -1290,7 +1290,7 @@ function rutaPorSenderos(desde, hasta) {
   }
   return [desde, ...puntos, hasta];
 }
-function generarRuta(desde, hasta) {
+function rutaHaciaPunto(desde, hasta) {
   const candidatos = [
     GENERADOR_RUTAS.fn,
     window.generarRuta,
@@ -1357,7 +1357,7 @@ function generarRutaAyuda() {
   if (!objetivo) return;
   RUTA_AYUDA.activa = true;
   RUTA_AYUDA.id = objetivo.id;
-  RUTA_AYUDA.puntos = generarRuta({ x: dot.x, y: dot.y }, { x: objetivo.x, y: objetivo.y });
+  RUTA_AYUDA.puntos = rutaHaciaPunto({ x: dot.x, y: dot.y }, { x: objetivo.x, y: objetivo.y });
   pintarRutaAyuda();
   actualizarAyudaBanner();
   announce('Ruta generada hacia ' + objetivo.id + '. ' +
@@ -1367,7 +1367,7 @@ function recalcularRutaAyuda() {
   if (!RUTA_AYUDA.activa) return;
   const objetivo = AYUDA.pidiendo.get(RUTA_AYUDA.id);
   if (!objetivo) { limpiarRutaAyuda(); return; }
-  RUTA_AYUDA.puntos = generarRuta({ x: dot.x, y: dot.y }, { x: objetivo.x, y: objetivo.y });
+  RUTA_AYUDA.puntos = rutaHaciaPunto({ x: dot.x, y: dot.y }, { x: objetivo.x, y: objetivo.y });
   pintarRutaAyuda();
 }
 
