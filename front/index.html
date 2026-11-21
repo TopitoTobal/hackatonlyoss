@@ -260,6 +260,7 @@
 
     <!-- Personas no videntes conectadas: solo se dibujan en modo vidente -->
     <svg width="1312" height="985" viewBox="0 0 1312 985" aria-hidden="true" class="pointer-events-none absolute left-0 top-0">
+      <g id="rutaLayer"></g>
       <g id="peerLayer"></g>
       <g id="ayudaLayer"></g>
     </svg>
@@ -283,7 +284,13 @@
 </div>
 <div id="scaleBar"><span id="scaleText">20 m</span></div>
 <div id="ayudaBanner" role="status" aria-live="assertive" aria-atomic="true"
-     class="hidden rounded-full border-[3px] border-black bg-red-700 px-3 py-2 text-[14px] font-extrabold text-white">
+     class="hidden items-center gap-2 rounded-full border-[3px] border-black bg-red-700 px-3 py-2 text-[14px] font-extrabold text-white">
+  <span id="ayudaTexto"></span>
+  <button id="btnIrAyuda" type="button"
+          aria-label="Generar una ruta para ir a ayudar a la persona que pidió ayuda"
+          class="hidden min-h-11 rounded-lg border-2 border-black bg-white px-2 text-[13px] font-extrabold text-red-700">
+    Ir a ayudar
+  </button>
 </div>
 
 <!-- Panel que aparece al elegir un edificio -->
@@ -618,6 +625,11 @@ const AYUDA = {
   ultimoEnvio: 0,
   pidiendo: new Map(),
 };
+/* Ruta del vidente hacia quien pidió ayuda. Danko puede registrar su
+   generador con window.registrarGeneradorRutas(fn); si no, usamos la red
+   de senderos dibujada en el plano. */
+const RUTA_AYUDA = { activa: false, id: null, puntos: [] };
+const GENERADOR_RUTAS = { fn: null };
 
 function bytesTexto(texto) { return new TextEncoder().encode(texto); }
 function mqttTexto(texto) {
@@ -898,6 +910,151 @@ function verificarInteriorAuto() {
     }
   }
 }
+function construirRedCaminos() {
+  const nodos = [];
+  const indice = new Map();
+  function nodo(x, y) {
+    const clave = Math.round(x) + ':' + Math.round(y);
+    if (!indice.has(clave)) {
+      indice.set(clave, nodos.length);
+      nodos.push({ x, y, vecinos: [] });
+    }
+    return indice.get(clave);
+  }
+  document.querySelectorAll('g[stroke="#475569"] path').forEach((p) => {
+    const d = p.getAttribute('d') || '';
+    const pts = [...d.matchAll(/[ML]\s*(-?[\d.]+)[ ,]+(-?[\d.]+)/g)]
+      .map((m) => ({ x: Number(m[1]), y: Number(m[2]) }));
+    for (let i = 0; i < pts.length; i++) {
+      const a = nodo(pts[i].x, pts[i].y);
+      if (i > 0) {
+        const b = nodo(pts[i - 1].x, pts[i - 1].y);
+        const w = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+        nodos[a].vecinos.push({ i: b, w });
+        nodos[b].vecinos.push({ i: a, w });
+      }
+    }
+  });
+  return nodos;
+}
+const RED_CAMINOS = construirRedCaminos();
+function indiceCercano(p) {
+  let mejor = -1, menor = Infinity;
+  RED_CAMINOS.forEach((n, i) => {
+    const d = Math.hypot(n.x - p.x, n.y - p.y);
+    if (d < menor) { menor = d; mejor = i; }
+  });
+  return mejor;
+}
+function rutaPorSenderos(desde, hasta) {
+  if (RED_CAMINOS.length < 2) return [desde, hasta];
+  const inicio = indiceCercano(desde), fin = indiceCercano(hasta);
+  if (inicio < 0 || fin < 0) return [desde, hasta];
+  const dist = RED_CAMINOS.map(() => Infinity);
+  const prev = RED_CAMINOS.map(() => null);
+  const visitado = new Set();
+  dist[inicio] = 0;
+  while (visitado.size < RED_CAMINOS.length) {
+    let actual = -1, menor = Infinity;
+    for (let i = 0; i < dist.length; i++) {
+      if (!visitado.has(i) && dist[i] < menor) { menor = dist[i]; actual = i; }
+    }
+    if (actual < 0 || !Number.isFinite(menor)) break;
+    if (actual === fin) break;
+    visitado.add(actual);
+    for (const v of RED_CAMINOS[actual].vecinos) {
+      const alternativa = dist[actual] + v.w;
+      if (alternativa < dist[v.i]) { dist[v.i] = alternativa; prev[v.i] = actual; }
+    }
+  }
+  if (!Number.isFinite(dist[fin])) return [desde, hasta];
+  const puntos = [];
+  for (let at = fin; at !== null && at !== undefined; at = prev[at]) {
+    puntos.unshift({ x: RED_CAMINOS[at].x, y: RED_CAMINOS[at].y });
+  }
+  return [desde, ...puntos, hasta];
+}
+function generarRuta(desde, hasta) {
+  const candidatos = [
+    GENERADOR_RUTAS.fn,
+    window.generarRuta,
+    window.generarRutaHacia,
+    window.rutas && window.rutas.generar,
+  ];
+  for (const fn of candidatos) {
+    if (typeof fn !== 'function') continue;
+    let resultado = null;
+    try {
+      resultado = fn({ desde: { ...desde }, hasta: { ...hasta } });
+    } catch (e) {
+      try { resultado = fn({ ...desde }, { ...hasta }); } catch (e2) { resultado = null; }
+    }
+    const puntos = Array.isArray(resultado)
+      ? resultado
+      : (resultado && (resultado.puntos || resultado.points));
+    if (Array.isArray(puntos) && puntos.length >= 2 &&
+        puntos.every((q) => Number.isFinite(q.x) && Number.isFinite(q.y))) {
+      return puntos.map((q) => ({ x: q.x, y: q.y }));
+    }
+  }
+  return rutaPorSenderos(desde, hasta);
+}
+window.registrarGeneradorRutas = (fn) => {
+  if (typeof fn === 'function') GENERADOR_RUTAS.fn = fn;
+};
+function pintarRutaAyuda() {
+  const capa = $('rutaLayer');
+  if (!capa) return;
+  capa.textContent = '';
+  if (!RUTA_AYUDA.activa || RUTA_AYUDA.puntos.length < 2) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const linea = document.createElementNS(NS, 'polyline');
+  linea.setAttribute('points', RUTA_AYUDA.puntos.map((q) => q.x + ',' + q.y).join(' '));
+  linea.setAttribute('fill', 'none');
+  linea.setAttribute('stroke', '#b91c1c');
+  linea.setAttribute('stroke-width', Math.max(4, 12 / z));
+  linea.setAttribute('stroke-linecap', 'round');
+  linea.setAttribute('stroke-linejoin', 'round');
+  linea.setAttribute('stroke-dasharray', (18 / z) + ' ' + (10 / z));
+  const titulo = document.createElementNS(NS, 'title');
+  titulo.textContent = 'Ruta para ir a ayudar a ' + RUTA_AYUDA.id;
+  linea.appendChild(titulo);
+  capa.appendChild(linea);
+}
+function limpiarRutaAyuda() {
+  RUTA_AYUDA.activa = false;
+  RUTA_AYUDA.id = null;
+  RUTA_AYUDA.puntos = [];
+  pintarRutaAyuda();
+}
+function objetivoAyudaMasCercano() {
+  let mejor = null, menor = Infinity;
+  AYUDA.pidiendo.forEach((a) => {
+    const d = Math.hypot(a.x - dot.x, a.y - dot.y);
+    if (d < menor) { menor = d; mejor = a; }
+  });
+  return mejor;
+}
+function generarRutaAyuda() {
+  if (PRESENCIA.rol !== 'vidente') return;
+  const objetivo = objetivoAyudaMasCercano();
+  if (!objetivo) return;
+  RUTA_AYUDA.activa = true;
+  RUTA_AYUDA.id = objetivo.id;
+  RUTA_AYUDA.puntos = generarRuta({ x: dot.x, y: dot.y }, { x: objetivo.x, y: objetivo.y });
+  pintarRutaAyuda();
+  actualizarAyudaBanner();
+  announce('Ruta generada hacia ' + objetivo.id + '. ' +
+    direccionHacia(objetivo.x, objetivo.y) + '. Sigue la línea roja.');
+}
+function recalcularRutaAyuda() {
+  if (!RUTA_AYUDA.activa) return;
+  const objetivo = AYUDA.pidiendo.get(RUTA_AYUDA.id);
+  if (!objetivo) { limpiarRutaAyuda(); return; }
+  RUTA_AYUDA.puntos = generarRuta({ x: dot.x, y: dot.y }, { x: objetivo.x, y: objetivo.y });
+  pintarRutaAyuda();
+}
+
 function direccionHacia(x, y) {
   const dx = x - dot.x, dy = y - dot.y, dist = Math.hypot(dx, dy);
   if (dist < 40) return 'junto a ti';
@@ -932,6 +1089,7 @@ function recibirAyuda(mensaje) {
   const id = String(mensaje.id).slice(0, 12);
   if (!mensaje.activo) {
     if (AYUDA.pidiendo.delete(id)) {
+      if (RUTA_AYUDA.id === id) limpiarRutaAyuda();
       announce('La petición de ayuda de ' + id + ' fue cancelada.');
     }
   } else if (PRESENCIA.rol === 'vidente') {
@@ -978,12 +1136,15 @@ function pintarAyudas() {
 }
 function actualizarAyudaBanner() {
   const banner = $('ayudaBanner');
-  if (!banner) return;
+  const texto = $('ayudaTexto');
+  const boton = $('btnIrAyuda');
+  if (!banner || !texto || !boton) return;
+  boton.classList.add('hidden');
   if (PRESENCIA.rol === 'no-vidente' && AYUDA.activo) {
     banner.classList.remove('hidden');
     banner.classList.remove('bg-red-700');
     banner.classList.add('bg-purple-800');
-    banner.textContent = 'Tu petición de ayuda está activa. Los videntes pueden verte.';
+    texto.textContent = 'Tu petición de ayuda está activa. Los videntes pueden verte.';
     return;
   }
   if (PRESENCIA.rol !== 'vidente' || AYUDA.pidiendo.size === 0) {
@@ -993,15 +1154,22 @@ function actualizarAyudaBanner() {
   banner.classList.remove('hidden');
   banner.classList.remove('bg-purple-800');
   banner.classList.add('bg-red-700');
-  const texto = [...AYUDA.pidiendo.values()]
+  banner.classList.add('items-center');
+  const lista = [...AYUDA.pidiendo.values()]
     .map((a) => a.id + ' ' + direccionHacia(a.x, a.y))
     .join(' · ');
-  banner.textContent = 'Pedido de ayuda: ' + texto;
+  texto.textContent = RUTA_AYUDA.activa
+    ? 'Ruta hacia ' + RUTA_AYUDA.id + ': ' + lista
+    : 'Pedido de ayuda: ' + lista;
+  boton.classList.remove('hidden');
+  boton.textContent = RUTA_AYUDA.activa ? 'Ver ruta' : 'Ir a ayudar';
 }
+$('btnIrAyuda')?.addEventListener('click', generarRutaAyuda);
 window.setAyuda = (activo) => {
   const nuevo = !!activo;
   if (nuevo === AYUDA.activo) return;
   AYUDA.activo = nuevo;
+  if (!nuevo) limpiarRutaAyuda();
   publicarAyuda(true);
   actualizarAyudaBanner();
   if (nuevo) announce('Petición de ayuda enviada a las personas videntes.');
@@ -1144,7 +1312,10 @@ setInterval(() => {
   publicarAyuda();
   const antesAyuda = AYUDA.pidiendo.size;
   for (const [id, a] of AYUDA.pidiendo) {
-    if (Date.now() - a.ts > 12000) AYUDA.pidiendo.delete(id);
+    if (Date.now() - a.ts > 12000) {
+      AYUDA.pidiendo.delete(id);
+      if (RUTA_AYUDA.id === id) limpiarRutaAyuda();
+    }
   }
   if (AYUDA.pidiendo.size !== antesAyuda) { pintarAyudas(); actualizarAyudaBanner(); }
   const antes = PRESENCIA.pares.size;
@@ -1183,6 +1354,7 @@ function aplicarModo(modo) {
     AYUDA.activo = false;
     publicarAyuda(true);
   }
+  limpiarRutaAyuda();
   document.body.dataset.modo = modo;
   if (modo === 'no-vidente') {
     autoVoice = true;
@@ -1222,6 +1394,7 @@ window.setUserPosition = (x, y, geo) => {
   publicarPresencia();
   publicarAyuda();
   pintarAyudas();
+  recalcularRutaAyuda();
   actualizarAyudaBanner();
   placeDot();
   /* Centramos la vista en el punto sin anunciar ni volver a seleccionar nada. */
