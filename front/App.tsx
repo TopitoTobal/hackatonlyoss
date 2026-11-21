@@ -51,6 +51,7 @@ export default function App() {
   const [ultimaPosicion, setUltimaPosicion] = useState('—')
   const [estadisticas, setEstadisticas] = useState('—')
   const [alerta, setAlerta] = useState('Sin alertas')
+  const [muestras, setMuestras] = useState(0)
 
   useEffect(() => {
     monitorRef.current = createSafetyMonitor({
@@ -72,6 +73,7 @@ export default function App() {
 
   async function iniciar() {
     setEstado('Solicitando permisos…')
+    setMuestras(0)
 
     try {
       const tracker = await startForegroundTracking({
@@ -85,9 +87,10 @@ export default function App() {
       tracker.subscribe((muestra) => {
         setPunto(aPuntoPlano(muestra.latitude, muestra.longitude))
         setUltimaPosicion(
-          `${muestra.latitude.toFixed(5)}, ${muestra.longitude.toFixed(5)} · ${formatSpeed(muestra.computedSpeedMps)}`,
+          `${muestra.latitude.toFixed(5)}, ${muestra.longitude.toFixed(5)} · ${formatSpeed(muestra.computedSpeedMps)} · ±${muestra.accuracyM?.toFixed(0) ?? '?'} m${muestra.isAccurate ? '' : ' (baja precisión)'}`,
         )
         setEstadisticas(movementStatsToText(tracker.getStats()))
+        setMuestras((total) => total + 1)
       })
 
       setEstado('Siguiendo ubicación')
@@ -102,6 +105,7 @@ export default function App() {
     trackerRef.current?.stop()
     trackerRef.current = null
     setEstado('Detenido')
+    setMuestras(0)
   }
 
   return (
@@ -113,7 +117,7 @@ export default function App() {
       <View style={styles.overlay} pointerEvents="box-none">
         <View style={styles.barra}>
           <Text style={styles.estado} accessibilityLiveRegion="polite">
-            {estado}
+            {estado} · muestras: {muestras}
           </Text>
           <View style={styles.boton}>
             <Button title="GPS" onPress={iniciar} color="#34d399" />

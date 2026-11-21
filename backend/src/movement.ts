@@ -63,6 +63,7 @@ export function computeSample(
   previous: GpsPoint | null,
   current: GpsPoint,
   stationarySpeedMps: number = DEFAULT_STATIONARY_SPEED_MPS,
+  maxAccuracyM: number = DEFAULT_MAX_ACCURACY_M,
 ): MovementSample {
   const distanceFromPreviousM = previous
     ? haversineDistanceM(previous, current)
@@ -89,12 +90,15 @@ export function computeSample(
     computedHeadingDeg,
     isMoving:
       computedSpeedMps !== null && computedSpeedMps >= stationarySpeedMps,
+    isAccurate:
+      current.accuracyM === null || current.accuracyM <= maxAccuracyM,
   }
 }
 
 /**
- * Acumula puntos y estadísticas de movimiento. Descarta posiciones cuya
- * precisión sea peor que `maxAccuracyM` para no ensuciar las rutas.
+ * Acumula puntos y estadísticas de movimiento. Las posiciones con precisión
+ * peor que `maxAccuracyM` se emiten igual para que la UI pueda mostrarlas,
+ * pero no cuentan para la ruta ni para las estadísticas.
  */
 export class MovementTracker {
   private readonly points: GpsPoint[] = []
@@ -115,35 +119,31 @@ export class MovementTracker {
     }
   }
 
-  push(point: GpsPoint): MovementSample | null {
-    if (
-      point.accuracyM !== null &&
-      point.accuracyM > this.config.maxAccuracyM
-    ) {
-      return null
-    }
-
+  push(point: GpsPoint): MovementSample {
     const previous = this.points[this.points.length - 1] ?? null
     const sample = computeSample(
       previous,
       point,
       this.config.stationarySpeedMps,
+      this.config.maxAccuracyM,
     )
 
-    this.points.push(point)
-    this.samples.push(sample)
+    if (sample.isAccurate) {
+      this.points.push(point)
+      this.samples.push(sample)
 
-    this.distanceM += sample.distanceFromPreviousM
+      this.distanceM += sample.distanceFromPreviousM
 
-    if (sample.isMoving) {
-      this.movingDistanceM += sample.distanceFromPreviousM
-      this.movingTimeMs += sample.elapsedMs
-    } else {
-      this.stoppedTimeMs += sample.elapsedMs
-    }
+      if (sample.isMoving) {
+        this.movingDistanceM += sample.distanceFromPreviousM
+        this.movingTimeMs += sample.elapsedMs
+      } else {
+        this.stoppedTimeMs += sample.elapsedMs
+      }
 
-    if (sample.computedSpeedMps !== null) {
-      this.maxSpeedMps = Math.max(this.maxSpeedMps, sample.computedSpeedMps)
+      if (sample.computedSpeedMps !== null) {
+        this.maxSpeedMps = Math.max(this.maxSpeedMps, sample.computedSpeedMps)
+      }
     }
 
     return sample

@@ -63,11 +63,10 @@ export async function startForegroundTracking(
     },
     (location) => {
       const sample = tracker.push(toGpsPoint(location))
-      if (sample) {
-        samples.emit(sample)
-        if (options.safetyMonitor) {
-          void options.safetyMonitor.evaluate(sample)
-        }
+      samples.emit(sample)
+
+      if (options.safetyMonitor && sample.isAccurate) {
+        void options.safetyMonitor.evaluate(sample)
       }
     },
     (message) => options.onError?.(message),

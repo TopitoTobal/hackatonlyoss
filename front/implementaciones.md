@@ -302,6 +302,7 @@ type MovementSample = GpsPoint & {
   computedSpeedMps: number | null
   computedHeadingDeg: number | null
   isMoving: boolean
+  isAccurate: boolean
 }
 
 type MovementStats = {
@@ -355,7 +356,9 @@ type SafetyAlert = {
   sistema (`openLocationSettings()`).
 - iOS: máximo **20** geofences; Android: máximo **100**.
 - El tracking en segundo plano se detiene si el usuario cierra la app.
-- Los puntos con precisión peor que `maxAccuracyM` (default 50 m) se descartan.
+- Los puntos con precisión peor que `maxAccuracyM` (default 50 m) se siguen
+  emitiendo (para que la UI no se quede frozen), pero no cuentan para la ruta
+  ni las estadísticas; vienen con `isAccurate: false`.
 - La velocidad se calcula en **m/s**; multiplica por 3.6 para km/h
   (`formatSpeed()` ya lo hace).
 - En iOS la vibración puede no producirse con modo de bajo consumo, Taptic

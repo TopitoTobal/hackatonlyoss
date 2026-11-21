@@ -25,6 +25,8 @@ export interface MovementSample extends GpsPoint {
   computedSpeedMps: number | null
   computedHeadingDeg: number | null
   isMoving: boolean
+  /** Precisión suficiente para contarla en las estadísticas y la ruta. */
+  isAccurate: boolean
 }
 
 export interface MovementStats {
