@@ -251,7 +251,7 @@
       <!-- 1. Fondo continuo: ningún borde queda sin dibujar -->
       <rect width="1312" height="985" fill="url(#manzanas)"/>
 
-      <!-- 2. Campus: desde la calle separadora hasta los bordes sur y este -->
+      <!-- 2. Campus: desde la calle separadora hasta los bordes norte y este -->
       <rect x="300" y="312" width="1012" height="673" fill="#f1f5f9"/>
       <rect x="300" y="312" width="1012" height="88" fill="#e8f1fb"/>
       <rect x="300" y="620" width="1012" height="365" fill="url(#parque)"/>
@@ -271,7 +271,7 @@
       <rect x="1150" y="690" width="70" height="120" rx="6" fill="#ecd9c8"/>
       <line x1="1150" y1="750" x2="1220" y2="750" stroke="#ffffff" stroke-width="2" opacity=".8"/>
 
-      <!-- Ladera / talud al sur de la cancha: curvas de nivel cerca de H -->
+      <!-- Ladera / talud al norte de la cancha: curvas de nivel cerca de H -->
       <g fill="none" stroke="#cbd2d9" stroke-width="2" opacity=".8">
         <path d="M470 790 Q590 730 710 790"/>
         <path d="M460 830 Q590 770 720 830"/>
@@ -342,7 +342,7 @@
         <text x="515" y="580" font-size="20" fill="#334155">8007</text>
         <text x="1185" y="755" font-size="16" fill="#334155">TENIS</text>
         <text x="660" y="301" font-size="20" fill="#334155">AVENIDA PLACERES</text>
-        <text x="142" y="160" font-size="17" fill="#64748b">BARRIO NORTE</text>
+        <text x="142" y="160" font-size="17" fill="#64748b">BARRIO SUR</text>
         <text x="590" y="830" font-size="16" fill="#94a3b8">LADERA</text>
         <text x="1170" y="950" font-size="17" fill="#4d7c0f">SUBIDA SAN LUIS</text>
       </g>
@@ -471,24 +471,24 @@
    Coordenadas en píxeles del plano oficial (1312 x 985).
    [id, centroX, centroY, ancho, alto, descripción] */
 const BUILDINGS = [
-  ['C', 750, 372, 460, 110, 'Norte, junto a Avenida Placeres.'],
-  ['R', 235, 345, 70, 45, 'Noroeste, junto a Avenida Placeres.'],
-  ['R2', 330, 375, 48, 40, 'Noroeste, junto a R.'],
+  ['C', 750, 372, 460, 110, 'Sur, junto a Avenida Placeres.'],
+  ['R', 235, 345, 70, 45, 'Suroeste, junto a Avenida Placeres.'],
+  ['R2', 330, 375, 48, 40, 'Suroeste, junto a R.'],
   ['M', 360, 470, 48, 120, 'Oeste, junto a Pasaje Valdés.'],
   ['M2', 415, 440, 48, 40, 'Oeste, junto a M.'],
-  ['B', 835, 510, 290, 130, 'Centro-norte. Bloque en U.'],
-  ['K', 1090, 420, 60, 70, 'Noreste, en Subida San Luis.'],
-  ['J', 1120, 340, 48, 40, 'Norte de K.'],
-  ['O', 1110, 560, 48, 40, 'Sur de K.'],
+  ['B', 835, 510, 290, 130, 'Centro-sur. Bloque en U.'],
+  ['K', 1090, 420, 60, 70, 'Sureste, en Subida San Luis.'],
+  ['J', 1120, 340, 48, 40, 'Sur de K.'],
+  ['O', 1110, 560, 48, 40, 'Norte de K.'],
   ['L', 600, 600, 48, 80, 'Oeste, junto a la cancha.'],
   ['U', 710, 690, 60, 170, 'Centro-oeste. Bloque alargado.'],
-  ['A', 840, 720, 170, 210, 'Centro-sur. Bloque grande, junto a B.'],
-  ['H', 590, 780, 60, 40, 'Suroeste, en la ladera.'],
+  ['A', 840, 720, 170, 210, 'Centro-norte. Bloque grande, junto a B.'],
+  ['H', 590, 780, 60, 40, 'Noroeste, en la ladera.'],
   ['D', 1020, 690, 120, 110, 'Centro-este, junto a A.'],
-  ['E', 1050, 780, 150, 45, 'Centro-este, al sur de D.'],
-  ['F2', 950, 820, 48, 70, 'Sur, entre A y F.'],
-  ['F', 1060, 880, 220, 40, 'Sur, junto a F2.'],
-  ['T', 1210, 850, 70, 80, 'Sureste, en Subida San Luis.'],
+  ['E', 1050, 780, 150, 45, 'Centro-este, al norte de D.'],
+  ['F2', 950, 820, 48, 70, 'Norte, entre A y F.'],
+  ['F', 1060, 880, 220, 40, 'Norte, junto a F2.'],
+  ['T', 1210, 850, 70, 80, 'Noreste, en Subida San Luis.'],
   ['8007', 515, 580, 150, 240, 'Cancha principal, junto al pasillo central.'],
   ['TENIS', 1185, 750, 70, 120, 'Cancha de tenis, junto a Subida San Luis.']
 ];
@@ -518,10 +518,10 @@ const PATHS = [
   [[450,450],[415,580],[450,710],[535,740]],
   [[740,445],[636,470],[636,600],[600,700],[590,780]],
   [[535,740],[590,780],[590,820],[590,985]],
-  [[636,600],[700,575]],                    /* L → norte de U */
-  [[710,605],[745,605],[745,690],[740,690]],/* norte de U → oeste de A */
+  [[636,600],[700,575]],                    /* L → sur de U */
+  [[710,605],[745,605],[745,690],[740,690]],/* sur de U → oeste de A */
   [[755,690],[755,600],[925,600],[925,785]],/* oeste de A → patio de E */
-  [[740,445],[980,510]],                    /* sur de C → acceso este de B */
+  [[740,445],[980,510]],                    /* norte de C → acceso este de B */
   [[980,510],[1030,510],[1060,455],[1090,455]],
   [[980,372],[1040,372],[1102,340]],
   [[1102,340],[1100,455]],                  /* J → K */
@@ -958,7 +958,7 @@ function actualizarNavegacion(opts) {
 function info(id) {
   const [, cx, cy, , , where] = BUILDINGS.find(b => b[0] === id);
   const dx = cx - dot.x, dy = cy - dot.y, dist = Math.hypot(dx, dy);
-  const ang = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
+  const ang = (Math.atan2(dx, dy) * 180 / Math.PI + 360) % 360;
   const metros = Math.round(dist * METROS_POR_PIXEL);
   const dir = dist < 70
     ? 'Ya estás junto a este lugar.'
@@ -1256,7 +1256,7 @@ function geoAPlano(lat, lng) {
   const metrosPorGradoLat = 111320;
   const metrosPorGradoLng = 111320 * Math.cos((o.latitude * Math.PI) / 180);
   const dx = ((lng - o.longitude) * metrosPorGradoLng) / METROS_POR_PIXEL;
-  const dy = (-(lat - o.latitude) * metrosPorGradoLat) / METROS_POR_PIXEL;
+  const dy = ((lat - o.latitude) * metrosPorGradoLat) / METROS_POR_PIXEL;
   return { x: CENTRO.x + dx, y: CENTRO.y + dy };
 }
 const AUTO_INTERIOR = { dentro: 0, fuera: 0, activo: false, bloqueo: 0 };
@@ -1587,7 +1587,7 @@ function recalcularRutaAyuda() {
 function direccionHacia(x, y) {
   const dx = x - dot.x, dy = y - dot.y, dist = Math.hypot(dx, dy);
   if (dist < 40) return 'junto a ti';
-  const ang = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
+  const ang = (Math.atan2(dx, dy) * 180 / Math.PI + 360) % 360;
   return 'a ' + Math.round(dist * METROS_POR_PIXEL) + ' metros al ' +
     DIRS[Math.round(ang / 45) % 8];
 }

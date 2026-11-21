@@ -148,10 +148,10 @@ El receptor convierte la posición ajena con **su propio primer fix como origen*
 marco local aunque cada celular haya empezado en un lugar distinto. Ese ancla
 **no se recalibra con cada muestra**: si se usara el fix actual, al caminar los
 pares se desplazarían justo en la dirección contraria (norte→sur, este→oeste).
-El plano es norte-arriba / este-derecha: la latitud creciente resta `y` y la
-longitud creciente suma `x`, lo mismo que usa `App.tsx` en `aPuntoPlano()`.
-Las indicaciones por voz salen de `info()` con `atan2(dx, -dy)`, por lo que
-`0°` es norte, `90°` este, `180°` sur y `270°` oeste. El zoom llega a **12×**,
+El plano es sur-arriba / este-derecha (norte abajo): la latitud creciente suma
+`y` y la longitud creciente suma `x`, lo mismo que usa `App.tsx` en
+`aPuntoPlano()`. Las indicaciones por voz salen de `info()` con `atan2(dx, dy)`,
+por lo que `0°` es norte, `90°` este, `180°` sur y `270°` oeste. El zoom llega a **12×**,
 con una barra de escala métrica arriba a la izquierda. Al acercar, cada par
 muestra un anillo discontinuo con su precisión GPS (`accuracyM`) y la distancia
 al punto propio en metros. Con esto el salón de la hackathon se puede
@@ -253,7 +253,7 @@ una vez después de cada deploy para tomar el service worker nuevo.
 - El catastro tiene 18 edificios y 2 canchas clickeables (`8007` y `TENIS`),
   que se nombran y se pueden elegir como destino igual que los edificios.
   Cambios principales respecto a la versión
-  anterior: **C** quedó en `(750, 372, 460×110)` (borde norte y=317, 5 px al sur
+  anterior: **C** quedó en `(750, 372, 460×110)` (borde sur y=317, 5 px al norte
   de Avenida Placeres) y su lado este se alinea con **B** `(835, 510, 290×130)`;
   **A** pasó a `(840, 720, 170×210)` y **U** a `(710, 690, 60×170)`, dejando un
   pasillo estrecho de 15 px entre ambos; **E** se corrió a `(1050, 780)` para no
