@@ -225,7 +225,7 @@ function Splash() {
       style={styles.splash}
     >
       <Image
-        source={{ uri: '/splash-1080x1920.png' }}
+        source={{ uri: '/splash-1080x1920.png?v=3' }}
         style={styles.splashImagen}
         resizeMode="contain"
       />

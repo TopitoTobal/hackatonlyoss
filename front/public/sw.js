@@ -1,7 +1,7 @@
 /* App web instalable del mapa de movilización.
    Navegación: red primero, con copia cacheada del index como respaldo.
    Assets: caché primero, y se guardan los que falten. */
-const CACHE = 'campus-accesible-v2';
+const CACHE = 'campus-accesible-v3';
 const SHELL = [
   '/',
   '/index.html',
@@ -9,7 +9,7 @@ const SHELL = [
   '/icon-192.png',
   '/icon-512.png',
   '/icon-180.png',
-  '/splash-1080x1920.png',
+  '/splash-1080x1920.png?v=3',
   '/splash-foto.webp',
 ];
 

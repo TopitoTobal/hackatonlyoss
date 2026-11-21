@@ -183,7 +183,9 @@ durante 1,8 s al abrir la app (en web y en nativo) con el mismo PNG
 `/splash-1080x1920.png`. Se puede tocar para saltarlo. Esto evita el problema
 de que una PWA **ya instalada** conserva el `apple-touch-startup-image` con el
 que se instaló: el overlay siempre muestra la versión nueva. El service worker
-subió a `campus-accesible-v2` y ahora cachea también el splash y la foto.
+subió a `campus-accesible-v3` y ahora cachea también el splash y la foto con
+un URL versionado (`/splash-1080x1920.png?v=3`), para que un PWA instalado con
+el pin de respaldo no siga sirviendo esa imagen vieja desde el caché.
 
 Si el splash del sistema no cambia después de un deploy, hay que **borrar la
 app de la pantalla de inicio y volver a agregarla** (iOS guarda ese archivo al
