@@ -9,10 +9,14 @@ export default function Mapa({
   posicion,
   modo,
   ayuda = false,
+  salirSenal = 0,
+  onInterior,
 }: {
   posicion: PuntoPlano
   modo: Modo
   ayuda?: boolean
+  salirSenal?: number
+  onInterior?: (activo: boolean) => void
 }) {
   const hostRef = useRef<any>(null)
   const iframeRef = useRef<any>(null)
@@ -32,7 +36,19 @@ export default function Mapa({
     const alCargar = () => enviar(iframe, posicion, modo, ayuda)
     iframe.addEventListener('load', alCargar)
 
+    const alMensaje = (event: MessageEvent) => {
+      if (event.source !== iframe.contentWindow) return
+      try {
+        const dato = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+        if (dato?.type === 'interior' && typeof dato.activo === 'boolean') {
+          onInterior?.(dato.activo)
+        }
+      } catch {}
+    }
+    doc.addEventListener('message', alMensaje as EventListener)
+
     return () => {
+      doc.removeEventListener('message', alMensaje as EventListener)
       iframe.removeEventListener('load', alCargar)
       iframe.remove()
       iframeRef.current = null
@@ -44,6 +60,15 @@ export default function Mapa({
   useEffect(() => {
     if (iframeRef.current) enviar(iframeRef.current, posicion, modo, ayuda)
   }, [posicion, modo, ayuda])
+
+  useEffect(() => {
+    if (salirSenal > 0 && iframeRef.current?.contentWindow) {
+      iframeRef.current.contentWindow.postMessage(
+        JSON.stringify({ type: 'salirInterior' }),
+        '*',
+      )
+    }
+  }, [salirSenal])
 
   return <View ref={hostRef} style={styles.mapa} />
 }

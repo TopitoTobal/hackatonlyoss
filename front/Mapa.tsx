@@ -17,10 +17,14 @@ export default function Mapa({
   posicion,
   modo,
   ayuda = false,
+  salirSenal = 0,
+  onInterior,
 }: {
   posicion: PuntoPlano
   modo: Modo
   ayuda?: boolean
+  salirSenal?: number
+  onInterior?: (activo: boolean) => void
 }) {
   const webViewRef = useRef<WebView<object> | null>(null)
 
@@ -36,6 +40,12 @@ export default function Mapa({
     enviar()
   }, [posicion, modo, ayuda])
 
+  useEffect(() => {
+    if (salirSenal > 0 && webViewRef.current) {
+      webViewRef.current.postMessage(JSON.stringify({ type: 'salirInterior' }))
+    }
+  }, [salirSenal])
+
   return (
     <WebView<object>
       ref={webViewRef}
@@ -44,6 +54,14 @@ export default function Mapa({
       originWhitelist={['*']}
       javaScriptEnabled
       onLoadEnd={enviar}
+      onMessage={(event) => {
+        try {
+          const dato = JSON.parse(event.nativeEvent.data)
+          if (dato?.type === 'interior' && typeof dato.activo === 'boolean') {
+            onInterior?.(dato.activo)
+          }
+        } catch {}
+      }}
     />
   )
 }

@@ -268,6 +268,8 @@ export default function App() {
   const [velocidad, setVelocidad] = useState('—')
   const [pidiendoAyuda, setPidiendoAyuda] = useState(false)
   const [infoAbierta, setInfoAbierta] = useState(false)
+  const [interior, setInterior] = useState(false)
+  const [salirSenal, setSalirSenal] = useState(0)
   const arrancandoRef = useRef(false)
   const origenRef = useRef<Origen | null>(null)
 
@@ -410,7 +412,13 @@ export default function App() {
         <View style={styles.contenedor} accessibilityRole="main">
           <StatusBar style="dark" />
 
-      <Mapa posicion={punto} modo={modo} ayuda={pidiendoAyuda} />
+      <Mapa
+        posicion={punto}
+        modo={modo}
+        ayuda={pidiendoAyuda}
+        salirSenal={salirSenal}
+        onInterior={setInterior}
+      />
 
       <View style={styles.overlay} pointerEvents="box-none">
         <View style={styles.barra}>
@@ -426,6 +434,23 @@ export default function App() {
               <Text style={styles.textoBoton}>Volver</Text>
             </View>
           </Pressable>
+          {interior && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Salir de la vista interior del edificio"
+              onPress={() => setSalirSenal((n) => n + 1)}
+              style={({ pressed }) => [
+                styles.botonAccion,
+                styles.botonSalirInterior,
+                pressed && styles.opcionPresionada,
+              ]}
+            >
+              <View style={styles.filaBoton}>
+                <Icono name="arrow_back" size={18} color="#ffffff" />
+                <Text style={styles.textoBotonAccion}>Salir interior</Text>
+              </View>
+            </Pressable>
+          )}
           <Text style={styles.estado} accessibilityLiveRegion="polite">
             {modo === 'vidente' ? 'Vidente' : 'No vidente'} · {estado} · {velocidad} · muestras:{' '}
             {muestras}
@@ -793,6 +818,10 @@ const styles = StyleSheet.create({
     minWidth: 44,
     backgroundColor: '#e8f1fb',
     borderColor: '#cbd2d9',
+  },
+  botonSalirInterior: {
+    backgroundColor: '#1d4ed8',
+    borderColor: '#1d4ed8',
   },
   textoBotonAccion: {
     color: '#ffffff',

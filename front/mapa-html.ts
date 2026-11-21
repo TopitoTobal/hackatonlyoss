@@ -579,6 +579,17 @@ function hablarAccion(text) {
   say(text);
   announce(text);
 }
+/* Avisa a la app nativa (o al iframe padre en web) si entramos/salimos. */
+function notificarInterior(activo) {
+  const dato = JSON.stringify({ type: 'interior', activo });
+  try {
+    if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+      window.ReactNativeWebView.postMessage(dato);
+    } else if (window.parent !== window) {
+      window.parent.postMessage(dato, '*');
+    }
+  } catch (e) {}
+}
 
 /* ---------- Construcción ---------- */
 BUILDINGS.forEach(([id, cx, cy, w, h]) => {
@@ -1957,6 +1968,7 @@ window.addEventListener('message', (event) => {
     if (data && data.type === 'ayuda' && typeof data.activo === 'boolean') {
       window.setAyuda(data.activo);
     }
+    if (data && data.type === 'salirInterior') salirInterior();
   } catch (e) {}
 });
 
@@ -2131,6 +2143,7 @@ function enterBuilding() {
   if (!selected) return;
   const [id, cx, cy, w, h] = BUILDINGS.find(b => b[0] === selected);
   inside = true;
+  notificarInterior(true);
   [ox, oy] = clamp(vp.clientWidth/2 - cx*z, vp.clientHeight/2 - cy*z, z); apply();
   $('sheet').classList.add('hidden'); $('sheet').classList.remove('flex');
   vp.inert = true;
@@ -2149,13 +2162,15 @@ function exitBuilding() {
   select(selected, { silent: true });
   $('btnRoute').focus();
   announce('Has salido del interior. Información del edificio ' + selected + '.');
+  notificarInterior(false);
 }
-$('inExit').onclick = () => {
+function salirInterior() {
   AUTO_INTERIOR.activo = false;
   AUTO_INTERIOR.dentro = 0;
   AUTO_INTERIOR.bloqueo = Date.now() + 15000;
   exitBuilding();
-};
+}
+$('inExit').onclick = salirInterior;
 $('inSpeak').onclick = () => {
   const texto = $('inRoom').textContent + '. ' + $('inNote').textContent;
   say(texto); announce(texto);
