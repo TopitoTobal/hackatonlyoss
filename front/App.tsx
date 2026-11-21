@@ -41,6 +41,9 @@ const CAMINO: RoutePath = { id: 'demo', points: [] }
    escala de 0,75 m por píxel. No hay georreferenciación absoluta todavía. */
 const CENTRO = { x: 690, y: 500 }
 const METROS_POR_PIXEL = 0.75
+/* En interior el GPS rara vez baja de 50 m. Seguimos publicando muestras hasta
+   150 m para que los demás vean el movimiento; la precisión se muestra igual. */
+const MAX_DISPLAY_ACCURACY_M = 150
 
 type Origen = { latitude: number; longitude: number }
 
@@ -318,7 +321,11 @@ export default function App() {
       trackerRef.current = tracker
 
       tracker.subscribe((muestra) => {
-        if (muestra.isAccurate) {
+        const utilizable =
+          Number.isFinite(muestra.latitude) &&
+          Number.isFinite(muestra.longitude) &&
+          (muestra.accuracyM === null || muestra.accuracyM <= MAX_DISPLAY_ACCURACY_M)
+        if (utilizable) {
           if (!origenRef.current) {
             origenRef.current = {
               latitude: muestra.latitude,

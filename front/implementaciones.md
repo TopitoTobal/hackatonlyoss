@@ -680,7 +680,9 @@ type SafetyAlert = {
 - El tracking en segundo plano se detiene si el usuario cierra la app.
 - Los puntos con precisión peor que `maxAccuracyM` (default 50 m) se siguen
   emitiendo (para que la UI no se quede frozen), pero no cuentan para la ruta
-  ni las estadísticas; vienen con `isAccurate: false`.
+  ni las estadísticas; vienen con `isAccurate: false`. El mapa además
+  publica los que están hasta 150 m para que los demás usuarios vean el
+  movimiento aunque la persona esté dentro de un edificio.
 - La velocidad se calcula en **m/s**; multiplica por 3.6 para km/h
   (`formatSpeed()` ya lo hace).
 - En iOS la vibración puede no producirse con modo de bajo consumo, Taptic
