@@ -5,7 +5,7 @@ const path = require('path');
 
 const dist = path.join(__dirname, '..', 'dist');
 
-const HEAD = `    <meta name="theme-color" content="#065f46" />
+const HEAD = `    <meta name="theme-color" content="#ffffff" />
     <meta name="description" content="Mapa de movilización accesible con GPS, rutas y pedidos de ayuda." />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />

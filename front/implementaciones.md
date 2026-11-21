@@ -189,6 +189,13 @@ Si el splash del sistema no cambia después de un deploy, hay que **borrar la
 app de la pantalla de inicio y volver a agregarla** (iOS guarda ese archivo al
 instalar). El splash interno, en cambio, aparece con solo recargar.
 
+En **Android**, Chrome no usa un PNG de splash: pinta el fondo con
+`theme_color` del manifest y encima el ícono. Por eso `theme_color` y
+`background_color` son `#ffffff`; el splash con la foto y la palabra Orienta
+lo aporta el overlay interno de `App.tsx`, que se ve después del splash de
+Chrome. Si la PWA ya estaba instalada, hay que desinstalarla y volver a
+instalarla desde la URL de Netlify para que Chrome tome el manifest nuevo.
+
 En la portada aparece el botón **Instalar app web**:
 
 - En Chrome/Android dispara el prompt nativo `beforeinstallprompt`.
