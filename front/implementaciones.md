@@ -158,9 +158,25 @@ Para no depender de compilar el APK, el export web queda listo para
   no se intercepta.
 - `front/scripts/postbuild-web.js`: después de `expo export` inyecta en los
   `index.html` de `front/dist` el `<link rel="manifest">`, los meta de tema,
-  el `apple-touch-icon`, el título en español y el registro del service worker.
-  Se ejecuta solo desde `npm --prefix front run build:web`, así que Netlify
-  (`npm run build` en la raíz) lo incluye sin cambios.
+  el `apple-touch-icon`, los `apple-touch-startup-image`, el título en español
+  y el registro del service worker. Se ejecuta solo desde
+  `npm --prefix front run build:web`, así que Netlify (`npm run build` en la
+  raíz) lo incluye sin cambios.
+
+#### Splash
+
+Los splash tienen **fondo blanco**, la palabra **Orienta** con las letras en
+amarillo/rojo/azul (`#f59e0b`, `#b91c1c`, `#1d4ed8`) y el subtítulo
+`Campus accesible · UTFSM`. Se generan con
+`python3 front/scripts/generate-splash.py` en cuatro tamaños:
+`1242x2688`, `1284x2778`, `1290x2796` (iOS) y `1080x1920` (Android/nativo).
+
+El script busca una foto del app en `front/public/splash-foto.webp` (también
+acepta `.png`, `.jpg` o `.jpeg`), la mete centrada con bordes redondeados y
+compone el texto debajo. Si no hay foto, dibuja un pin morado de respaldo para
+que el build nunca falle. Para usar la foto real: copiarla a esa ruta, correr
+el generador y `npm --prefix front run build:web`. `front/app.json` apunta el
+splash nativo a `public/splash-1080x1920.png` con fondo blanco.
 
 En la portada aparece el botón **Instalar app web**:
 

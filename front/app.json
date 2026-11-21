@@ -4,7 +4,12 @@
     "slug": "hackatonlyoss",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./public/splash-1080x1920.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
     "plugins": [
       [
         "expo-location",
