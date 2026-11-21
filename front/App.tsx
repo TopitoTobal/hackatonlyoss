@@ -43,7 +43,7 @@ function aPuntoPlano(latitude: number, longitude: number): PuntoPlano {
 }
 
 export default function App() {
-  const webViewRef = useRef<WebView | null>(null)
+  const webViewRef = useRef<WebView<object> | null>(null)
   const trackerRef = useRef<ForegroundTracker | null>(null)
   const monitorRef = useRef<SafetyMonitor | null>(null)
   const puntoRef = useRef<PuntoPlano>({ x: PLANO.centroX, y: PLANO.centroY })
@@ -118,7 +118,7 @@ export default function App() {
     <View style={styles.contenedor}>
       <StatusBar style="dark" />
 
-      <WebView
+      <WebView<object>
         ref={webViewRef}
         source={{ html: MAPA_HTML }}
         style={styles.mapa}
