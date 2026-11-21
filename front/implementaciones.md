@@ -87,12 +87,14 @@ window.registrarGeneradorRutas(function (args) {
 
 También se detectan `window.generarRuta`, `window.generarRutaHacia` y
 `window.rutas.generar`, con las mismas dos firmas aceptadas
-(`fn({ desde, hasta })` o `fn(desde, hasta)`). Si ninguno está disponible,
-`rutaPorSenderos()` arma un grafo con los 51 vértices de los senderos del plano
-(`g[stroke="#475569"] path`), hace Dijkstra y une el punto propio y el destino
-con el camino más corto; así la función ya funciona antes de que llegue el
-módulo de Danko. El hook y el fallback viven en `front/index.html`; no hay que
-cambiar el contrato de `postMessage`.
+(`fn({ desde, hasta })` o `fn(desde, hasta)`). **Con el módulo de Danko ya
+subido**, `rutaHaciaPunto()` usa preferentemente su grafo (`GRAFO` y
+`mejorRuta()`): elige el nodo más cercano a la persona que pidió ayuda y
+concatena el destino real, así el recorrido va por los mismos senderos que la
+ruta azul a edificios. El gancho `window.registrarGeneradorRutas(fn)` sigue
+disponible para un generator externo. Como respaldo final, `rutaPorSenderos()`
+arma un grafo con los vértices de `g[stroke="#475569"] path` y hace Dijkstra.
+El contrato de `postMessage` no cambia.
 
 La precisión se fusiona entre pares siguiendo el RFC, con un **árbol de
 confianza** que evita el arrastre entre personas:
