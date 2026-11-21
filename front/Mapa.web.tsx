@@ -2,9 +2,16 @@ import { useEffect, useRef } from 'react'
 import { StyleSheet, View } from 'react-native'
 
 import { MAPA_HTML } from './mapa-html'
+import type { Modo } from './modo'
 import type { PuntoPlano } from './Mapa'
 
-export default function Mapa({ posicion }: { posicion: PuntoPlano }) {
+export default function Mapa({
+  posicion,
+  modo,
+}: {
+  posicion: PuntoPlano
+  modo: Modo
+}) {
   const hostRef = useRef<any>(null)
   const iframeRef = useRef<any>(null)
 
@@ -20,7 +27,7 @@ export default function Mapa({ posicion }: { posicion: PuntoPlano }) {
     host.appendChild(iframe)
     iframeRef.current = iframe
 
-    const alCargar = () => enviar(iframe, posicion)
+    const alCargar = () => enviar(iframe, posicion, modo)
     iframe.addEventListener('load', alCargar)
 
     return () => {
@@ -33,17 +40,17 @@ export default function Mapa({ posicion }: { posicion: PuntoPlano }) {
   }, [])
 
   useEffect(() => {
-    if (iframeRef.current) enviar(iframeRef.current, posicion)
-  }, [posicion])
+    if (iframeRef.current) enviar(iframeRef.current, posicion, modo)
+  }, [posicion, modo])
 
   return <View ref={hostRef} style={styles.mapa} />
 }
 
-function enviar(iframe: any, posicion: PuntoPlano) {
-  iframe.contentWindow?.postMessage(
-    JSON.stringify({ type: 'position', ...posicion }),
-    '*',
-  )
+function enviar(iframe: any, posicion: PuntoPlano, modo: Modo) {
+  const win = iframe.contentWindow
+  if (!win) return
+  win.postMessage(JSON.stringify({ type: 'modo', modo }), '*')
+  win.postMessage(JSON.stringify({ type: 'position', ...posicion }), '*')
 }
 
 const styles = StyleSheet.create({

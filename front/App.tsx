@@ -3,7 +3,14 @@ import '../backend/src/tasks'
 import { StatusBar } from 'expo-status-bar'
 import * as Location from 'expo-location'
 import { useEffect, useRef, useState } from 'react'
-import { Button, StyleSheet, Text, View } from 'react-native'
+import {
+  AccessibilityInfo,
+  Button,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native'
 
 import {
   createSafetyMonitor,
@@ -19,6 +26,7 @@ import {
 } from '../backend/src'
 
 import Mapa, { type PuntoPlano } from './Mapa'
+import { RUTAS, modoDeRuta, type Modo } from './modo'
 
 const PAREDES: WallSegment[] = []
 const CAMINO: RoutePath = { id: 'demo', points: [] }
@@ -39,10 +47,81 @@ function aPuntoPlano(latitude: number, longitude: number): PuntoPlano {
   return { x: PLANO.centroX + dx, y: PLANO.centroY + dy }
 }
 
+function rutaActual(): string | undefined {
+  return (globalThis as any).location?.pathname as string | undefined
+}
+
+/* Voz en web y aviso para lectores de pantalla en todas las plataformas. */
+function hablar(texto: string) {
+  AccessibilityInfo.announceForAccessibility(texto)
+  try {
+    const win: any = globalThis as any
+    const Synth = win.SpeechSynthesisUtterance
+    if (win.speechSynthesis && typeof Synth === 'function') {
+      const u = new Synth(texto)
+      u.lang = 'es-CL'
+      win.speechSynthesis.cancel()
+      win.speechSynthesis.speak(u)
+    }
+  } catch (e) {}
+}
+
+/* Portada equivalente a index (4).html: elige vidente / no vidente antes
+   de pedir permisos de GPS o cargar el mapa. */
+function Selector({ onElegir }: { onElegir: (modo: Modo) => void }) {
+  const opciones =
+    '¿Eres una persona vidente o no vidente? Primera opción: Soy vidente. Segunda opción: Soy no vidente.'
+
+  return (
+    <View style={styles.selector} accessibilityRole="main">
+      <StatusBar style="dark" />
+      <Text style={styles.selectorEyebrow}>Campus Casa Central · UTFSM</Text>
+      <Text accessibilityRole="header" style={styles.selectorTitulo}>
+        ¿Eres una persona vidente o no vidente?
+      </Text>
+
+      <Pressable
+        accessibilityRole="link"
+        accessibilityLabel="Soy vidente. Abrir mapa visual."
+        onPress={() => onElegir('vidente')}
+        style={({ pressed }) => [
+          styles.opcion,
+          styles.opcionVidente,
+          pressed && styles.opcionPresionada,
+        ]}
+      >
+        <Text style={styles.opcionTextoClaro}>Soy vidente</Text>
+      </Pressable>
+
+      <Pressable
+        accessibilityRole="link"
+        accessibilityLabel="Soy no vidente. Abrir mapa con voz automática."
+        onPress={() => onElegir('no-vidente')}
+        style={({ pressed }) => [
+          styles.opcion,
+          styles.opcionNoVidente,
+          pressed && styles.opcionPresionada,
+        ]}
+      >
+        <Text style={styles.opcionTextoOscuro}>Soy no vidente</Text>
+      </Pressable>
+
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => hablar(opciones)}
+        style={({ pressed }) => [styles.escuchar, pressed && styles.opcionPresionada]}
+      >
+        <Text style={styles.escucharTexto}>Escuchar las opciones</Text>
+      </Pressable>
+    </View>
+  )
+}
+
 export default function App() {
   const trackerRef = useRef<ForegroundTracker | null>(null)
   const monitorRef = useRef<SafetyMonitor | null>(null)
 
+  const [modo, setModo] = useState<Modo | null>(() => modoDeRuta(rutaActual()))
   const [punto, setPunto] = useState<PuntoPlano>({
     x: PLANO.centroX,
     y: PLANO.centroY,
@@ -56,6 +135,17 @@ export default function App() {
   const arrancandoRef = useRef(false)
 
   useEffect(() => {
+    const win: any = globalThis as any
+    if (!win.addEventListener) return
+    const alCambiar = () => setModo(modoDeRuta(rutaActual()))
+    win.addEventListener('popstate', alCambiar)
+    return () => win.removeEventListener('popstate', alCambiar)
+  }, [])
+
+  useEffect(() => {
+    /* La portada no pide GPS: solo se sigue la ubicación cuando ya elegimos modo. */
+    if (!modo) return
+
     monitorRef.current = createSafetyMonitor({
       walls: PAREDES,
       routes: [CAMINO],
@@ -66,7 +156,6 @@ export default function App() {
       setAlerta(nueva.text)
     })
 
-    // En cuanto se monta la pantalla pedimos permiso y empezamos a seguir el GPS.
     void iniciar(true)
 
     return () => {
@@ -74,7 +163,7 @@ export default function App() {
       trackerRef.current?.stop()
       trackerRef.current = null
     }
-  }, [])
+  }, [modo])
 
   async function iniciar(auto = false) {
     if (trackerRef.current || arrancandoRef.current) return
@@ -120,16 +209,40 @@ export default function App() {
     setVelocidad('—')
   }
 
+  function irAModo(nuevo: Modo) {
+    const win: any = globalThis as any
+    if (win.history?.pushState) win.history.pushState({}, '', RUTAS[nuevo])
+    setPunto({ x: PLANO.centroX, y: PLANO.centroY })
+    setModo(nuevo)
+  }
+
+  function volver() {
+    const win: any = globalThis as any
+    if (win.history?.pushState) win.history.pushState({}, '', '/')
+    setModo(null)
+  }
+
+  if (!modo) return <Selector onElegir={irAModo} />
+
   return (
     <View style={styles.contenedor} accessibilityRole="main">
       <StatusBar style="dark" />
 
-      <Mapa posicion={punto} />
+      <Mapa posicion={punto} modo={modo} />
 
       <View style={styles.overlay} pointerEvents="box-none">
         <View style={styles.barra}>
+          <Pressable
+            accessibilityRole="link"
+            accessibilityLabel="Volver a elegir modo"
+            onPress={volver}
+            style={styles.botonVolver}
+          >
+            <Text style={styles.textoBoton}>← Modo</Text>
+          </Pressable>
           <Text style={styles.estado} accessibilityLiveRegion="polite">
-            {estado} · muestras: {muestras}
+            {modo === 'vidente' ? 'Vidente' : 'No vidente'} · {estado} · muestras:{' '}
+            {muestras}
           </Text>
           <View style={styles.boton}>
             <Button title="GPS" onPress={() => void iniciar()} color="#065f46" />
@@ -159,6 +272,69 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  selector: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    padding: 16,
+    paddingTop: 56,
+    paddingBottom: 32,
+    gap: 12,
+    justifyContent: 'center',
+  },
+  selectorEyebrow: {
+    color: '#0369a1',
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  selectorTitulo: {
+    color: '#000000',
+    fontSize: 32,
+    lineHeight: 38,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  opcion: {
+    minHeight: 128,
+    borderRadius: 16,
+    borderWidth: 4,
+    borderColor: '#000000',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  opcionVidente: { backgroundColor: '#1e3a8a' },
+  opcionNoVidente: { backgroundColor: '#facc15' },
+  opcionPresionada: { opacity: 0.75 },
+  opcionTextoClaro: {
+    color: '#ffffff',
+    fontSize: 30,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  opcionTextoOscuro: {
+    color: '#000000',
+    fontSize: 30,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  escuchar: {
+    minHeight: 64,
+    borderRadius: 16,
+    borderWidth: 4,
+    borderColor: '#000000',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  escucharTexto: {
+    color: '#000000',
+    fontSize: 20,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
   contenedor: {
     flex: 1,
     backgroundColor: '#e2e8f0',
@@ -174,6 +350,7 @@ const styles = StyleSheet.create({
   },
   barra: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: 8,
     backgroundColor: 'rgba(15, 23, 42, 0.92)',
@@ -186,6 +363,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     flex: 1,
+  },
+  botonVolver: {
+    minHeight: 40,
+    minWidth: 84,
+    borderRadius: 10,
+    backgroundColor: '#0f172a',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  textoBoton: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '700',
   },
   boton: {
     width: 84,

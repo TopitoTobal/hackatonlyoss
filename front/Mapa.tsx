@@ -3,21 +3,29 @@ import { StyleSheet } from 'react-native'
 import { WebView } from 'react-native-webview'
 
 import { MAPA_HTML } from './mapa-html'
+import type { Modo } from './modo'
 
 export type PuntoPlano = { x: number; y: number }
 
-export default function Mapa({ posicion }: { posicion: PuntoPlano }) {
+export default function Mapa({
+  posicion,
+  modo,
+}: {
+  posicion: PuntoPlano
+  modo: Modo
+}) {
   const webViewRef = useRef<WebView<object> | null>(null)
 
   function enviar() {
-    webViewRef.current?.postMessage(
-      JSON.stringify({ type: 'position', ...posicion }),
-    )
+    const web = webViewRef.current
+    if (!web) return
+    web.postMessage(JSON.stringify({ type: 'modo', modo }))
+    web.postMessage(JSON.stringify({ type: 'position', ...posicion }))
   }
 
   useEffect(() => {
     enviar()
-  }, [posicion])
+  }, [posicion, modo])
 
   return (
     <WebView<object>

@@ -544,6 +544,26 @@ $('btnVoice').onclick = () => {
 };
 voiceLabel();
 
+/* ---------- Modo elegido en la portada ----------
+   App.tsx envía { type:'modo', modo } al cargar el mapa. En "no vidente"
+   forcamos la voz; en "vidente" dejamos solo el aviso silencioso para
+   lectores de pantalla. El botón de la interfaz puede cambiarlo después. */
+function aplicarModo(modo) {
+  document.body.dataset.modo = modo;
+  if (modo === 'no-vidente') {
+    autoVoice = true;
+    try { localStorage.setItem('autoVoice', 'on'); } catch (e) {}
+    voiceLabel();
+    speakOrAnnounce('Modo no vidente. Voz automática activada. Toca un edificio o usa las flechas para recorrerlos.');
+  } else {
+    autoVoice = false;
+    try { localStorage.setItem('autoVoice', 'off'); } catch (e) {}
+    voiceLabel();
+    announce('Modo vidente. Toca un edificio para ver la ruta.');
+  }
+}
+window.setModo = aplicarModo;
+
 /* ---------- GPS: puente con la app Expo ----------
    App.tsx convierte lat/lng a píxeles y envía { type:'position', x, y }.
    Solo movemos el punto y la guía: no llamamos a select() para que la voz
@@ -569,6 +589,9 @@ window.setUserPosition = (x, y) => {
 window.addEventListener('message', (event) => {
   try {
     const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+    if (data && data.type === 'modo' && (data.modo === 'vidente' || data.modo === 'no-vidente')) {
+      aplicarModo(data.modo);
+    }
     if (data && data.type === 'position' && Number.isFinite(data.x) && Number.isFinite(data.y)) {
       window.setUserPosition(data.x, data.y);
     }
