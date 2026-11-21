@@ -8,7 +8,7 @@ consuma.
 ## Instalación (en la app de Expo)
 
 ```sh
-npx expo install expo-location expo-task-manager
+npx expo install expo-location expo-task-manager expo-haptics
 ```
 
 ## Configuración de `app.json`
@@ -94,6 +94,80 @@ geofenceEvents.subscribe((event) => {
   console.log(geofenceEventToText(event, 'Punto de encuentro'))
 })
 ```
+
+## Alertas de seguridad (pared + salida del camino)
+
+`createSafetyMonitor()` evalúa cada posición y vibra cuando el usuario está
+cerca de una pared o cuando se sale del recorrido activo. La alarma de pared
+viene activa por defecto; la de salida del camino hay que habilitarla
+explícitamente.
+
+```ts
+import {
+  createSafetyMonitor,
+  safetyAlerts,
+  type WallSegment,
+  type RoutePath,
+} from './backend/src'
+
+const paredes: WallSegment[] = [
+  {
+    id: 'pared-norte',
+    name: 'Pared norte',
+    start: { latitude: 20.6701, longitude: -103.3501 },
+    end: { latitude: 20.6701, longitude: -103.3495 },
+  },
+]
+
+const camino: RoutePath = {
+  id: 'ruta-1',
+  name: 'Ruta principal',
+  points: [
+    { latitude: 20.67, longitude: -103.35 },
+    { latitude: 20.6705, longitude: -103.3498 },
+  ],
+}
+
+const monitor = createSafetyMonitor({
+  walls: paredes,
+  routes: [camino],
+  activeRouteId: camino.id,
+  wallAlertDistanceM: 3,
+  offPathDistanceM: 8,
+  offPathConsecutiveSamples: 3,
+  cooldownMs: 5_000,
+})
+
+monitor.setOffPathAlertsEnabled(true) // habilitar aviso de salida del camino
+
+safetyAlerts.subscribe((alert) => {
+  // alert.text -> anunciar con lector de pantalla / vista de lista
+})
+
+// Si usas startForegroundTracking, pásalo directamente:
+startForegroundTracking({ safetyMonitor: monitor })
+```
+
+Para tracking en segundo plano, suscríbete a `backgroundLocations` y llama a
+`monitor.evaluate(point)` por cada posición.
+
+### Ajustes en caliente
+
+- `setWalls(walls)` / `setRoutes(routes)` / `setActiveRoute(id)`.
+- `setWallAlertsEnabled(bool)`, `setOffPathAlertsEnabled(bool)`.
+- `setVibrationEnabled(bool)` para silenciar las vibraciones.
+- `reset()` limpia el estado de desvío y los cooldowns.
+
+### Comportamiento
+
+- Pared: distancia al segmento más cercano; avisa al superar el umbral
+  (3 m por defecto) con vibración de tipo `Error`.
+- Salida del camino: distancia a la polilínea; hay que superar el umbral
+  (8 m) durante varias muestras consecutivas (3 por defecto) para evitar
+  falsos positivos; vibra con tipo `Warning`.
+- Cooldown de 5 s por alerta para no repetir la vibración constantemente.
+- La vibración usa `expo-haptics`; en iOS puede no vibrar con bajo consumo,
+  Taptic Engine desactivado o cámara/dictado en uso.
 
 ## Salida de datos
 

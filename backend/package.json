@@ -5,6 +5,7 @@
   "main": "src/index.ts",
   "description": "Módulo de GPS, movimiento, geofencing y GeoJSON para el mapa de movilización accesible.",
   "peerDependencies": {
+    "expo-haptics": "*",
     "expo-location": "*",
     "expo-task-manager": "*",
     "react-native": "*"

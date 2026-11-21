@@ -9,6 +9,7 @@ import {
 import { createEmitter, type Emitter, type Unsubscribe } from './events'
 import { MovementTracker, toGpsPoint } from './movement'
 import { ensureForegroundPermissions } from './permissions'
+import type { SafetyMonitor } from './safety'
 import type {
   AccuracyOption,
   GpsPoint,
@@ -23,6 +24,7 @@ export interface ForegroundTrackingOptions {
   maxAccuracyM?: number
   stationarySpeedMps?: number
   onError?: (message: string) => void
+  safetyMonitor?: SafetyMonitor
 }
 
 export interface ForegroundTracker {
@@ -61,7 +63,12 @@ export async function startForegroundTracking(
     },
     (location) => {
       const sample = tracker.push(toGpsPoint(location))
-      if (sample) samples.emit(sample)
+      if (sample) {
+        samples.emit(sample)
+        if (options.safetyMonitor) {
+          void options.safetyMonitor.evaluate(sample)
+        }
+      }
     },
     (message) => options.onError?.(message),
   )

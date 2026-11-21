@@ -78,5 +78,39 @@ export type PermissionOutcome =
       canAskAgain: boolean
     }
 
+export interface WallSegment {
+  id: string
+  start: LatLng
+  end: LatLng
+  name?: string
+}
+
+export interface RoutePath {
+  id: string
+  points: LatLng[]
+  name?: string
+}
+
+export interface SafetyAlert {
+  type: 'wall' | 'off-path'
+  id: string
+  distanceM: number
+  text: string
+  timestamp: number
+}
+
+export interface SafetyMonitorConfig {
+  walls: WallSegment[]
+  routes: RoutePath[]
+  activeRouteId?: string
+  wallAlertDistanceM: number
+  offPathDistanceM: number
+  offPathConsecutiveSamples: number
+  cooldownMs: number
+  vibrationEnabled: boolean
+  wallAlertsEnabled: boolean
+  offPathAlertsEnabled: boolean
+}
+
 export type AccuracyOption = LocationOptions['accuracy']
 export type TaskAccuracyOption = LocationTaskOptions['accuracy']

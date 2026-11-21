@@ -19,6 +19,7 @@ este módulo solo produce datos.
 | Cálculo de movimiento | `MovementTracker`, `computeSample()`, `haversineDistanceM()`, `bearingDeg()` | muestras y estadísticas |
 | GeoJSON | `pointToFeature()`, `pointsToFeatureCollection()`, `routeToFeature()`, `toPosition()` | `Feature` / `FeatureCollection` |
 | Accesibilidad | `movementStatsToText()`, `geofenceEventToText()`, `formatDistance()`, `formatSpeed()`, `formatHeading()` | texto en español |
+| Alertas de seguridad | `createSafetyMonitor()`, `safetyAlerts` | vibración + `SafetyAlert` con texto |
 
 Todo se importa desde `backend/src`:
 
@@ -33,7 +34,7 @@ import { ... } from '../backend/src'
 ## 2. Preparación en la app de Expo
 
 ```sh
-npx expo install expo-location expo-task-manager
+npx expo install expo-location expo-task-manager expo-haptics
 ```
 
 ### `app.json`
@@ -184,6 +185,68 @@ offGeofences()
 
 ---
 
+### Alerta al acercarse a una pared / salirse del camino
+
+```ts
+import {
+  createSafetyMonitor,
+  safetyAlerts,
+  type WallSegment,
+  type RoutePath,
+} from '../backend/src'
+
+const paredes: WallSegment[] = [
+  {
+    id: 'pared-norte',
+    name: 'Pared norte',
+    start: { latitude: 20.6701, longitude: -103.3501 },
+    end: { latitude: 20.6701, longitude: -103.3495 },
+  },
+]
+
+const camino: RoutePath = {
+  id: 'ruta-1',
+  points: [
+    { latitude: 20.67, longitude: -103.35 },
+    { latitude: 20.6705, longitude: -103.3498 },
+  ],
+}
+
+const monitor = createSafetyMonitor({
+  walls: paredes,
+  routes: [camino],
+  activeRouteId: 'ruta-1',
+})
+
+monitor.setOffPathAlertsEnabled(true) // viene desactivado
+
+safetyAlerts.subscribe((alert) => {
+  // alert.type: 'wall' | 'off-path'
+  // alert.text -> anunciar con lector de pantalla / vista de lista
+  // la vibración ya la dispara el módulo
+})
+
+// Opción A: pasar el monitor al tracker
+startForegroundTracking({ safetyMonitor: monitor })
+
+// Opción B: background
+backgroundLocations.subscribe((points) => {
+  points.forEach((point) => void monitor.evaluate(point))
+})
+```
+
+Podemos activar/desactivar cada alerta y la vibración en caliente:
+
+```ts
+monitor.setWallAlertsEnabled(true)
+monitor.setOffPathAlertsEnabled(true)
+monitor.setVibrationEnabled(false)
+monitor.setWalls(nuevasParedes)
+monitor.setActiveRoute('ruta-2')
+```
+
+---
+
 ## 4. Formatos de datos
 
 ```ts
@@ -224,6 +287,27 @@ type GeofenceEvent = {
   regionId: string
   timestamp: number
 }
+
+type WallSegment = {
+  id: string
+  start: { latitude: number; longitude: number }
+  end: { latitude: number; longitude: number }
+  name?: string
+}
+
+type RoutePath = {
+  id: string
+  points: { latitude: number; longitude: number }[]
+  name?: string
+}
+
+type SafetyAlert = {
+  type: 'wall' | 'off-path'
+  id: string
+  distanceM: number
+  text: string
+  timestamp: number
+}
 ```
 
 ---
@@ -238,6 +322,10 @@ type GeofenceEvent = {
 - Los puntos con precisión peor que `maxAccuracyM` (default 50 m) se descartan.
 - La velocidad se calcula en **m/s**; multiplica por 3.6 para km/h
   (`formatSpeed()` ya lo hace).
+- En iOS la vibración puede no producirse con modo de bajo consumo, Taptic
+  Engine desactivado, cámara activa o dictado en uso.
+- La alerta de pared está activa por defecto; la de salida del camino hay que
+  habilitarla con `setOffPathAlertsEnabled(true)`.
 
 ---
 
