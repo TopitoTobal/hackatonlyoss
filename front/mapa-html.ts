@@ -5,7 +5,7 @@ export const MAPA_HTML = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e2e8f0">
-<title>Mapa accesible Â· Campus Casa Central UTFSM</title>
+<title>Mapa accesible · Campus Casa Central UTFSM</title>
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <style>
   html, body { margin: 0; height: 100%; }
@@ -19,7 +19,7 @@ export const MAPA_HTML = `<!doctype html>
   #interior { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
   #sheetName { font-size: clamp(20px, 6.4vw, 26px); }
 
-  /* Pantallas bajas: botones y textos mÃ¡s compactos */
+  /* Pantallas bajas: botones y textos más compactos */
   @media (max-height: 700px) {
     #sheet { padding: 10px; gap: 6px; }
     #sheet button, #interior button { min-height: 48px; }
@@ -80,7 +80,7 @@ export const MAPA_HTML = `<!doctype html>
       </g>
     </svg>
 
-    <!-- LÃ­nea de direcciÃ³n hacia el edificio elegido -->
+    <!-- Línea de dirección hacia el edificio elegido -->
     <svg width="1312" height="985" viewBox="0 0 1312 985" aria-hidden="true" class="pointer-events-none absolute left-0 top-0">
       <line id="guide" x1="690" y1="500" x2="690" y2="500" stroke="#0369a1" stroke-width="7"
             stroke-dasharray="16 12" stroke-linecap="round" stroke-opacity="0"/>
@@ -89,16 +89,16 @@ export const MAPA_HTML = `<!doctype html>
     <!-- Botones de edificios (los crea el script) -->
     <div id="buildings"></div>
 
-    <!-- Punto azul: ubicaciÃ³n de la persona -->
+    <!-- Punto azul: ubicación de la persona -->
     <div id="dotHalo" aria-hidden="true" class="pointer-events-none absolute h-10 w-10 rounded-full bg-sky-500/30"></div>
-    <div id="dot" role="img" aria-label="Tu ubicaciÃ³n"
+    <div id="dot" role="img" aria-label="Tu ubicación"
          class="pointer-events-none absolute box-border h-7 w-7 rounded-full border-[5px] border-white bg-sky-600 shadow-[0_0_0_3px_#0c4a6e]"></div>
   </div>
 </main>
 
 <!-- Pista inicial -->
 <div id="hint" class="pointer-events-none absolute left-1/2 top-4 w-[calc(100%-32px)] max-w-sm -translate-x-1/2 rounded-full bg-black px-4 py-3 text-center text-[17px] font-bold text-white">
-  Arrastra el mapa Â· Toca un edificio
+  Arrastra el mapa · Toca un edificio
 </div>
 
 <!-- Panel que aparece al elegir un edificio -->
@@ -121,14 +121,14 @@ export const MAPA_HTML = `<!doctype html>
     <button id="btnEnter" class="col-span-4 min-h-14 rounded-[10px] border-[3px] border-black bg-blue-900 text-lg font-extrabold text-white">Entrar al edificio</button>
     <button id="btnSpeak"  class="col-span-2 min-h-14 rounded-[10px] border-[3px] border-black bg-black text-lg font-extrabold text-white">Escuchar</button>
     <button id="btnClose"  class="col-span-2 min-h-14 rounded-[10px] border-[3px] border-black bg-white text-lg font-extrabold text-black">Cerrar</button>
-    <button id="btnCenter" class="col-span-2 min-h-14 rounded-[10px] border-[3px] border-black bg-sky-900 text-[17px] font-extrabold text-white">Mi ubicaciÃ³n</button>
+    <button id="btnCenter" class="col-span-2 min-h-14 rounded-[10px] border-[3px] border-black bg-sky-900 text-[17px] font-extrabold text-white">Mi ubicación</button>
     <button id="btnIn"  aria-label="Acercar" class="min-h-14 rounded-[10px] border-[3px] border-black bg-black text-3xl font-extrabold text-white">+</button>
-    <button id="btnOut" aria-label="Alejar"  class="min-h-14 rounded-[10px] border-[3px] border-black bg-black text-3xl font-extrabold text-white">âˆ’</button>
+    <button id="btnOut" aria-label="Alejar"  class="min-h-14 rounded-[10px] border-[3px] border-black bg-black text-3xl font-extrabold text-white">−</button>
     <button id="btnVoice" aria-pressed="true" class="col-span-4 min-h-12 rounded-[10px] border-[3px] border-black bg-white text-base font-extrabold text-black"></button>
   </div>
 </section>
 
-<!-- Vista interior: el resto del mapa queda desenfocado detrÃ¡s -->
+<!-- Vista interior: el resto del mapa queda desenfocado detrás -->
 <section id="interior" role="dialog" aria-modal="true" aria-labelledby="inTitle"
          class="absolute inset-0 z-20 hidden flex-col bg-white/40 backdrop-blur-md">
   <div class="flex items-center gap-3 p-3">
@@ -145,28 +145,28 @@ export const MAPA_HTML = `<!doctype html>
 
 <script>
 /* ---------- Datos ----------
-   Coordenadas en pÃ­xeles del plano oficial (1312 x 985).
-   [id, centroX, centroY, ancho, alto, descripciÃ³n] */
+   Coordenadas en píxeles del plano oficial (1312 x 985).
+   [id, centroX, centroY, ancho, alto, descripción] */
 const BUILDINGS = [
-  ['C', 756, 340, 338, 123, 'Norte. Es el edificio mÃ¡s grande, junto a Avenida Placeres.'],
-  ['R', 437, 340, 60, 40, 'Noroeste, junto a Avenida Placeres y Pasaje ValdÃ©s.'],
-  ['M', 365, 490, 55, 115, 'Noroeste, junto a Pasaje ValdÃ©s, al oeste de la cancha.'],
+  ['C', 756, 340, 338, 123, 'Norte. Es el edificio más grande, junto a Avenida Placeres.'],
+  ['R', 437, 340, 60, 40, 'Noroeste, junto a Avenida Placeres y Pasaje Valdés.'],
+  ['M', 365, 490, 55, 115, 'Noroeste, junto a Pasaje Valdés, al oeste de la cancha.'],
   ['M2', 420, 530, 45, 42, 'Noroeste, al este del Edificio M.'],
-  ['B', 836, 528, 228, 125, 'Centro-norte. Tiene un patio interior y estÃ¡ al sur del Edificio C.'],
+  ['B', 836, 528, 228, 125, 'Centro-norte. Tiene un patio interior y está al sur del Edificio C.'],
   ['K', 975, 440, 50, 60, 'Noreste, junto a la Subida San Luis.'],
   ['L', 622, 596, 26, 64, 'Oeste, pegado al borde este de la cancha.'],
   ['U', 746, 660, 54, 120, 'Centro-oeste, al oeste del Edificio A y al sur del Edificio B.'],
-  ['A', 845, 715, 110, 150, 'Centro-sur, al sur del patio central. EstÃ¡ al este del Edificio U.'],
+  ['A', 845, 715, 110, 150, 'Centro-sur, al sur del patio central. Está al este del Edificio U.'],
   ['D', 968, 661, 103, 98, 'Centro-este, al este del patio central y al norte del Edificio E.'],
   ['E', 1002, 735, 115, 32, 'Centro-este, justo al sur del Edificio D.'],
   ['H', 602, 752, 60, 36, 'Suroeste, bajo la cancha, sobre la ladera.'],
   ['F2', 948, 800, 22, 70, 'Sur, entre el Edificio D y el Edificio F.'],
-  ['F', 1032, 860, 215, 32, 'Sur, a lo largo de Avenida EspaÃ±a.'],
+  ['F', 1032, 860, 215, 32, 'Sur, a lo largo de Avenida España.'],
   ['T', 1226, 830, 65, 70, 'Extremo sureste del campus.']
 ];
 const DIRS = ['norte','noreste','este','sureste','sur','suroeste','oeste','noroeste'];
 
-/* UbicaciÃ³n de la persona (simulada). Para conectar un GPS real, llama a
+/* Ubicación de la persona (simulada). Para conectar un GPS real, llama a
    setUserPosition(x, y) con coordenadas ya convertidas al plano. */
 let dot = { x: 690, y: 500 };
 
@@ -174,13 +174,13 @@ let dot = { x: 690, y: 500 };
 const $ = (id) => document.getElementById(id);
 const vp = $('viewport'), world = $('world');
 let ox = 0, oy = 0, z = 1, selected = null;
-let autoVoice = true;   /* voz automÃ¡tica activada por defecto */
+let autoVoice = true;   /* voz automática activada por defecto */
 try { if (localStorage.getItem('autoVoice') === 'off') autoVoice = false; } catch (e) {}
 const buttons = {};
 const ON  = ['bg-yellow-400','text-black','border-black','border-[5px]'];
 const OFF = ['bg-blue-900','text-white','border-slate-900','border-[3px]'];
 
-/* ---------- ConstrucciÃ³n ---------- */
+/* ---------- Construcción ---------- */
 BUILDINGS.forEach(([id, cx, cy, w, h]) => {
   const W = Math.max(48, w), H = Math.max(48, h);
   const b = document.createElement('button');
@@ -199,7 +199,7 @@ function placeDot() {
   $('dotHalo').style.cssText = \`left:\${dot.x - 20}px;top:\${dot.y - 20}px\`;
 }
 
-/* ---------- Mapa: posiciÃ³n y zoom ---------- */
+/* ---------- Mapa: posición y zoom ---------- */
 function clamp(x, y, s) {
   const m = 120, vw = vp.clientWidth, vh = vp.clientHeight;
   return [Math.min(m, Math.max(vw - 1312*s - m, x)), Math.min(m, Math.max(vh - 985*s - m, y))];
@@ -227,13 +227,13 @@ function zoomBy(k) {
   z = nz; apply();
 }
 
-/* ---------- SelecciÃ³n ---------- */
+/* ---------- Selección ---------- */
 function info(id) {
   const [, cx, cy, , , where] = BUILDINGS.find(b => b[0] === id);
   const dx = cx - dot.x, dy = cy - dot.y, dist = Math.hypot(dx, dy);
   const ang = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
-  const dir = dist < 70 ? 'Ya estÃ¡s junto a este edificio.'
-    : 'Desde tu ubicaciÃ³n, dirÃ­gete hacia el ' + DIRS[Math.round(ang/45) % 8] + '.';
+  const dir = dist < 70 ? 'Ya estás junto a este edificio.'
+    : 'Desde tu ubicación, dirígete hacia el ' + DIRS[Math.round(ang/45) % 8] + '.';
   return { cx, cy, where, dir, label: 'Edificio ' + id };
 }
 function select(id) {
@@ -294,7 +294,7 @@ function speak() {
 }
 function voiceLabel() {
   const b = $('btnVoice');
-  b.textContent = 'Voz automÃ¡tica: ' + (autoVoice ? 'activada' : 'desactivada');
+  b.textContent = 'Voz automática: ' + (autoVoice ? 'activada' : 'desactivada');
   b.setAttribute('aria-pressed', autoVoice ? 'true' : 'false');
 }
 $('btnVoice').onclick = () => {
@@ -305,9 +305,9 @@ $('btnVoice').onclick = () => {
   else speechSynthesis.cancel();
 };
 voiceLabel();
-/* La app Expo envÃ­a la posiciÃ³n ya convertida a pÃ­xeles del plano.
-   Solo se actualizan el punto y la guÃ­a: no volvemos a llamar a select()
-   para que la voz automÃ¡tica no se repita en cada muestra del GPS. */
+/* La app Expo envía la posición ya convertida a píxeles del plano.
+   Solo se actualizan el punto y la guía: no volvemos a llamar a select()
+   para que la voz automática no se repita en cada muestra del GPS. */
 window.setUserPosition = (x, y) => {
   dot = { x, y };
   placeDot();
@@ -362,17 +362,17 @@ window.addEventListener('resize', () => {
 });
 
 /* ---------- Interior del edificio ----------
-   Plano ESQUEMÃTICO generado: un pasillo central y salas a ambos lados.
+   Plano ESQUEMÁTICO generado: un pasillo central y salas a ambos lados.
    Cuando existan planos oficiales por edificio, reemplazar buildPlan(). */
 let inside = false, room = null;
 const ROOM_ON  = ['bg-yellow-400','text-black','border-black'];
 const ROOM_OFF = ['bg-blue-900','text-white','border-slate-900'];
 
 function roomInfo() {
-  $('inRoom').textContent = room ? 'Sala ' + room + ' Â· Edificio ' + selected : 'Edificio ' + selected;
+  $('inRoom').textContent = room ? 'Sala ' + room + ' · Edificio ' + selected : 'Edificio ' + selected;
   $('inNote').textContent = room
-    ? 'Plano esquemÃ¡tico: todavÃ­a no hay datos oficiales de este espacio.'
-    : 'Toca una sala para ver su informaciÃ³n.';
+    ? 'Plano esquemático: todavía no hay datos oficiales de este espacio.'
+    : 'Toca una sala para ver su información.';
 }
 function buildPlan(w, h) {
   const st = $('inStage'); st.innerHTML = ''; room = null;
@@ -417,7 +417,7 @@ function buildPlan(w, h) {
     card.appendChild(b);
   });
   const d = document.createElement('div');
-  d.setAttribute('role', 'img'); d.setAttribute('aria-label', 'Tu ubicaciÃ³n');
+  d.setAttribute('role', 'img'); d.setAttribute('aria-label', 'Tu ubicación');
   d.className = 'pointer-events-none absolute box-border h-7 w-7 rounded-full border-[5px] border-white bg-sky-600 shadow-[0_0_0_3px_#0c4a6e]';
   d.style.cssText = \`left:\${dx - 14}px;top:\${dy - 14}px\`;
   card.appendChild(d);
@@ -432,7 +432,7 @@ function enterBuilding() {
   $('sheet').classList.add('hidden'); $('sheet').classList.remove('flex');
   vp.inert = true;
   const el = $('interior'); el.classList.remove('hidden'); el.classList.add('flex');
-  $('inTitle').textContent = 'Edificio ' + id + ' Â· interior';
+  $('inTitle').textContent = 'Edificio ' + id + ' · interior';
   buildPlan(w, h);
   $('inExit').focus();
   if (autoVoice) say('Dentro del Edificio ' + id);
