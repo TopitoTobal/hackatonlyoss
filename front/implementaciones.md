@@ -14,6 +14,14 @@ En el prototipo el primer fix GPS preciso se ancla al centro del plano
 seleccionar el edificio, para no repetir la voz automática en cada muestra.
 El interior de los edificios es esquemático hasta que haya planos oficiales.
 
+En modo **vidente** el mapa muestra a las personas **no videntes conectadas**
+como puntos morados con un ID corto y efímero, y un contador accesible arriba a
+la izquierda. La presencia usa MQTT sobre WSS
+(`wss://broker.emqx.io:8084/mqtt`, tema `hackatonlyoss/campus/presencia/v1`):
+sin credenciales, sin nombres y sin historial. Los pares expiran a los 12 s sin
+actualización. Si el broker no está disponible, la capa se oculta y el GPS y la
+voz siguen funcionando con normalidad.
+
 ### Accesibilidad y responsive
 
 - El mapa tiene un `<h1>` oculto, instrucciones para lectores de pantalla
