@@ -50,8 +50,11 @@ como puntos morados con un ID corto y efímero, y un contador accesible arriba a
 la izquierda. La presencia usa MQTT sobre WSS
 (`wss://broker.emqx.io:8084/mqtt`, tema `hackatonlyoss/campus/presencia/v1`):
 sin credenciales, sin nombres y sin historial. Los pares expiran a los 12 s sin
-actualización. Si el broker no está disponible, la capa se oculta y el GPS y la
-voz siguen funcionando con normalidad.
+actualización. Cada muestra GPS se publica (con un mínimo de 400 ms entre
+envíos) y un latido cada 2 s mantiene el `ts` fresco aunque el navegador
+espacie las muestras; en web además se sondea `getCurrentPosition` cada 2 s
+junto a `watchPosition`. Si el broker no está disponible, la capa se oculta y el
+GPS y la voz siguen funcionando con normalidad.
 
 ### Pedido de ayuda (botón del teléfono)
 
@@ -59,7 +62,7 @@ En modo **no vidente** aparece un botón **Pedir ayuda** en la barra superior.
 Al tocarlo se publica un aviso en el tema MQTT
 `hackatonlyoss/campus/ayuda/v1` (mismo broker WSS que la presencia) con el ID
 efímero, el rol, `lat`/`lng`/`acc` del GPS satelital crudo y un `ts`. Mientras
-está activo se repite cada 3 s; al volver a tocar el botón se publica
+está activo se repite cada 2 s; al volver a tocar el botón se publica
 `activo: false` y desaparece. Cambiar de modo o detener el GPS también cancela
 el pedido.
 

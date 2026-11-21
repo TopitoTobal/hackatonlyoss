@@ -1217,7 +1217,7 @@ function publicarPresencia(fuerza = false) {
   const ws = PRESENCIA.socket;
   if (!ws || ws.readyState !== 1 || !PRESENCIA.conectado || !PRESENCIA.rol) return;
   const ahora = Date.now();
-  if (!fuerza && ahora - PRESENCIA.ultimoEnvio < 900) return;
+  if (!fuerza && ahora - PRESENCIA.ultimoEnvio < 400) return;
   PRESENCIA.ultimoEnvio = ahora;
   /* Publicamos el GPS satelital CRUDO, nunca la posición ya fusionada.
      Si publicáramos el estimado, otros nodos lo re-fusionarían y el
@@ -1872,8 +1872,11 @@ setInterval(() => {
   }
 }, 3000);
 setInterval(() => {
-  if (PRESENCIA.socket && PRESENCIA.socket.readyState === 1) publicarPresencia(true);
-}, 10000);
+  if (PRESENCIA.socket && PRESENCIA.socket.readyState === 1) {
+    publicarPresencia(true);
+    publicarAyuda(true);
+  }
+}, 2000);
 setInterval(() => {
   if (PRESENCIA.socket && PRESENCIA.socket.readyState === 1) PRESENCIA.socket.send(mqttPing());
 }, 45000);
