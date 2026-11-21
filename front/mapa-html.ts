@@ -40,6 +40,15 @@ export const MAPA_HTML = `<!doctype html>
     box-shadow: 0 4px 14px rgba(29,78,216,.22);
   }
   #buildings button:focus-visible { box-shadow: none; }
+  /* Las canchas se tocan igual que los edificios, pero su botón es transparente
+     para no tapar el dibujo de la cancha. */
+  #buildings button.canchaBoton {
+    background: transparent !important; border: 0 !important;
+    box-shadow: none !important; color: transparent !important;
+  }
+  #buildings button.canchaBoton[aria-pressed="true"] {
+    outline: 3px solid #1d4ed8; outline-offset: -3px; border-radius: 8px;
+  }
   #dot, #dotHalo { position: absolute; border-radius: 9999px; box-sizing: border-box; pointer-events: none; }
   #dot { background: #1d4ed8; border: 3px solid #fff; box-shadow: 0 2px 8px rgba(15,23,42,.25); }
   #dotHalo { background: rgba(29,78,216,.18); }
@@ -260,8 +269,8 @@ export const MAPA_HTML = `<!doctype html>
       <rect x="440" y="460" width="150" height="240" rx="8" fill="#cfe6c8"/>
       <rect x="448" y="470" width="134" height="220" rx="6" fill="none" stroke="#ffffff" stroke-width="2" opacity=".8"/>
       <line x1="515" y1="470" x2="515" y2="690" stroke="#ffffff" stroke-width="2" opacity=".8"/>
-      <rect x="1130" y="690" width="70" height="120" rx="6" fill="#ecd9c8"/>
-      <line x1="1130" y1="750" x2="1200" y2="750" stroke="#ffffff" stroke-width="2" opacity=".8"/>
+      <rect x="1150" y="690" width="70" height="120" rx="6" fill="#ecd9c8"/>
+      <line x1="1150" y1="750" x2="1220" y2="750" stroke="#ffffff" stroke-width="2" opacity=".8"/>
 
       <!-- Ladera / talud al sur de la cancha: curvas de nivel cerca de H -->
       <g fill="none" stroke="#cbd2d9" stroke-width="2" opacity=".8">
@@ -332,7 +341,7 @@ export const MAPA_HTML = `<!doctype html>
       <!-- 7. Etiquetas -->
       <g font-family="system-ui, sans-serif" font-weight="700" text-anchor="middle">
         <text x="515" y="580" font-size="20" fill="#334155">8007</text>
-        <text x="1165" y="755" font-size="16" fill="#334155">TENIS</text>
+        <text x="1185" y="755" font-size="16" fill="#334155">TENIS</text>
         <text x="660" y="301" font-size="20" fill="#334155">AVENIDA PLACERES</text>
         <text x="142" y="160" font-size="17" fill="#64748b">BARRIO NORTE</text>
         <text x="590" y="830" font-size="16" fill="#94a3b8">LADERA</text>
@@ -480,8 +489,22 @@ const BUILDINGS = [
   ['E', 1050, 780, 150, 45, 'Centro-este, al sur de D.'],
   ['F2', 950, 820, 48, 70, 'Sur, entre A y F.'],
   ['F', 1060, 880, 220, 40, 'Sur, junto a F2.'],
-  ['T', 1210, 850, 70, 80, 'Sureste, en Subida San Luis.']
+  ['T', 1210, 850, 70, 80, 'Sureste, en Subida San Luis.'],
+  ['8007', 515, 580, 150, 240, 'Cancha principal, junto al pasillo central.'],
+  ['TENIS', 1185, 750, 70, 120, 'Cancha de tenis, junto a Subida San Luis.']
 ];
+/* Las canchas son destinos clickeables, pero no tienen interior. */
+const CANCHAS = new Set(['8007', 'TENIS']);
+function etiquetaDestino(id) {
+  if (id === '8007') return 'Cancha 8007';
+  if (id === 'TENIS') return 'Cancha de tenis';
+  return 'Edificio ' + id;
+}
+function nombreDestino(id) {
+  if (id === '8007') return 'la cancha 8007';
+  if (id === 'TENIS') return 'la cancha de tenis';
+  return 'el edificio ' + id;
+}
 
 /* Los mismos senderos dibujados en el plano, como polilíneas en píxeles.
    Incluye los accesos que antes eran "enlaces" invisibles: ahora están
@@ -520,7 +543,8 @@ const ENTRADAS = {
   M2: [415,460], B: [980,510],  K: [1090,455], J: [1102,340],
   O: [1100,560], L: [624,580],  U: [710,605],  A: [755,690],
   H: [590,780],  D: [1020,745], E: [975,785],  F2: [941,785],
-  F: [1050,860], T: [1175,860]
+  F: [1050,860], T: [1175,860],
+  8007: [440,580], TENIS: [1185,810]
 };
 
 const DIRS = ['norte','noreste','este','sureste','sur','suroeste','oeste','noroeste'];
@@ -574,9 +598,10 @@ BUILDINGS.forEach(([id, cx, cy, w, h]) => {
   const W = Math.max(48, w), H = Math.max(48, h);
   const b = document.createElement('button');
   b.className = 'absolute box-border rounded-lg p-0 text-2xl font-extrabold ' + OFF.join(' ');
+  if (CANCHAS.has(id)) b.classList.add('canchaBoton');
   b.style.cssText = 'left:' + Math.round(cx - W/2) + 'px;top:' + Math.round(cy - H/2) + 'px;width:' + W + 'px;height:' + H + 'px';
   b.textContent = id;
-  b.setAttribute('aria-label', 'Edificio ' + id);
+  b.setAttribute('aria-label', etiquetaDestino(id));
   b.setAttribute('aria-pressed', 'false');
   b.addEventListener('click', (e) => {
     if (justDragged) return;
@@ -804,7 +829,7 @@ function instruccion(nav, pr) {
   if (k === pts.length - 1 || destinoPunto.entrada === nav.id) {
     return {
       clave: 'entrada',
-      texto: 'Continúa ' + metros + ' m hasta la entrada del edificio ' + nav.id + '.'
+      texto: 'Continúa ' + metros + ' m hasta ' + nombreDestino(nav.id) + '.'
     };
   }
   const a = pts[k - 1] || { x: pr.x, y: pr.y };
@@ -817,7 +842,7 @@ function instruccion(nav, pr) {
     : cross > 0 ? 'Gira a la derecha' : 'Gira a la izquierda';
   return {
     clave: giro + ':' + k,
-    texto: 'En ' + metros + ' m, ' + giro.toLowerCase() + '. Hacia el edificio ' + nav.id + '.'
+    texto: 'En ' + metros + ' m, ' + giro.toLowerCase() + '. Hacia ' + nombreDestino(nav.id) + '.'
   };
 }
 function pintarRuta(recorrido, restante) {
@@ -841,10 +866,10 @@ function actualizarBotonRuta() {
   const b = $('btnRoute');
   if (navegacion) {
     b.innerHTML = '<span class="material-icons" aria-hidden="true" style="font-size:30px">stop</span>';
-    b.setAttribute('aria-label', 'Detener la navegación hacia el edificio ' + navegacion.id);
+    b.setAttribute('aria-label', 'Detener la navegación hacia ' + nombreDestino(navegacion.id));
   } else {
     b.innerHTML = '<span class="material-icons" aria-hidden="true" style="font-size:30px">route</span>';
-    b.setAttribute('aria-label', 'Generar ruta hacia el edificio seleccionado');
+    b.setAttribute('aria-label', 'Generar ruta hacia el destino seleccionado');
   }
 }
 function detenerRuta(silent) {
@@ -859,8 +884,8 @@ function llegar(nav) {
   navegacion = null;
   ocultarRuta();
   actualizarBotonRuta();
-  $('sheetRoute').textContent = 'Llegaste a la entrada del edificio ' + nav.id + '.';
-  hablarAccion('Llegaste a la entrada del edificio ' + nav.id + '.');
+  $('sheetRoute').textContent = 'Llegaste a ' + nombreDestino(nav.id) + '.';
+  hablarAccion('Llegaste a ' + nombreDestino(nav.id) + '.');
   if (esCiego()) setTimeout(() => mostrarFlechasCiego(false), 1800);
 }
 function iniciarNavegacion(id, r, silent) {
@@ -876,11 +901,11 @@ function iniciarNavegacion(id, r, silent) {
   actualizarBotonRuta();
   pintarRuta([], navegacion.puntos);
   const ins = instruccion(navegacion, { i: 0, t: 0, x: dot.x, y: dot.y, d: 0 });
-  $('sheetRoute').textContent = 'Ruta al edificio ' + id + ' · ' +
+  $('sheetRoute').textContent = 'Ruta a ' + nombreDestino(id) + ' · ' +
     Math.round(navegacion.total * METROS_POR_PIXEL) + ' m. ' + ins.texto;
   centerOn(dot.x, dot.y);
   if (!silent)
-    hablarAccion('Ruta generada hacia el edificio ' + id + '. ' +
+    hablarAccion('Ruta generada hacia ' + nombreDestino(id) + '. ' +
       Math.round(navegacion.total * METROS_POR_PIXEL) + ' metros. Sigue el camino azul ' +
       'desde el punto azul. ' + ins.texto);
 }
@@ -889,7 +914,7 @@ function generarRuta(id) {
   if (destino === undefined) return;
   const r = mejorRuta(destino);
   if (!r) {
-    hablarAccion('No se pudo generar la ruta hacia el edificio ' + id + '.');
+    hablarAccion('No se pudo generar la ruta hacia ' + nombreDestino(id) + '.');
     return;
   }
   iniciarNavegacion(id, r);
@@ -923,7 +948,7 @@ function actualizarNavegacion(opts) {
   const quedan = Math.max(0,
     Math.round((nav.total - avanceHasta(nav.puntos, pr.i, pr.t)) * METROS_POR_PIXEL));
   const ins = instruccion(nav, pr);
-  $('sheetRoute').textContent = 'Edificio ' + nav.id + ' · quedan ' + quedan + ' m. ' + ins.texto;
+  $('sheetRoute').textContent = etiquetaDestino(nav.id) + ' · quedan ' + quedan + ' m. ' + ins.texto;
   if (!opts.silent && ins.clave !== nav.ultimoAviso) {
     nav.ultimoAviso = ins.clave;
     speakOrAnnounce(ins.texto);
@@ -937,9 +962,9 @@ function info(id) {
   const ang = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
   const metros = Math.round(dist * METROS_POR_PIXEL);
   const dir = dist < 70
-    ? 'Ya estás junto a este edificio.'
+    ? 'Ya estás junto a este lugar.'
     : 'Desde tu ubicación, a ' + metros + ' metros hacia el ' + DIRS[Math.round(ang/45) % 8] + '.';
-  return { cx, cy, where, dir, metros, label: 'Edificio ' + id };
+  return { cx, cy, where, dir, metros, label: etiquetaDestino(id) };
 }
 function select(id, opts) {
   opts = opts || {};
@@ -970,7 +995,8 @@ function select(id, opts) {
   const texto = i.label + '. ' + i.dir + ' ' + i.where;
   if (opts.focus && !esCiego()) $('sheetName').focus({ preventScroll: true });
   if (opts.silent) return;
-  if (opts.ciego || esCiego()) hablarAccion('Edificio seleccionado: ' + id + '. ' + i.dir + ' ' + i.where);
+  if (opts.ciego || esCiego())
+    hablarAccion(i.label + (CANCHAS.has(id) ? ' seleccionada. ' : ' seleccionado. ') + i.dir + ' ' + i.where);
   else if (opts.focus) announce(i.dir + ' ' + i.where);
   else speakOrAnnounce(texto);
 }
@@ -1238,6 +1264,7 @@ const AUTO_INTERIOR = { dentro: 0, fuera: 0, activo: false, bloqueo: 0 };
 function edificioEn(x, y) {
   const MARGEN = 8; /* ~6 m: tolerancia a ruido GPS en espacios pequeños */
   for (const [id, cx, cy, w, h] of BUILDINGS) {
+    if (CANCHAS.has(id)) continue; /* las canchas no tienen plano interior */
     if (Math.abs(x - cx) <= w / 2 + MARGEN && Math.abs(y - cy) <= h / 2 + MARGEN) {
       return id;
     }

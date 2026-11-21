@@ -247,7 +247,9 @@ una vez después de cada deploy para tomar el service worker nuevo.
 - El plano base se redibujó como mapa continuo: un patrón de manzanas cubre todo
   el lienzo y el campus, la Avenida Placeres y las calles llegan hasta los cuatro
   bordes. No quedan franjas lisas ("bordes blancos") alrededor del dibujo.
-- El catastro se ajustó a 18 recintos. Cambios principales respecto a la versión
+- El catastro tiene 18 edificios y 2 canchas clickeables (`8007` y `TENIS`),
+  que se nombran y se pueden elegir como destino igual que los edificios.
+  Cambios principales respecto a la versión
   anterior: **C** quedó en `(750, 372, 460×110)` (borde norte y=317, 5 px al sur
   de Avenida Placeres) y su lado este se alinea con **B** `(835, 510, 290×130)`;
   **A** pasó a `(840, 720, 170×210)` y **U** a `(710, 690, 60×170)`, dejando un
@@ -255,16 +257,16 @@ una vez después de cada deploy para tomar el service worker nuevo.
   chocar con **F2**; **F2** y **L** usan ahora 48 px de ancho mínimo (mismo
   mínimo táctil que el render) y no se solapan con A/E ni con la cancha. Se
   agregaron los recintos pequeños **R2**, **J** y **O**.
-- La cancha principal `8007` ahora es `x=450, y=450, w=170, h=260`, con la
-  ladera (curvas de nivel) al sur cerca de **H**. Los 18 senderos/calles están
-  duplicados con exactamente el mismo `d` en la capa de contorno
-  (`#475569`, 24 px) y en la de relleno blanco (16 px). Conectan Placeres→C→B,
-  B→U→A, el circuito de la cancha→H, Pasaje Valdés→M/M2, B/K/O→Subida San Luis
-  y D/E/F2/F→T.
-- Las polilíneas de los 18 senderos están duplicadas en `PATHS` y se convierten
+- La cancha principal `8007` es `x=440, y=460, w=150, h=240` y la de tenis
+  `x=1150, y=690, w=70, h=120`, corrida a la derecha para que no la tape el
+  sendero de Subida San Luis. La ladera (curvas de nivel) queda al sur cerca de
+  **H**. Los 25 senderos/calles están duplicados con exactamente el mismo `d`
+  en la capa de contorno (`#94a3b8`, 24 px) y en la de relleno blanco (16 px).
+- Las polilíneas de los 25 senderos están duplicadas en `PATHS` y se convierten
   en un grafo (`GRAFO`) con las entradas de `ENTRADAS`. `mejorRuta()` usa
-  Dijkstra desde el sendero más cercano al punto azul. Los enlaces de
-  `ENLACES` conectan las zonas que el dibujo deja separadas.
+  Dijkstra desde el sendero más cercano al punto azul. Todos los tramos que
+  puede usar la ruta están dibujados: no quedan accesos invisibles ni atajos
+  entre nodos cercanos que crucen edificios.
 - Al pulsar **Generar ruta** se inicia una navegación: `#routeLine` muestra el
   tramo que falta (azul) y `#routeDone` el ya recorrido (gris). Cada posición
   del GPS se proyecta sobre la ruta; `#sheetRoute` indica metros restantes y el
