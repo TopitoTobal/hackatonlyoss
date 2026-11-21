@@ -205,9 +205,17 @@ export default function App() {
               longitude: muestra.longitude,
             }
           }
-          setPunto(
-            aPuntoPlano(muestra.latitude, muestra.longitude, origenRef.current),
+          const plano = aPuntoPlano(
+            muestra.latitude,
+            muestra.longitude,
+            origenRef.current,
           )
+          setPunto({
+            ...plano,
+            latitude: muestra.latitude,
+            longitude: muestra.longitude,
+            accuracyM: muestra.accuracyM,
+          })
         }
         setVelocidad(formatSpeed(muestra.computedSpeedMps))
         setUltimaPosicion(

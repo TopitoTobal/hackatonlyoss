@@ -5,7 +5,13 @@ import { WebView } from 'react-native-webview'
 import { MAPA_HTML } from './mapa-html'
 import type { Modo } from './modo'
 
-export type PuntoPlano = { x: number; y: number }
+export type PuntoPlano = {
+  x: number
+  y: number
+  latitude?: number
+  longitude?: number
+  accuracyM?: number | null
+}
 
 export default function Mapa({
   posicion,

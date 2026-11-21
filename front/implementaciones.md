@@ -5,7 +5,7 @@ Este archivo es el handoff para quien construye el mapa con Tailwind: aquí est�
 todo lo que ya puedes consumir desde `front/`. El mapa vive en
 `front/index.html` y se carga desde `App.tsx` a través de `Mapa.tsx`
 (`WebView` en nativo, `Mapa.web.tsx` con `iframe` en web), enviándole la
-ubicación del GPS con `postMessage({ type: 'position', x, y })`.
+ubicación del GPS con `postMessage({ type: 'position', x, y, latitude, longitude, accuracyM })`.
 La conversión lat/lng → píxeles del plano está en `App.tsx` (`aPuntoPlano`).
 En el prototipo el primer fix GPS preciso se ancla al centro del plano
 `(690, 500)` y los puntos siguientes son desplazamientos relativos desde ahí
@@ -21,6 +21,15 @@ la izquierda. La presencia usa MQTT sobre WSS
 sin credenciales, sin nombres y sin historial. Los pares expiran a los 12 s sin
 actualización. Si el broker no está disponible, la capa se oculta y el GPS y la
 voz siguen funcionando con normalidad.
+
+Cada dispositivo publica también su `latitude`/`longitude`/`accuracyM` crudos.
+El receptor convierte la posición ajena con **su propio primer fix como origen**
+(`geoAPlano`), así los puntos caen en el mismo marco local aunque cada celular
+haya empezado en un lugar distinto. El zoom llega a **12×**, con una barra de
+escala métrica arriba a la izquierda. Al acercar, cada par muestra un anillo
+discontinuo con su precisión GPS (`accuracyM`) y la distancia al punto propio en
+metros. Con esto el salón de la hackathon se puede inspeccionar a pocos metros
+(de 1 a 10 m por píxel de pantalla según el zoom).
 
 ### Accesibilidad y responsive
 

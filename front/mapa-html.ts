@@ -24,6 +24,13 @@ export const MAPA_HTML = `<!doctype html>
     box-shadow: 0 4px 14px rgba(0,0,0,.35);
   }
   #presenceBadge.sin-conexion { background: #7f1d1d; }
+  #scaleBar {
+    position: fixed; left: max(10px, env(safe-area-inset-left)); top: 58px;
+    z-index: 9; pointer-events: none; display: none;
+    border: 3px solid #000; border-top: 0; background: rgba(255,255,255,.92);
+    padding: 1px 4px; font-size: 12px; font-weight: 800; color: #000;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  }
   #peerLayer text { paint-order: stroke fill; stroke: #fff; stroke-width: 4px; stroke-linejoin: round; }
 
   /* Elementos flotantes: nunca deben salirse del área visible */
@@ -274,6 +281,7 @@ export const MAPA_HTML = `<!doctype html>
      class="rounded-full border-[3px] border-black bg-purple-800 px-3 py-2 text-[14px] font-extrabold text-white">
   0 no videntes conectadas
 </div>
+<div id="scaleBar"><span id="scaleText">20 m</span></div>
 
 <!-- Panel que aparece al elegir un edificio -->
 <section id="sheet" role="region" aria-label="Información del edificio seleccionado"
@@ -343,10 +351,11 @@ const BUILDINGS = [
 ];
 const DIRS = ['norte','noreste','este','sureste','sur','suroeste','oeste','noroeste'];
 const METROS_POR_PIXEL = 0.75; /* el mismo valor que usa App.tsx para el GPS */
+const CENTRO = { x: 690, y: 500 };
 
-/* Ubicación de la persona (simulada). El GPS real llama a setUserPosition(x, y)
-   con coordenadas relativas al centro del plano (690, 500). */
-let dot = { x: 690, y: 500 };
+/* Ubicación de la persona (simulada). El GPS real llama a setUserPosition(x, y, geo)
+   con coordenadas relativas al centro del plano. */
+let dot = { x: CENTRO.x, y: CENTRO.y };
 
 /* ---------- Estado ---------- */
 const $ = (id) => document.getElementById(id);
@@ -393,7 +402,7 @@ BUILDINGS.forEach(([id, cx, cy, w, h]) => {
 
 /* El zoom base depende del tamaño de la pantalla; los elementos táctiles
    mantienen un tamaño constante en pantalla sin importar el zoom. */
-const ZMAX = 3;
+const ZMAX = 12;
 /* Zoom mínimo "cover", como en Google Maps: el plano siempre cubre el viewport.
    Así nunca aparece fondo vacío alrededor del mapa al alejar al máximo. */
 function minZoom() {
@@ -409,6 +418,18 @@ function placeDot() {
     borderWidth: (5 / z) + 'px', boxShadow: '0 0 0 ' + (3 / z) + 'px #0c4a6e' });
   Object.assign($('dotHalo').style, { left: (dot.x - hh/2) + 'px', top: (dot.y - hh/2) + 'px', width: hh + 'px', height: hh + 'px' });
 }
+function actualizarEscala() {
+  const bar = $('scaleBar');
+  if (!bar) return;
+  let metros = 1;
+  for (const m of [1, 2, 5, 10, 20, 50]) {
+    if ((m / METROS_POR_PIXEL) * z <= 120) metros = m;
+    else break;
+  }
+  bar.style.display = 'block';
+  bar.style.width = ((metros / METROS_POR_PIXEL) * z).toFixed(1) + 'px';
+  $('scaleText').textContent = metros + ' m';
+}
 function restyle() {
   const px = (n) => (n / z).toFixed(2) + 'px';
   BUILDINGS.forEach(([id, cx, cy, w, h]) => {
@@ -420,6 +441,7 @@ function restyle() {
   });
   placeDot();
   pintarPares();
+  actualizarEscala();
   const g = $('guide');
   g.setAttribute('stroke-width', 7 / z);
   g.setAttribute('stroke-dasharray', (16 / z) + ' ' + (12 / z));
@@ -572,6 +594,7 @@ const PRESENCIA_BROKER = 'wss://broker.emqx.io:8084/mqtt';
 const PRESENCIA = {
   id: 'NV-' + Math.random().toString(36).slice(2, 8).toUpperCase(),
   rol: null,
+  geo: null,
   x: dot.x,
   y: dot.y,
   pares: new Map(),
@@ -653,22 +676,40 @@ function publicarPresencia(fuerza = false) {
   const ahora = Date.now();
   if (!fuerza && ahora - PRESENCIA.ultimoEnvio < 900) return;
   PRESENCIA.ultimoEnvio = ahora;
+  const g = PRESENCIA.geo;
   const cuerpo = {
     id: PRESENCIA.id,
     rol: PRESENCIA.rol,
     x: Math.round(PRESENCIA.x),
     y: Math.round(PRESENCIA.y),
+    lat: g && Number.isFinite(g.latitude) ? Number(g.latitude.toFixed(6)) : null,
+    lng: g && Number.isFinite(g.longitude) ? Number(g.longitude.toFixed(6)) : null,
+    acc: g && Number.isFinite(g.accuracyM) ? Math.round(g.accuracyM) : null,
     ts: ahora,
   };
   ws.send(mqttPaquete(3, 0, [...mqttTexto(PRESENCIA_TOPIC), ...bytesTexto(JSON.stringify(cuerpo))]));
 }
+function geoAPlano(lat, lng) {
+  const o = PRESENCIA.geo;
+  if (!o || !Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  const metrosPorGradoLat = 111320;
+  const metrosPorGradoLng = 111320 * Math.cos((o.latitude * Math.PI) / 180);
+  const dx = ((lng - o.longitude) * metrosPorGradoLng) / METROS_POR_PIXEL;
+  const dy = (-(lat - o.latitude) * metrosPorGradoLat) / METROS_POR_PIXEL;
+  return { x: CENTRO.x + dx, y: CENTRO.y + dy };
+}
 function recibirPresencia(mensaje) {
   if (!mensaje || mensaje.id === PRESENCIA.id) return;
   if (mensaje.rol !== 'no-vidente') return;
-  if (!Number.isFinite(mensaje.x) || !Number.isFinite(mensaje.y)) return;
+  const punto = geoAPlano(mensaje.lat, mensaje.lng) ||
+    (Number.isFinite(mensaje.x) && Number.isFinite(mensaje.y)
+      ? { x: mensaje.x, y: mensaje.y }
+      : null);
+  if (!punto) return;
   PRESENCIA.pares.set(mensaje.id, {
-    x: mensaje.x,
-    y: mensaje.y,
+    x: punto.x,
+    y: punto.y,
+    acc: Number.isFinite(mensaje.acc) ? mensaje.acc : null,
     ts: Date.now(),
     etiqueta: String(mensaje.id || 'NV').slice(0, 6),
   });
@@ -685,6 +726,18 @@ function pintarPares() {
   capa.textContent = '';
   const NS = 'http://www.w3.org/2000/svg';
   paresVisibles().forEach((p) => {
+    if (Number.isFinite(p.acc) && p.acc > 0) {
+      const halo = document.createElementNS(NS, 'circle');
+      halo.setAttribute('cx', p.x);
+      halo.setAttribute('cy', p.y);
+      halo.setAttribute('r', Math.max(2, p.acc / METROS_POR_PIXEL));
+      halo.setAttribute('fill', 'none');
+      halo.setAttribute('stroke', '#7c3aed');
+      halo.setAttribute('stroke-width', 2 / z);
+      halo.setAttribute('stroke-dasharray', (5 / z) + ' ' + (4 / z));
+      halo.setAttribute('opacity', '.6');
+      capa.appendChild(halo);
+    }
     const circulo = document.createElementNS(NS, 'circle');
     circulo.setAttribute('cx', p.x);
     circulo.setAttribute('cy', p.y);
@@ -699,7 +752,8 @@ function pintarPares() {
     texto.setAttribute('font-size', 14 / z);
     texto.setAttribute('font-weight', '800');
     texto.setAttribute('fill', '#4c1d95');
-    texto.textContent = p.etiqueta;
+    const dist = Math.round(Math.hypot(p.x - dot.x, p.y - dot.y) * METROS_POR_PIXEL);
+    texto.textContent = p.etiqueta + (z >= 2 ? ' · ' + dist + ' m' : '');
     capa.appendChild(circulo);
     capa.appendChild(texto);
   });
@@ -771,13 +825,16 @@ window.setModo = aplicarModo;
    { type:'position', x, y } como desplazamientos relativos desde ahí.
    Solo movemos el punto y la guía: no llamamos a select() para que la voz
    automática no se repita en cada muestra del GPS. */
-window.setUserPosition = (x, y) => {
+window.setUserPosition = (x, y, geo) => {
   /* El GPS puede venir fuera del plano (coordenadas lejanas o poca precisión).
      Lo fijamos dentro de los límites para que el punto nunca desaparezca. */
   const MARGEN = 16;
   x = Math.min(1312 - MARGEN, Math.max(MARGEN, x));
   y = Math.min(985 - MARGEN, Math.max(MARGEN, y));
   dot = { x, y };
+  if (geo && Number.isFinite(geo.latitude) && Number.isFinite(geo.longitude)) {
+    PRESENCIA.geo = geo;
+  }
   PRESENCIA.x = dot.x;
   PRESENCIA.y = dot.y;
   publicarPresencia();
@@ -799,7 +856,11 @@ window.addEventListener('message', (event) => {
       aplicarModo(data.modo);
     }
     if (data && data.type === 'position' && Number.isFinite(data.x) && Number.isFinite(data.y)) {
-      window.setUserPosition(data.x, data.y);
+      window.setUserPosition(data.x, data.y, {
+        latitude: data.latitude,
+        longitude: data.longitude,
+        accuracyM: data.accuracyM,
+      });
     }
   } catch (e) {}
 });
