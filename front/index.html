@@ -593,7 +593,8 @@ const PRESENCIA_BROKER = 'wss://broker.emqx.io:8084/mqtt';
 const PRESENCIA = {
   id: 'NV-' + Math.random().toString(36).slice(2, 8).toUpperCase(),
   rol: null,
-  geo: null,
+  geo: null,      // fix satelital actual (para estimar y publicar)
+  origen: null,   // primer fix preciso: ancla del marco GPS del plano
   x: dot.x,
   y: dot.y,
   pares: new Map(),
@@ -705,7 +706,10 @@ function publicarPresencia(fuerza = false) {
   ws.send(mqttPaquete(3, 0, [...mqttTexto(PRESENCIA_TOPIC), ...bytesTexto(JSON.stringify(cuerpo))]));
 }
 function geoAPlano(lat, lng) {
-  const o = PRESENCIA.geo;
+  /* Usamos SIEMPRE el primer fix como origen. Si se usara el fix actual,
+     cada vez que la persona camina se recalibraría el marco y los pares
+     caerían desplazados justo en la dirección contraria al movimiento. */
+  const o = PRESENCIA.origen || PRESENCIA.geo;
   if (!o || !Number.isFinite(lat) || !Number.isFinite(lng)) return null;
   const metrosPorGradoLat = 111320;
   const metrosPorGradoLng = 111320 * Math.cos((o.latitude * Math.PI) / 180);
@@ -1040,6 +1044,7 @@ window.setUserPosition = (x, y, geo) => {
   dot = { x, y };
   if (geo && Number.isFinite(geo.latitude) && Number.isFinite(geo.longitude)) {
     PRESENCIA.geo = geo;
+    if (!PRESENCIA.origen) PRESENCIA.origen = geo;
   }
   PRESENCIA.x = dot.x;
   PRESENCIA.y = dot.y;

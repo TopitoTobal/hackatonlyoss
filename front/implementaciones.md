@@ -62,12 +62,18 @@ morado discontinuo.
 
 Cada dispositivo publica también su `latitude`/`longitude`/`accuracyM` crudos.
 El receptor convierte la posición ajena con **su propio primer fix como origen**
-(`geoAPlano`), así los puntos caen en el mismo marco local aunque cada celular
-haya empezado en un lugar distinto. El zoom llega a **12×**, con una barra de
-escala métrica arriba a la izquierda. Al acercar, cada par muestra un anillo
-discontinuo con su precisión GPS (`accuracyM`) y la distancia al punto propio en
-metros. Con esto el salón de la hackathon se puede inspeccionar a pocos metros
-(de 1 a 10 m por píxel de pantalla según el zoom).
+(`PRESENCIA.origen` dentro de `geoAPlano`), así los puntos caen en el mismo
+marco local aunque cada celular haya empezado en un lugar distinto. Ese ancla
+**no se recalibra con cada muestra**: si se usara el fix actual, al caminar los
+pares se desplazarían justo en la dirección contraria (norte→sur, este→oeste).
+El plano es norte-arriba / este-derecha: la latitud creciente resta `y` y la
+longitud creciente suma `x`, lo mismo que usa `App.tsx` en `aPuntoPlano()`.
+Las indicaciones por voz salen de `info()` con `atan2(dx, -dy)`, por lo que
+`0°` es norte, `90°` este, `180°` sur y `270°` oeste. El zoom llega a **12×**,
+con una barra de escala métrica arriba a la izquierda. Al acercar, cada par
+muestra un anillo discontinuo con su precisión GPS (`accuracyM`) y la distancia
+al punto propio en metros. Con esto el salón de la hackathon se puede
+inspeccionar a pocos metros (de 1 a 10 m por píxel de pantalla según el zoom).
 
 ### Accesibilidad y responsive
 
