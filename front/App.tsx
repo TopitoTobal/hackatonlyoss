@@ -41,6 +41,12 @@ const CAMINO: RoutePath = { id: 'demo', points: [] }
    escala de 0,75 m por píxel. No hay georreferenciación absoluta todavía. */
 const CENTRO = { x: 690, y: 500 }
 const METROS_POR_PIXEL = 0.75
+/* En interior el GPS rara vez baja de 50 m. Aceptamos hasta 150 m, pero el
+   desplazamiento se limita a velocidad de caminata y se suaviza antes de
+   publicarlo: así los demás ven movimiento sin saltos de 150 m. */
+const MAX_DISPLAY_ACCURACY_M = 150
+const MAX_WALK_SPEED_MPS = 2.5
+const MARGEN_M = 3
 
 type Origen = { latitude: number; longitude: number }
 
@@ -55,6 +61,39 @@ function aPuntoPlano(
   const dx = ((longitude - origen.longitude) * metrosPorGradoLng) / METROS_POR_PIXEL
   const dy = ((latitude - origen.latitude) * metrosPorGradoLat) / METROS_POR_PIXEL
   return { x: CENTRO.x + dx, y: CENTRO.y + dy }
+}
+
+type PosicionSuavizada = {
+  lat: number
+  lng: number
+  accuracyM: number | null
+  ts: number
+}
+
+/* Limita el salto entre muestras a una caminata real y suaviza la corrección.
+   Con ±150 m el GPS puede “teletransportar” el punto; esto evita publicar eso
+   como si la persona hubiera corrido 150 m en dos segundos. */
+function suavizarMuestra(
+  anterior: PosicionSuavizada,
+  crudo: { lat: number; lng: number; accuracyM: number | null },
+  ahora: number,
+): PosicionSuavizada {
+  const dt = Math.max(0, (ahora - anterior.ts) / 1000)
+  const metrosPorGradoLng =
+    111_320 * Math.cos((anterior.lat * Math.PI) / 180)
+  const dLat = crudo.lat - anterior.lat
+  const dLng = crudo.lng - anterior.lng
+  const dist = Math.hypot(dLng * metrosPorGradoLng, dLat * 111_320)
+  const permitido = MAX_WALK_SPEED_MPS * dt + MARGEN_M
+  const factor = dist > permitido ? permitido / dist : 1
+  const acc = crudo.accuracyM ?? 50
+  const alpha = acc <= 50 ? 0.8 : Math.max(0.18, Math.min(0.5, 50 / acc))
+  return {
+    lat: anterior.lat + dLat * factor * alpha,
+    lng: anterior.lng + dLng * factor * alpha,
+    accuracyM: crudo.accuracyM,
+    ts: ahora,
+  }
 }
 
 function rutaActual(): string | undefined {
@@ -265,8 +304,11 @@ export default function App() {
   const [velocidad, setVelocidad] = useState('—')
   const [pidiendoAyuda, setPidiendoAyuda] = useState(false)
   const [infoAbierta, setInfoAbierta] = useState(false)
+  const [interior, setInterior] = useState(false)
+  const [salirSenal, setSalirSenal] = useState(0)
   const arrancandoRef = useRef(false)
   const origenRef = useRef<Origen | null>(null)
+  const posicionRef = useRef<PosicionSuavizada | null>(null)
 
   useEffect(() => {
     const win: any = globalThis as any
@@ -306,6 +348,7 @@ export default function App() {
     setEstado('Solicitando permisos…')
     setMuestras(0)
     origenRef.current = null
+    posicionRef.current = null
     setPunto({ x: CENTRO.x, y: CENTRO.y })
 
     try {
@@ -318,23 +361,36 @@ export default function App() {
       trackerRef.current = tracker
 
       tracker.subscribe((muestra) => {
-        if (muestra.isAccurate) {
-          if (!origenRef.current) {
-            origenRef.current = {
-              latitude: muestra.latitude,
-              longitude: muestra.longitude,
-            }
+        const utilizable =
+          Number.isFinite(muestra.latitude) &&
+          Number.isFinite(muestra.longitude) &&
+          (muestra.accuracyM === null || muestra.accuracyM <= MAX_DISPLAY_ACCURACY_M)
+        if (utilizable) {
+          const ahora = Date.now()
+          const crudo = {
+            lat: muestra.latitude,
+            lng: muestra.longitude,
+            accuracyM: muestra.accuracyM,
           }
-          const plano = aPuntoPlano(
-            muestra.latitude,
-            muestra.longitude,
-            origenRef.current,
-          )
+          if (!origenRef.current) {
+            origenRef.current = { latitude: crudo.lat, longitude: crudo.lng }
+            posicionRef.current = { ...crudo, ts: ahora }
+          } else if (!posicionRef.current) {
+            posicionRef.current = { ...crudo, ts: ahora }
+          } else {
+            posicionRef.current = suavizarMuestra(
+              posicionRef.current,
+              crudo,
+              ahora,
+            )
+          }
+          const f = posicionRef.current!
+          const plano = aPuntoPlano(f.lat, f.lng, origenRef.current)
           setPunto({
             ...plano,
-            latitude: muestra.latitude,
-            longitude: muestra.longitude,
-            accuracyM: muestra.accuracyM,
+            latitude: f.lat,
+            longitude: f.lng,
+            accuracyM: f.accuracyM,
           })
         }
         setVelocidad(formatSpeed(muestra.computedSpeedMps))
@@ -367,6 +423,7 @@ export default function App() {
     setMuestras(0)
     setVelocidad('—')
     origenRef.current = null
+    posicionRef.current = null
     setPunto({ x: CENTRO.x, y: CENTRO.y })
     setPidiendoAyuda(false)
   }
@@ -375,6 +432,7 @@ export default function App() {
     const win: any = globalThis as any
     if (win.history?.pushState) win.history.pushState({}, '', RUTAS[nuevo])
     origenRef.current = null
+    posicionRef.current = null
     setPunto({ x: CENTRO.x, y: CENTRO.y })
     setPidiendoAyuda(false)
     setModo(nuevo)
@@ -403,7 +461,13 @@ export default function App() {
         <View style={styles.contenedor} accessibilityRole="main">
           <StatusBar style="dark" />
 
-      <Mapa posicion={punto} modo={modo} ayuda={pidiendoAyuda} />
+      <Mapa
+        posicion={punto}
+        modo={modo}
+        ayuda={pidiendoAyuda}
+        salirSenal={salirSenal}
+        onInterior={setInterior}
+      />
 
       <View style={styles.overlay} pointerEvents="box-none">
         <View style={styles.barra}>
@@ -419,6 +483,23 @@ export default function App() {
               <Text style={styles.textoBoton}>Volver</Text>
             </View>
           </Pressable>
+          {interior && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Salir de la vista interior del edificio"
+              onPress={() => setSalirSenal((n) => n + 1)}
+              style={({ pressed }) => [
+                styles.botonAccion,
+                styles.botonSalirInterior,
+                pressed && styles.opcionPresionada,
+              ]}
+            >
+              <View style={styles.filaBoton}>
+                <Icono name="arrow_back" size={18} color="#ffffff" />
+                <Text style={styles.textoBotonAccion}>Salir interior</Text>
+              </View>
+            </Pressable>
+          )}
           <Text style={styles.estado} accessibilityLiveRegion="polite">
             {modo === 'vidente' ? 'Vidente' : 'No vidente'} · {estado} · {velocidad} · muestras:{' '}
             {muestras}
@@ -786,6 +867,10 @@ const styles = StyleSheet.create({
     minWidth: 44,
     backgroundColor: '#e8f1fb',
     borderColor: '#cbd2d9',
+  },
+  botonSalirInterior: {
+    backgroundColor: '#1d4ed8',
+    borderColor: '#1d4ed8',
   },
   textoBotonAccion: {
     color: '#ffffff',

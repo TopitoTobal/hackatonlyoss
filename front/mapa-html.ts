@@ -730,6 +730,17 @@ function hablarAccion(text) {
   say(text);
   announce(text);
 }
+/* Avisa a la app nativa (o al iframe padre en web) si entramos/salimos. */
+function notificarInterior(activo) {
+  const dato = JSON.stringify({ type: 'interior', activo });
+  try {
+    if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+      window.ReactNativeWebView.postMessage(dato);
+    } else if (window.parent !== window) {
+      window.parent.postMessage(dato, '*');
+    }
+  } catch (e) {}
+}
 
 /* ---------- Construcción ---------- */
 BUILDINGS.forEach(([id, cx, cy, w, h]) => {
@@ -1811,6 +1822,10 @@ function recalcularPares() {
     if (!punto) return;
     p.x = punto.x;
     p.y = punto.y;
+    /* Guardamos también el geo crudo: la distancia real no debe depender
+       del ancla local de cada celular (dos anclas con error se restan). */
+    p.lat = f.lat;
+    p.lng = f.lng;
     p.accFus = f.acc;
     p.n = f.n;
     p.edificio = edificioEn(punto.x, punto.y);
@@ -2185,7 +2200,10 @@ function recibirPresencia(mensaje) {
       accFus: Number.isFinite(mensaje.acc) ? mensaje.acc : 15,
       n: 1,
       edificio: null,
-      ts: mensaje.ts || Date.now(),
+      /* Hora de recepción, no del otro celular: un reloj desfasado no debe
+         hacer que el par aparezca como “sin señal” apenas entra. */
+      ts: Date.now(),
+      estale: false,
       etiqueta: String(observador).slice(0, 6),
     });
   }
@@ -2205,6 +2223,11 @@ function pintarPares() {
   capa.textContent = '';
   const NS = 'http://www.w3.org/2000/svg';
   paresVisibles().forEach((p) => {
+    /* Si el celular del par se queda sin señal, lo dejamos en el mapa como
+       “última señal” en vez de borrarlo: vale más una posición vieja y
+       claramente marcada que hacer desaparecer a la persona. */
+    const ageS = Math.max(0, Math.round((Date.now() - (p.ts || Date.now())) / 1000));
+    const estale = ageS > 12;
     if (p.edificio) {
       const b = BUILDINGS.find((x) => x[0] === p.edificio);
       if (b) {
@@ -2226,29 +2249,37 @@ function pintarPares() {
       halo.setAttribute('cy', p.y);
       halo.setAttribute('r', Math.max(2, p.accFus / METROS_POR_PIXEL));
       halo.setAttribute('fill', 'none');
-      halo.setAttribute('stroke', '#7c3aed');
+      halo.setAttribute('stroke', estale ? '#64748b' : '#7c3aed');
       halo.setAttribute('stroke-width', 2 / z);
       halo.setAttribute('stroke-dasharray', (5 / z) + ' ' + (4 / z));
-      halo.setAttribute('opacity', '.6');
+      halo.setAttribute('opacity', estale ? '.25' : '.6');
       capa.appendChild(halo);
     }
     const circulo = document.createElementNS(NS, 'circle');
     circulo.setAttribute('cx', p.x);
     circulo.setAttribute('cy', p.y);
     circulo.setAttribute('r', 12 / z);
-    circulo.setAttribute('fill', '#7c3aed');
+    circulo.setAttribute('fill', estale ? '#94a3b8' : '#7c3aed');
     circulo.setAttribute('stroke', '#ffffff');
     circulo.setAttribute('stroke-width', 4 / z);
+    circulo.setAttribute('opacity', estale ? '.7' : '1');
     const texto = document.createElementNS(NS, 'text');
     texto.setAttribute('x', p.x);
     texto.setAttribute('y', p.y - 20 / z);
     texto.setAttribute('text-anchor', 'middle');
     texto.setAttribute('font-size', 14 / z);
     texto.setAttribute('font-weight', '800');
-    texto.setAttribute('fill', '#4c1d95');
-    const dist = Math.round(Math.hypot(p.x - dot.x, p.y - dot.y) * METROS_POR_PIXEL);
-    texto.textContent = p.etiqueta + (z >= 2 ? ' · ' + dist + ' m' : '') +
-      (p.n > 1 ? ' · ' + p.n + ' señales' : '');
+    texto.setAttribute('fill', estale ? '#475569' : '#4c1d95');
+    const yoFus = PRESENCIA.filtro.get(PRESENCIA.id);
+    /* Haversine sobre lat/lng: así el error del ancla de cada dispositivo
+       no se suma a la distancia que se le muestra al vidente. */
+    const dist = yoFus && Number.isFinite(p.lat) && Number.isFinite(p.lng)
+      ? Math.round(distM(yoFus, p))
+      : Math.round(Math.hypot(p.x - dot.x, p.y - dot.y) * METROS_POR_PIXEL);
+    texto.textContent = p.etiqueta + (estale
+      ? ' · última señal hace ' + ageS + ' s'
+      : (z >= 2 ? ' · ' + dist + ' m' : '') +
+        (p.n > 1 ? ' · ' + p.n + ' señales' : ''));
     capa.appendChild(circulo);
     capa.appendChild(texto);
   });
@@ -2256,16 +2287,21 @@ function pintarPares() {
 function actualizarPresencia() {
   const badge = $('presenceBadge');
   if (!badge) return;
-  const n = paresVisibles().length;
+  const visibles = paresVisibles();
+  const n = visibles.filter((p) => !p.estale).length;
+  const e = visibles.length - n;
   badge.style.display = PRESENCIA.rol === 'vidente' ? 'block' : 'none';
   badge.classList.toggle('sin-conexion', !PRESENCIA.conectado);
+  let texto = n + ' no vidente' + (n === 1 ? '' : 's') + ' conectada' + (n === 1 ? '' : 's');
+  if (e) texto += ' · ' + e + ' con última señal';
   badge.textContent = PRESENCIA.conectado
-    ? n + ' no vidente' + (n === 1 ? '' : 's') + ' conectada' + (n === 1 ? '' : 's')
-    : 'Presencia sin conexión';
+    ? texto
+    : 'Presencia sin conexión' + (visibles.length ? ' · ' + visibles.length + ' en el mapa' : '');
   if (PRESENCIA.rol === 'vidente' && n !== PRESENCIA.ultimoAnuncio) {
     PRESENCIA.ultimoAnuncio = n;
     announce(n + ' persona' + (n === 1 ? '' : 's') + ' no vidente' + (n === 1 ? '' : 's') +
-      ' conectada' + (n === 1 ? '' : 's') + ' en el mapa.');
+      ' conectada' + (n === 1 ? '' : 's') + ' en el mapa.' +
+      (e ? ' ' + e + ' con última señal.' : ''));
   }
 }
 function configurarPresencia(rol) {
@@ -2306,10 +2342,18 @@ setInterval(() => {
     trasCambioIncidencias('Un reporte de incidencia expiró.', false);
   }
   const antes = PRESENCIA.pares.size;
+  const antesEstale = [...PRESENCIA.pares.values()].filter((p) => p.estale).length;
   for (const [id, p] of PRESENCIA.pares) {
-    if (Date.now() - p.ts > 12000) PRESENCIA.pares.delete(id);
+    const age = Date.now() - (p.ts || Date.now());
+    /* 12 s sin señal deja de contar como “conectado”, pero el marcador sigue
+       visible hasta 2 min como última posición conocida. */
+    if (age > 120000) PRESENCIA.pares.delete(id);
+    else p.estale = age > 12000;
   }
-  if (PRESENCIA.pares.size !== antes) actualizarPresencia();
+  const despuesEstale = [...PRESENCIA.pares.values()].filter((p) => p.estale).length;
+  if (PRESENCIA.pares.size !== antes || despuesEstale !== antesEstale) {
+    actualizarPresencia();
+  }
   pintarPares();
   for (const [observador, mapa] of PRESENCIA.observaciones) {
     for (const [id, o] of mapa) {
@@ -2398,6 +2442,7 @@ window.setUserPosition = (x, y, geo) => {
   recalcularRutaAyuda();
   actualizarAyudaBanner();
   placeDot();
+  actualizarInteriorDot();
   /* Centramos la vista en el punto sin anunciar ni volver a seleccionar nada. */
   centerOn(x, y);
   if (!selected) return;
@@ -2423,6 +2468,7 @@ window.addEventListener('message', (event) => {
     if (data && data.type === 'ayuda' && typeof data.activo === 'boolean') {
       window.setAyuda(data.activo);
     }
+    if (data && data.type === 'salirInterior') salirInterior();
   } catch (e) {}
 });
 
@@ -2513,6 +2559,8 @@ window.addEventListener('resize', () => {
    Plano ESQUEMÁTICO generado: un pasillo central y salas a ambos lados.
    Cuando existan planos oficiales por edificio, reemplazar buildPlan(). */
 let inside = false, room = null;
+let interiorDot = null, interiorAnchor = null, interiorBase = null;
+let interiorEscala = null, interiorBounds = null, interiorUltimoAnuncio = 0;
 const ROOM_ON  = ['bg-white','text-[#1d4ed8]','border-[#1d4ed8]'];
 const ROOM_OFF = ['bg-[#e8f1fb]','text-[#334155]','border-[#cbd2d9]'];
 
@@ -2568,15 +2616,34 @@ function buildPlan(w, h) {
   const d = document.createElement('div');
   d.setAttribute('role', 'img'); d.setAttribute('aria-label', 'Tu ubicación');
   d.className = 'pointer-events-none absolute box-border h-7 w-7 rounded-full border-[3px] border-white bg-[#1d4ed8] shadow-[0_2px_8px_rgba(15,23,42,.25)]';
-  d.style.cssText = 'left:' + (dx - 14) + 'px;top:' + (dy - 14) + 'px';
+  d.style.cssText = 'left:' + (dx - 14) + 'px;top:' + (dy - 14) + 'px;transition:left .45s linear,top .45s linear';
   card.appendChild(d);
+  interiorDot = d;
+  interiorAnchor = { x: dot.x, y: dot.y };
+  interiorBase = { left: dx - 14, top: dy - 14 };
+  interiorEscala = { x: cw / Math.max(1, w), y: ch / Math.max(1, h) };
+  interiorBounds = { w: cw, h: ch };
+  interiorUltimoAnuncio = 0;
   st.appendChild(card);
   roomInfo();
+}
+function actualizarInteriorDot() {
+  if (!inside || !interiorDot || !interiorAnchor || !interiorBase || !interiorEscala || !interiorBounds) return;
+  const x = interiorBase.left + (dot.x - interiorAnchor.x) * interiorEscala.x;
+  const y = interiorBase.top + (dot.y - interiorAnchor.y) * interiorEscala.y;
+  interiorDot.style.left = Math.min(interiorBounds.w - 28, Math.max(0, x)) + 'px';
+  interiorDot.style.top = Math.min(interiorBounds.h - 28, Math.max(0, y)) + 'px';
+  const dist = Math.hypot(dot.x - interiorAnchor.x, dot.y - interiorAnchor.y) * METROS_POR_PIXEL;
+  if (dist >= interiorUltimoAnuncio + 10) {
+    interiorUltimoAnuncio = dist;
+    announce('Dentro del edificio ' + selected + ': a ' + Math.round(dist) + ' metros del punto de entrada.');
+  }
 }
 function enterBuilding() {
   if (!selected) return;
   const [id, cx, cy, w, h] = BUILDINGS.find(b => b[0] === selected);
   inside = true;
+  notificarInterior(true);
   [ox, oy] = clamp(vp.clientWidth/2 - cx*z, vp.clientHeight/2 - cy*z, z); apply();
   $('sheet').classList.add('hidden'); $('sheet').classList.remove('flex');
   vp.inert = true;
@@ -2589,17 +2656,21 @@ function enterBuilding() {
 function exitBuilding() {
   if (!inside) return;
   inside = false; vp.inert = false;
+  interiorDot = null; interiorAnchor = null; interiorBase = null;
+  interiorEscala = null; interiorBounds = null; interiorUltimoAnuncio = 0;
   const el = $('interior'); el.classList.add('hidden'); el.classList.remove('flex');
   select(selected, { silent: true });
   $('btnRoute').focus();
   announce('Has salido del interior. Información del edificio ' + selected + '.');
+  notificarInterior(false);
 }
-$('inExit').onclick = () => {
+function salirInterior() {
   AUTO_INTERIOR.activo = false;
   AUTO_INTERIOR.dentro = 0;
   AUTO_INTERIOR.bloqueo = Date.now() + 15000;
   exitBuilding();
-};
+}
+$('inExit').onclick = salirInterior;
 $('inSpeak').onclick = () => {
   const texto = $('inRoom').textContent + '. ' + $('inNote').textContent;
   say(texto); announce(texto);

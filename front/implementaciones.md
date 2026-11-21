@@ -49,8 +49,10 @@ En modo **vidente** el mapa muestra a las personas **no videntes conectadas**
 como puntos morados con un ID corto y efímero, y un contador accesible arriba a
 la izquierda. La presencia usa MQTT sobre WSS
 (`wss://broker.emqx.io:8084/mqtt`, tema `hackatonlyoss/campus/presencia/v1`):
-sin credenciales, sin nombres y sin historial. Los pares expiran a los 12 s sin
-actualización. Cada muestra GPS se publica (con un mínimo de 400 ms entre
+sin credenciales, sin nombres y sin historial. A los 12 s sin actualización el
+par deja de contar como “conectado”, pero su marcador permanece hasta 2 min en
+gris como “última señal hace X s”: un bache de red ya no lo hace desaparecer.
+Cada muestra GPS se publica (con un mínimo de 400 ms entre
 envíos) y un latido cada 2 s mantiene el `ts` fresco aunque el navegador
 espacie las muestras; en web además se sondea `getCurrentPosition` cada 2 s
 junto a `watchPosition`. Si el broker no está disponible, la capa se oculta y el
@@ -164,8 +166,11 @@ rectángulos de `BUILDINGS` con ~6 m de tolerancia. Si la persona en modo
 **no vidente** queda dentro de un edificio durante 3 muestras seguidas, el mapa
 selecciona esa **letra** y abre automáticamente su vista interior; si sale,
 vuelve al mapa. La salida manual bloquea la reentrada automática por 15 s. En
-el mapa del vidente, el edificio donde está cada par se resalta con un marco
-morado discontinuo.
+el interior, el punto azul del plano esquemático sigue el GPS real (anclado al
+entrar) y se anuncia cada 10 m recorridos. La card de acciones muestra un botón
+**Salir interior** sincronizado con el diálogo, porque el botón del mapa queda
+debajo de esa card. En el mapa del vidente, el edificio donde está cada par se
+resalta con un marco morado discontinuo.
 
 Cada dispositivo publica también su `latitude`/`longitude`/`accuracyM` crudos.
 El receptor convierte la posición ajena con **su propio primer fix como origen**
@@ -704,7 +709,14 @@ type SafetyAlert = {
 - El tracking en segundo plano se detiene si el usuario cierra la app.
 - Los puntos con precisión peor que `maxAccuracyM` (default 50 m) se siguen
   emitiendo (para que la UI no se quede frozen), pero no cuentan para la ruta
-  ni las estadísticas; vienen con `isAccurate: false`.
+  ni las estadísticas; vienen con `isAccurate: false`. El mapa además
+  publica los que están hasta 150 m para que los demás usuarios vean el
+  movimiento aunque la persona esté dentro de un edificio, pero antes
+  `suavizarMuestra()` limita el salto a 2,5 m/s + 3 m de margen y pondera
+  la corrección según la precisión. Así un fix ruidoso no se publica como
+  un teletransporte de 150 m. La distancia que ve el vidente se calcula con
+  haversine sobre lat/lng (no sobre el plano local), para que el error del
+  ancla de cada celular no inflé la separación real.
 - La velocidad se calcula en **m/s**; multiplica por 3.6 para km/h
   (`formatSpeed()` ya lo hace).
 - En iOS la vibración puede no producirse con modo de bajo consumo, Taptic
