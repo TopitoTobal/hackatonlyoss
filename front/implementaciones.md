@@ -8,9 +8,10 @@ todo lo que ya puedes consumir desde `front/`. El mapa vive en
 ubicación del GPS con `postMessage({ type: 'position', x, y })`.
 La conversión lat/lng → píxeles del plano está en `App.tsx` (`aPuntoPlano`)
 y usa una referencia aproximada pendiente de georreferenciar.
-`setUserPosition()` solo actualiza el punto y la guía, sin volver a
-seleccionar el edificio, para no repetir la voz automática en cada muestra.
-El interior de los edificios es esquemático hasta que haya planos oficiales.
+`setUserPosition()` solo actualiza el punto y recalcula la ruta activa, sin
+volver a seleccionar el edificio ni repetir la voz automática en cada muestra.
+El botón **Generar ruta** reemplazó al antiguo "Entrar al edificio": traza el
+recorrido más corto por los senderos hasta la entrada del edificio elegido.
 
 ### Accesibilidad y responsive
 
@@ -21,9 +22,8 @@ El interior de los edificios es esquemático hasta que haya planos oficiales.
 - Las indicaciones incluyen **distancia en metros** (`METROS_POR_PIXEL = 0.75`,
   el mismo valor de `App.tsx`) y dirección cardinal. "Mi ubicación" centra y
   anuncia la posición.
-- El panel se desplaza internamente si no cabe y el interior pasa a un
-  diseño lateral en horizontal; nunca se sale del viewport. Se respetan zonas
-  seguras (`env(safe-area-inset-*)`) y `100dvh`.
+- El panel se desplaza internamente si no cabe; nunca se sale del viewport. Se
+  respetan zonas seguras (`env(safe-area-inset-*)`) y `100dvh`.
 - Zoom estilo Google Maps: `minZoom()` es dinámico (`max(ancho/1312, alto/985)`)
   y el plano siempre cubre la pantalla; `clamp()` impide panear más allá de sus
   bordes, así que al alejar al máximo no aparece fondo vacío ni se corta la UI.
@@ -44,15 +44,22 @@ El interior de los edificios es esquemático hasta que haya planos oficiales.
   (`#475569`, 24 px) y en la de relleno blanco (16 px). Conectan Placeres→C→B,
   B→U→A, el circuito de la cancha→H, Pasaje Valdés→M/M2, B/K/O→Subida San Luis
   y D/E/F2/F→T.
-- El interior (`buildPlan(w, h)`) sigue siendo esquemático, pero ya deriva la
-  orientación del pasillo y el tamaño de las salas de las nuevas proporciones
-  (`w/h`) de cada edificio: C/B/F horizontales, U/A/F2 verticales.
+- Las polilíneas de los 18 senderos están duplicadas en `PATHS` y se convierten
+  en un grafo (`GRAFO`) con las entradas de `ENTRADAS`. `mejorRuta()` usa
+  Dijkstra desde el sendero más cercano al punto azul. Los enlaces de
+  `ENLACES` conectan las zonas que el dibujo deja separadas.
+- Al pulsar **Generar ruta** se inicia una navegación: `#routeLine` muestra el
+  tramo que falta (azul) y `#routeDone` el ya recorrido (gris). Cada posición
+  del GPS se proyecta sobre la ruta; `#sheetRoute` indica metros restantes y el
+  próximo giro. Si el punto azul se sale más de 45 px, la ruta se recalcula; si
+  llega a la entrada, se anuncia la llegada. El botón pasa a **Detener ruta**.
 - Queda pendiente una medición exacta en píxeles sobre el catastro original para
   los recintos pequeños y los giros de los senderos; las coordenadas actuales
   son una aproximación visual consistente con el lienzo de 1312×985. El puente
   `setUserPosition(x, y)`, el teclado y la voz no se modificaron.
-- En el diálogo interior el foco queda atrapado, `Escape` sale y el fondo se
-  marca `inert`. Lighthouse: accesibilidad y buenas prácticas 1.00.
+- Los giros y la llegada se anuncian por voz (o por el lector de pantalla), pero
+  no se repite el mismo aviso en cada muestra del GPS. Al cerrar el panel,
+  cambiar de edificio o detener la navegación, la ruta se oculta.
 
 El componente `Mapa` tiene dos implementaciones: `Mapa.tsx` usa `WebView` en
 iOS/Android y `Mapa.web.tsx` usa un `<iframe>` en navegador, porque

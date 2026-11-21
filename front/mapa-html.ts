@@ -7,7 +7,18 @@ export const MAPA_HTML = `<!doctype html>
 <meta name="theme-color" content="#e2e8f0">
 <title>Mapa accesible · Campus Casa Central UTFSM</title>
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Material+Icons&display=swap" rel="stylesheet">
 <style>
+  .material-icons {
+    font-family: 'Material Icons';
+    font-weight: normal; font-style: normal; font-size: 24px; line-height: 1;
+    letter-spacing: normal; text-transform: none; display: inline-block;
+    white-space: nowrap; word-wrap: normal; direction: ltr;
+    -webkit-font-feature-settings: 'liga'; -webkit-font-smoothing: antialiased;
+    vertical-align: middle;
+  }
   /* ---- Base estructural: el visor ocupa exactamente la pantalla ---- */
   html, body { margin: 0; padding: 0; width: 100%; height: 100vh; height: 100dvh; overflow: hidden; background: #e2e8f0; }
   body { position: fixed; inset: 0; height: 100vh; height: 100dvh; font-family: system-ui, sans-serif; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; }
@@ -33,18 +44,7 @@ export const MAPA_HTML = `<!doctype html>
     overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
   }
   #sheet.flex { display: flex; }
-  #interior {
-    position: fixed; inset: 0; display: none; flex-direction: column; box-sizing: border-box; z-index: 20;
-    padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
-    background: rgba(255,255,255,.94);
-  }
-  #interior.flex { display: flex; }
   #hint.hidden { display: none; }
-  #inStage { flex: 1 1 auto; min-height: 0; min-width: 0; }
-  #inInfo {
-    flex: 0 0 auto; max-height: 45vh; max-height: 45dvh;
-    overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
-  }
   #sheetName { font-size: clamp(20px, 6.4vw, 26px); }
 
   /* Foco muy visible, incluidos los botones del plano (el borde se dibuja hacia adentro) */
@@ -62,32 +62,23 @@ export const MAPA_HTML = `<!doctype html>
   /* Pantallas bajas: compactar sin ocultar información */
   @media (max-height: 700px) {
     #sheet { padding: 10px; gap: 6px; }
-    #sheet button, #interior button { min-height: 48px; }
+    #sheet button { min-height: 48px; }
     #sheetDir { font-size: 17px; }
     #sheetWhere { font-size: 15px; }
-    #inInfo { max-height: 40vh; max-height: 40dvh; }
   }
-  /* Celular en horizontal: el panel y el interior pasan a un lado */
+  /* Celular en horizontal: el panel pasa a un lado */
   @media (max-height: 500px) and (orientation: landscape) {
     #sheet {
       left: auto; right: max(10px, env(safe-area-inset-right)); top: max(10px, env(safe-area-inset-top)); bottom: 10px;
       width: min(380px, 50vw); max-width: none; margin: 0;
       max-height: calc(100dvh - 20px); padding: 8px; gap: 4px;
     }
-    #sheet button, #interior button { min-height: 44px; }
+    #sheet button { min-height: 44px; }
     #sheetName { font-size: 20px; }
     #sheetDir { font-size: 16px; }
     #sheetWhere { font-size: 14px; }
     #sheet > div:first-child button { min-width: 56px; }
     #hint { max-width: 22rem; }
-    #interior { flex-flow: row wrap; align-content: flex-start; }
-    #interior > header { flex: 0 0 100%; padding: 6px 12px; gap: 8px; }
-    #interior > header h2 { font-size: 1.25rem; }
-    #interior > header button { min-height: 44px; padding-left: 14px; padding-right: 14px; }
-    #inStage { flex: 1 1 56%; }
-    #inInfo { flex: 0 1 38%; margin: 8px; max-height: calc(100dvh - 76px); padding: 10px; }
-    #inRoom { font-size: 18px; }
-    #inNote { display: block; font-size: 14px; }
   }
   @media (max-width: 340px) {
     #sheet button { font-size: 15px; }
@@ -95,7 +86,7 @@ export const MAPA_HTML = `<!doctype html>
   }
   @media (forced-colors: active) {
     button:focus-visible { outline-color: Highlight; box-shadow: none; }
-    #sheet, #inInfo, #interior > header button { border-color: CanvasText; }
+    #sheet { border-color: CanvasText; }
   }
 </style>
 </head>
@@ -109,8 +100,10 @@ export const MAPA_HTML = `<!doctype html>
       class="relative h-full w-full cursor-grab touch-none overflow-hidden bg-slate-200">
   <p id="mapa-instrucciones" class="sr-only">
     Mapa interactivo del campus. Toca un edificio para escuchar hacia dónde dirigirte.
-    Con el teclado, usa las flechas izquierda y derecha para recorrer los edificios,
-    Enter para entrar al edificio seleccionado y Escape para salir.
+    Con el teclado, usa las flechas izquierda y derecha para recorrer los edificios.
+    El botón Generar ruta inicia la navegación por los senderos hasta la entrada del edificio.
+    El punto azul es tu ubicación; el tramo ya recorrido aparece gris y el que falta, azul.
+    El panel indica la distancia restante y el próximo giro. Pulsa el botón otra vez para detener la ruta.
     Los botones de acercar y alejar están al final del panel de información.
   </p>
   <div id="world" class="absolute left-0 top-0 origin-top-left" style="width:1312px;height:985px">
@@ -223,10 +216,13 @@ export const MAPA_HTML = `<!doctype html>
       </g>
     </svg>
 
-    <!-- Línea de dirección hacia el edificio elegido -->
+    <!-- Ruta generada por los senderos hasta la entrada del edificio -->
     <svg width="1312" height="985" viewBox="0 0 1312 985" aria-hidden="true" class="pointer-events-none absolute left-0 top-0">
-      <line id="guide" x1="690" y1="500" x2="690" y2="500" stroke="#0369a1" stroke-width="7"
-            stroke-dasharray="16 12" stroke-linecap="round" stroke-opacity="0"/>
+      <polyline id="routeDone" points="" fill="none" stroke="#94a3b8" stroke-width="7"
+                stroke-dasharray="14 10" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0"/>
+      <polyline id="routeLine" points="" fill="none" stroke="#0369a1" stroke-width="7"
+                stroke-dasharray="16 12" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0"/>
+      <circle id="routeEnd" cx="690" cy="500" r="8" fill="#0369a1" stroke="#ffffff" stroke-width="3" opacity="0"/>
     </svg>
 
     <!-- Botones de edificios (los crea el script) -->
@@ -255,7 +251,7 @@ export const MAPA_HTML = `<!doctype html>
 <!-- Pista inicial ( decorativa: las instrucciones reales van en #mapa-instrucciones ) -->
 <div id="hint" aria-hidden="true"
      class="pointer-events-none absolute left-1/2 top-4 w-[calc(100%-32px)] max-w-sm -translate-x-1/2 rounded-full bg-black px-4 py-3 text-center text-[15px] font-bold text-white sm:text-[17px]">
-  Toca un edificio · Usa ← →
+  Toca un edificio · Usa <span class="material-icons" aria-hidden="true">chevron_left</span> <span class="material-icons" aria-hidden="true">chevron_right</span>
 </div>
 
 <!-- Panel que aparece al elegir un edificio -->
@@ -263,40 +259,26 @@ export const MAPA_HTML = `<!doctype html>
          class="absolute inset-x-2.5 bottom-2.5 mx-auto hidden max-w-md flex-col gap-2 rounded-2xl border-4 border-black bg-yellow-200 p-3.5">
   <div class="flex items-center justify-between gap-2">
     <button id="btnPrev" aria-keyshortcuts="ArrowLeft" class="flex min-h-14 min-w-16 flex-col items-center justify-center gap-0.5 rounded-[10px] border-[3px] border-black bg-black px-2 text-white">
-      <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+      <span class="material-icons" aria-hidden="true" style="font-size:26px">chevron_left</span>
       <span id="prevId" class="text-sm font-extrabold leading-none"></span>
     </button>
     <h2 id="sheetName" tabindex="-1" class="m-0 flex-1 text-center text-[26px] font-extrabold"></h2>
     <button id="btnNext" aria-keyshortcuts="ArrowRight" class="flex min-h-14 min-w-16 flex-col items-center justify-center gap-0.5 rounded-[10px] border-[3px] border-black bg-black px-2 text-white">
-      <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+      <span class="material-icons" aria-hidden="true" style="font-size:26px">chevron_right</span>
       <span id="nextId" class="text-sm font-extrabold leading-none"></span>
     </button>
   </div>
   <p id="sheetDir" class="m-0 text-[19px] font-extrabold leading-tight text-sky-900"></p>
   <p id="sheetWhere" class="m-0 text-base font-medium leading-snug"></p>
+  <p id="sheetRoute" class="m-0 text-[15px] font-bold leading-snug text-blue-900"></p>
   <div class="mt-1 grid grid-cols-4 gap-2">
-    <button id="btnEnter" class="col-span-4 min-h-14 rounded-[10px] border-[3px] border-black bg-blue-900 text-lg font-extrabold text-white">Entrar al edificio</button>
-    <button id="btnSpeak" aria-label="Escuchar información de este edificio" class="col-span-2 min-h-14 rounded-[10px] border-[3px] border-black bg-black text-lg font-extrabold text-white">Escuchar</button>
-    <button id="btnClose" aria-label="Cerrar información del edificio" class="col-span-2 min-h-14 rounded-[10px] border-[3px] border-black bg-white text-lg font-extrabold text-black">Cerrar</button>
-    <button id="btnCenter" aria-label="Centrar en mi ubicación y anunciar mi posición" class="col-span-2 min-h-14 rounded-[10px] border-[3px] border-black bg-sky-900 text-[17px] font-extrabold text-white">Mi ubicación</button>
-    <button id="btnIn" aria-label="Acercar" class="min-h-14 rounded-[10px] border-[3px] border-black bg-black text-3xl font-extrabold text-white">+</button>
-    <button id="btnOut" aria-label="Alejar" class="min-h-14 rounded-[10px] border-[3px] border-black bg-black text-3xl font-extrabold text-white">−</button>
-    <button id="btnVoice" aria-pressed="true" class="col-span-4 min-h-12 rounded-[10px] border-[3px] border-black bg-white text-base font-extrabold text-black"></button>
-  </div>
-</section>
-
-<!-- Vista interior: el resto del mapa queda desenfocado detrás -->
-<section id="interior" role="dialog" aria-modal="true" aria-labelledby="inTitle" aria-describedby="inNote"
-         class="absolute inset-0 z-20 hidden flex-col bg-white/95">
-  <header class="flex items-center gap-3 p-3">
-    <button id="inExit" class="min-h-14 rounded-[10px] border-[3px] border-black bg-white px-5 text-lg font-extrabold text-black">Salir</button>
-    <h2 id="inTitle" class="m-0 text-2xl font-extrabold"></h2>
-  </header>
-  <div id="inStage" class="relative min-h-0 flex-1"></div>
-  <div id="inInfo" class="m-3 flex flex-col gap-2 rounded-2xl border-4 border-black bg-yellow-200 p-3.5">
-    <p id="inRoom" class="m-0 text-[22px] font-extrabold"></p>
-    <p id="inNote" class="m-0 text-base font-medium leading-snug"></p>
-    <button id="inSpeak" class="min-h-14 rounded-[10px] border-[3px] border-black bg-black text-lg font-extrabold text-white">Escuchar</button>
+    <button id="btnRoute" class="col-span-4 inline-flex min-h-14 items-center justify-center gap-2 rounded-[10px] border-[3px] border-black bg-blue-900 text-lg font-extrabold text-white"><span class="material-icons" aria-hidden="true">route</span>Generar ruta</button>
+    <button id="btnSpeak" aria-label="Escuchar información de este edificio" class="col-span-2 inline-flex min-h-14 items-center justify-center gap-2 rounded-[10px] border-[3px] border-black bg-black text-lg font-extrabold text-white"><span class="material-icons" aria-hidden="true">volume_up</span>Escuchar</button>
+    <button id="btnClose" aria-label="Cerrar información del edificio" class="col-span-2 inline-flex min-h-14 items-center justify-center gap-2 rounded-[10px] border-[3px] border-black bg-white text-lg font-extrabold text-black"><span class="material-icons" aria-hidden="true">close</span>Cerrar</button>
+    <button id="btnCenter" aria-label="Centrar en mi ubicación y anunciar mi posición" class="col-span-2 inline-flex min-h-14 items-center justify-center gap-2 rounded-[10px] border-[3px] border-black bg-sky-900 text-[17px] font-extrabold text-white"><span class="material-icons" aria-hidden="true">my_location</span>Mi ubicación</button>
+    <button id="btnIn" aria-label="Acercar" class="inline-flex min-h-14 items-center justify-center rounded-[10px] border-[3px] border-black bg-black text-white"><span class="material-icons" aria-hidden="true" style="font-size:30px">add</span></button>
+    <button id="btnOut" aria-label="Alejar" class="inline-flex min-h-14 items-center justify-center rounded-[10px] border-[3px] border-black bg-black text-white"><span class="material-icons" aria-hidden="true" style="font-size:30px">remove</span></button>
+    <button id="btnVoice" aria-pressed="true" class="col-span-4 inline-flex min-h-12 items-center justify-center gap-2 rounded-[10px] border-[3px] border-black bg-white text-base font-extrabold text-black"></button>
   </div>
 </section>
 
@@ -305,25 +287,65 @@ export const MAPA_HTML = `<!doctype html>
    Coordenadas en píxeles del plano oficial (1312 x 985).
    [id, centroX, centroY, ancho, alto, descripción] */
 const BUILDINGS = [
-  ['C', 750, 372, 460, 110, 'Norte. Bloque horizontal largo al sur de Avenida Placeres y al norte de B; su extremo este se alinea con B y llega al acceso de Subida San Luis.'],
-  ['R', 235, 345, 70, 45, 'Noroeste, junto a Avenida Placeres y Pasaje Valdés.'],
-  ['R2', 330, 375, 48, 40, 'Noroeste, recinto pequeño al este-sur de R, junto a Pasaje Valdés.'],
-  ['M', 360, 470, 48, 120, 'Oeste. Bloque alargado con ligera inclinación, pegado a Pasaje Valdés y al oeste de la cancha 8007.'],
-  ['M2', 415, 440, 48, 40, 'Oeste, adyacente al este-sur de M, en el borde superior izquierdo de la cancha 8007.'],
-  ['B', 835, 510, 290, 130, 'Centro-norte. Bloque en U con patio interior, al sur de C y al norte de A; brazo este hacia Subida San Luis.'],
-  ['K', 1090, 420, 60, 70, 'Borde noreste, junto a la Subida San Luis.'],
-  ['J', 1120, 340, 48, 40, 'Acceso pequeño al norte de K, junto a la Subida San Luis.'],
-  ['O', 1110, 560, 48, 40, 'Recinto pequeño al sur de K, en la Subida San Luis.'],
-  ['L', 644, 600, 48, 80, 'Oeste, en el desnivel entre la cancha 8007 y el sector de B y U.'],
-  ['U', 710, 690, 60, 170, 'Centro-oeste. Bloque vertical alargado, al oeste de A y separado por un pasillo estrecho.'],
-  ['A', 840, 720, 170, 210, 'Centro-sur. Bloque grande al sur de B y al este de U, con salientes norte y sur sobre el patio central.'],
-  ['H', 590, 780, 60, 40, 'Suroeste, en la ladera con curvas de nivel, al sur de la cancha 8007.'],
-  ['D', 1020, 690, 120, 110, 'Centro-este, al este de A y al norte de E y los jardines geométricos.'],
-  ['E', 1050, 780, 150, 45, 'Centro-este. Bloque horizontal escalonado al sur de D, bordeando el patio interior.'],
-  ['F2', 950, 820, 48, 70, 'Sur. Conexión estrecha entre el sector de A y los jardines con F.'],
-  ['F', 1060, 880, 220, 40, 'Sur. Tramo horizontal con retorno norte en su extremo oeste, cerca de F2.'],
-  ['T', 1210, 850, 70, 80, 'Extremo sureste, siguiendo la curva de Subida San Luis y el borde sur del campus.']
+  ['C', 750, 372, 460, 110, 'Norte, junto a Avenida Placeres.'],
+  ['R', 235, 345, 70, 45, 'Noroeste, junto a Avenida Placeres.'],
+  ['R2', 330, 375, 48, 40, 'Noroeste, junto a R.'],
+  ['M', 360, 470, 48, 120, 'Oeste, junto a Pasaje Valdés.'],
+  ['M2', 415, 440, 48, 40, 'Oeste, junto a M.'],
+  ['B', 835, 510, 290, 130, 'Centro-norte. Bloque en U.'],
+  ['K', 1090, 420, 60, 70, 'Noreste, en Subida San Luis.'],
+  ['J', 1120, 340, 48, 40, 'Norte de K.'],
+  ['O', 1110, 560, 48, 40, 'Sur de K.'],
+  ['L', 644, 600, 48, 80, 'Oeste, junto a la cancha.'],
+  ['U', 710, 690, 60, 170, 'Centro-oeste. Bloque alargado.'],
+  ['A', 840, 720, 170, 210, 'Centro-sur. Bloque grande, junto a B.'],
+  ['H', 590, 780, 60, 40, 'Suroeste, en la ladera.'],
+  ['D', 1020, 690, 120, 110, 'Centro-este, junto a A.'],
+  ['E', 1050, 780, 150, 45, 'Centro-este, al sur de D.'],
+  ['F2', 950, 820, 48, 70, 'Sur, entre A y F.'],
+  ['F', 1060, 880, 220, 40, 'Sur, junto a F2.'],
+  ['T', 1210, 850, 70, 80, 'Sureste, en Subida San Luis.']
 ];
+
+/* Los mismos 18 senderos del plano, como polilíneas en píxeles. */
+const PATHS = [
+  [[740,312],[740,317]],
+  [[740,427],[740,445]],
+  [[700,575],[710,605]],
+  [[740,690],[755,690]],
+  [[520,380],[430,380],[355,405],[270,355]],
+  [[300,415],[415,440],[450,450]],
+  [[450,450],[415,580],[450,710],[535,740]],
+  [[620,450],[650,580],[668,640],[600,740]],
+  [[535,740],[590,780],[590,820],[590,985]],
+  [[980,510],[1030,510],[1060,455],[1090,455]],
+  [[980,372],[1040,372],[1102,340]],
+  [[1100,455],[1100,540]],
+  [[1100,580],[1140,620],[1140,860]],
+  [[1020,745],[1020,757]],
+  [[925,785],[941,785]],
+  [[955,785],[955,860],[1050,860]],
+  [[1050,802],[1050,860]],
+  [[1140,860],[1175,860],[1175,810]]
+];
+
+/* Accesos entre zonas que el plano dibuja separadas: permiten seguir por la
+   red de senderos en vez de cruzar edificios en línea recta. */
+const ENLACES = [
+  [[740,445],[980,510]],  /* sur de C → acceso este de B */
+  [[755,690],[925,785]],  /* acceso oeste de A → patio de E */
+  [[710,605],[740,690]]   /* norte de U → sur de U */
+];
+
+/* Punto de entrada de cada edificio sobre el borde más cercano a un sendero. */
+const ENTRADAS = {
+  C: [740,427],  R: [270,355],  R2: [355,395], M: [384,440],
+  M2: [415,460], B: [980,510],  K: [1090,455], J: [1102,340],
+  O: [1100,560], L: [650,580],  U: [710,605],  A: [755,690],
+  H: [590,780],  D: [1020,745], E: [975,785],  F2: [941,785],
+  F: [1050,860], T: [1175,860]
+};
+
 const DIRS = ['norte','noreste','este','sureste','sur','suroeste','oeste','noroeste'];
 const METROS_POR_PIXEL = 0.75; /* el mismo valor que usa App.tsx para el GPS */
 
@@ -402,9 +424,12 @@ function restyle() {
     st.borderWidth = px(id === selected ? 5 : 3);
   });
   placeDot();
-  const g = $('guide');
+  const g = $('routeLine'), d = $('routeDone');
   g.setAttribute('stroke-width', 7 / z);
   g.setAttribute('stroke-dasharray', (16 / z) + ' ' + (12 / z));
+  d.setAttribute('stroke-width', 7 / z);
+  d.setAttribute('stroke-dasharray', (14 / z) + ' ' + (10 / z));
+  $('routeEnd').setAttribute('r', 8 / z);
 }
 
 /* ---------- Mapa: posición y zoom ---------- */
@@ -450,6 +475,260 @@ function zoomBy(k) {
   }
 }
 
+/* ---------- Grafo de senderos y entradas ----------
+   Vértices: giros de los caminos y entradas de edificios. Las aristas de un
+   sendero pesan su longitud; los enlaces entre senderos y desde la persona se
+   penalizan para preferir siempre los caminos dibujados. */
+const GRAFO = (() => {
+  const nodos = [], aristas = [];
+  function nodo(x, y) {
+    let n = nodos.find(p => Math.abs(p.x - x) < 0.5 && Math.abs(p.y - y) < 0.5);
+    if (!n) { n = { x, y, i: nodos.length, entrada: null }; nodos.push(n); }
+    return n;
+  }
+  function unir(a, b, factor) {
+    if (a.i === b.i) return;
+    aristas.push({ a: a.i, b: b.i,
+      d: Math.hypot(a.x - b.x, a.y - b.y) * (factor || 1) });
+  }
+  PATHS.forEach(path => {
+    const ns = path.map(([x, y]) => nodo(x, y));
+    for (let i = 0; i < ns.length - 1; i++) unir(ns[i], ns[i + 1], 1);
+  });
+  ENLACES.forEach(([a, b]) => unir(nodo(a[0], a[1]), nodo(b[0], b[1]), 1.6));
+  for (let i = 0; i < nodos.length; i++) {
+    for (let j = i + 1; j < nodos.length; j++) {
+      const d = Math.hypot(nodos[i].x - nodos[j].x, nodos[i].y - nodos[j].y);
+      if (d <= 36) unir(nodos[i], nodos[j], 1.8);
+      else if (d <= 140) unir(nodos[i], nodos[j], 2.6);
+    }
+  }
+  const entradaNodo = {};
+  Object.keys(ENTRADAS).forEach(id => {
+    const [x, y] = ENTRADAS[id];
+    const n = nodo(x, y);
+    n.entrada = id;
+    entradaNodo[id] = n.i;
+    nodos.forEach(p => {
+      const d = Math.hypot(p.x - x, p.y - y);
+      if (p.i !== n.i && d <= 60) unir(n, p, d <= 12 ? 1 : 1.5);
+    });
+  });
+  return { nodos, aristas, entradaNodo };
+})();
+
+function mejorRuta(destino) {
+  const nodos = GRAFO.nodos, n = nodos.length;
+  const dist = new Array(n).fill(Infinity), prev = new Array(n).fill(-1);
+  const visto = new Array(n).fill(false);
+  /* La persona entra a la red por el sendero más cercano, nunca por una
+     entrada: así el primer tramo también va por un camino del plano. */
+  let inicio = -1, mejorD = Infinity;
+  nodos.forEach((p, i) => {
+    if (p.entrada) return;
+    const d = Math.hypot(p.x - dot.x, p.y - dot.y);
+    if (d < mejorD) { mejorD = d; inicio = i; }
+  });
+  if (inicio >= 0) dist[inicio] = mejorD * 1.5;
+  for (;;) {
+    let u = -1, menor = Infinity;
+    for (let i = 0; i < n; i++)
+      if (!visto[i] && dist[i] < menor) { menor = dist[i]; u = i; }
+    if (u < 0 || u === destino) break;
+    visto[u] = true;
+    GRAFO.aristas.forEach(e => {
+      const v = e.a === u ? e.b : e.b === u ? e.a : -1;
+      if (v < 0 || visto[v]) return;
+      const nd = dist[u] + e.d;
+      if (nd < dist[v]) { dist[v] = nd; prev[v] = u; }
+    });
+  }
+  if (!isFinite(dist[destino])) return null;
+  const indices = [];
+  for (let v = destino; v >= 0; v = prev[v]) indices.push(v);
+  indices.reverse();
+  const puntos = indices.map(i => GRAFO.nodos[i]);
+  const desdePersona = [{ x: dot.x, y: dot.y }].concat(puntos);
+  return {
+    destino: destino,
+    puntos: puntos,
+    longitud: longitud(desdePersona),
+    metros: Math.round(longitud(desdePersona) * METROS_POR_PIXEL)
+  };
+}
+
+/* ---------- Navegación activa ----------
+   Al pulsar "Generar ruta" parts desde el punto azul. Cada muestra del GPS
+   proyecta ese punto sobre el recorrido: lo ya andado se pinta gris, lo que
+   queda se pinta azul y el panel.anuncia el próximo giro. */
+const UMBRAL_RUTA = 45;   /* px (~34 m): si el punto azul se aleja, se recalcula */
+const LLEGADA = 20;       /* px (~15 m): distancia para dar la ruta por terminada */
+const RECALCULO_MS = 4000;
+let navegacion = null;
+
+function puntosTexto(pts) {
+  return pts.map(p => Math.round(p.x) + ',' + Math.round(p.y)).join(' ');
+}
+function longitud(pts) {
+  let total = 0;
+  for (let i = 0; i < pts.length - 1; i++)
+    total += Math.hypot(pts[i + 1].x - pts[i].x, pts[i + 1].y - pts[i].y);
+  return total;
+}
+function proyectarSobre(p, pts) {
+  let mejor = { i: 0, t: 0, x: pts[0].x, y: pts[0].y, d: Infinity };
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i + 1];
+    const dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy;
+    const t = l2 ? Math.max(0, Math.min(1,
+      ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2)) : 0;
+    const x = a.x + t * dx, y = a.y + t * dy;
+    const d = Math.hypot(p.x - x, p.y - y);
+    if (d < mejor.d) mejor = { i, t, x, y, d };
+  }
+  return mejor;
+}
+function avanceHasta(pts, i, t) {
+  let s = 0;
+  for (let k = 0; k < i; k++)
+    s += Math.hypot(pts[k + 1].x - pts[k].x, pts[k + 1].y - pts[k].y);
+  if (pts[i + 1])
+    s += t * Math.hypot(pts[i + 1].x - pts[i].x, pts[i + 1].y - pts[i].y);
+  return s;
+}
+function instruccion(nav, pr) {
+  const pts = nav.puntos, k = Math.min(pts.length - 2, pr.i + 1);
+  const destinoPunto = pts[k], fin = pts[pts.length - 1];
+  const metros = Math.max(0,
+    Math.round(Math.hypot(pr.x - destinoPunto.x, pr.y - destinoPunto.y) * METROS_POR_PIXEL));
+  if (k === pts.length - 1 || destinoPunto.entrada === nav.id) {
+    return {
+      clave: 'entrada',
+      texto: 'Continúa ' + metros + ' m hasta la entrada del edificio ' + nav.id + '.'
+    };
+  }
+  const a = pts[k - 1] || { x: pr.x, y: pr.y };
+  const va = { x: destinoPunto.x - a.x, y: destinoPunto.y - a.y };
+  const vb = { x: pts[k + 1].x - destinoPunto.x, y: pts[k + 1].y - destinoPunto.y };
+  const cross = va.x * vb.y - va.y * vb.x;
+  const escalar = va.x * vb.x + va.y * vb.y;
+  const angulo = Math.abs(Math.atan2(cross, escalar)) * 180 / Math.PI;
+  const giro = angulo < 28 ? 'Continúa recto'
+    : cross > 0 ? 'Gira a la derecha' : 'Gira a la izquierda';
+  return {
+    clave: giro + ':' + k,
+    texto: 'En ' + metros + ' m, ' + giro.toLowerCase() + '. Hacia el edificio ' + nav.id + '.'
+  };
+}
+function pintarRuta(recorrido, restante) {
+  $('routeDone').setAttribute('points', puntosTexto(recorrido));
+  $('routeDone').setAttribute('stroke-opacity', recorrido.length > 1 ? '0.55' : '0');
+  $('routeLine').setAttribute('points', puntosTexto(restante));
+  $('routeLine').setAttribute('stroke-opacity', restante.length > 1 ? '0.95' : '0');
+  const fin = restante[restante.length - 1] || recorrido[recorrido.length - 1] || dot;
+  $('routeEnd').setAttribute('cx', Math.round(fin.x));
+  $('routeEnd').setAttribute('cy', Math.round(fin.y));
+  $('routeEnd').setAttribute('opacity', restante.length > 1 ? '1' : '0');
+}
+function ocultarRuta() {
+  $('routeDone').setAttribute('points', '');
+  $('routeDone').setAttribute('stroke-opacity', '0');
+  $('routeLine').setAttribute('points', '');
+  $('routeLine').setAttribute('stroke-opacity', '0');
+  $('routeEnd').setAttribute('opacity', '0');
+}
+function actualizarBotonRuta() {
+  const b = $('btnRoute');
+  if (navegacion) {
+    b.innerHTML = '<span class="material-icons" aria-hidden="true">stop</span>Detener ruta';
+    b.setAttribute('aria-label', 'Detener la navegación hacia el edificio ' + navegacion.id);
+  } else {
+    b.innerHTML = '<span class="material-icons" aria-hidden="true">route</span>Generar ruta';
+    b.setAttribute('aria-label', 'Generar ruta hacia el edificio seleccionado');
+  }
+}
+function detenerRuta(silent) {
+  if (!navegacion) return;
+  navegacion = null;
+  ocultarRuta();
+  $('sheetRoute').textContent = '';
+  actualizarBotonRuta();
+  if (!silent) announce('Navegación detenida.');
+}
+function llegar(nav) {
+  navegacion = null;
+  ocultarRuta();
+  actualizarBotonRuta();
+  $('sheetRoute').textContent = 'Llegaste a la entrada del edificio ' + nav.id + '.';
+  speakOrAnnounce('Llegaste a la entrada del edificio ' + nav.id + '.');
+}
+function iniciarNavegacion(id, r, silent) {
+  navegacion = {
+    id: id,
+    destino: r.destino,
+    puntos: [{ x: dot.x, y: dot.y, entrada: null }].concat(
+      r.puntos.map(p => ({ x: p.x, y: p.y, entrada: p.entrada }))),
+    total: r.longitud,
+    ultimoAviso: '',
+    ultimoRecalculo: Date.now()
+  };
+  actualizarBotonRuta();
+  pintarRuta([], navegacion.puntos);
+  const ins = instruccion(navegacion, { i: 0, t: 0, x: dot.x, y: dot.y, d: 0 });
+  $('sheetRoute').textContent = 'Ruta al edificio ' + id + ' · ' +
+    Math.round(navegacion.total * METROS_POR_PIXEL) + ' m. ' + ins.texto;
+  centerOn(dot.x, dot.y);
+  if (!silent)
+    speakOrAnnounce('Ruta generada hacia el edificio ' + id + '. ' +
+      Math.round(navegacion.total * METROS_POR_PIXEL) + ' metros. Sigue el camino azul ' +
+      'desde el punto azul. ' + ins.texto);
+}
+function generarRuta(id) {
+  const destino = GRAFO.entradaNodo[id];
+  if (destino === undefined) return;
+  const r = mejorRuta(destino);
+  if (!r) {
+    announce('No se pudo generar la ruta hacia el edificio ' + id + '.');
+    return;
+  }
+  iniciarNavegacion(id, r);
+}
+function actualizarNavegacion(opts) {
+  const nav = navegacion;
+  if (!nav) return;
+  opts = opts || {};
+  const fin = nav.puntos[nav.puntos.length - 1];
+  if (Math.hypot(dot.x - fin.x, dot.y - fin.y) <= LLEGADA) { llegar(nav); return; }
+
+  const pr = proyectarSobre(dot, nav.puntos);
+  if (pr.d > UMBRAL_RUTA) {
+    if (!opts.silent && Date.now() - nav.ultimoRecalculo > RECALCULO_MS) {
+      nav.ultimoRecalculo = Date.now();
+      const r = mejorRuta(nav.destino);
+      if (r) {
+        iniciarNavegacion(nav.id, r, true);
+        speakOrAnnounce('Ruta recalculada desde tu ubicación. Quedan ' +
+          Math.round(navegacion.total * METROS_POR_PIXEL) + ' metros.');
+      }
+    }
+    return;
+  }
+
+  const recorrido = nav.puntos.slice(0, pr.i + 1).map(p => ({ x: p.x, y: p.y }));
+  recorrido.push({ x: pr.x, y: pr.y });
+  const restante = [{ x: pr.x, y: pr.y }].concat(nav.puntos.slice(pr.i + 1));
+  pintarRuta(recorrido, restante);
+
+  const quedan = Math.max(0,
+    Math.round((nav.total - avanceHasta(nav.puntos, pr.i, pr.t)) * METROS_POR_PIXEL));
+  const ins = instruccion(nav, pr);
+  $('sheetRoute').textContent = 'Edificio ' + nav.id + ' · quedan ' + quedan + ' m. ' + ins.texto;
+  if (!opts.silent && ins.clave !== nav.ultimoAviso) {
+    nav.ultimoAviso = ins.clave;
+    speakOrAnnounce(ins.texto);
+  }
+}
+
 /* ---------- Selección ---------- */
 function info(id) {
   const [, cx, cy, , , where] = BUILDINGS.find(b => b[0] === id);
@@ -475,14 +754,12 @@ function select(id, opts) {
   updateArrows();
   $('sheetDir').textContent = i.dir;
   $('sheetWhere').textContent = i.where;
+  $('sheetRoute').textContent = '';
+  detenerRuta(true);
   $('sheet').classList.remove('hidden'); $('sheet').classList.add('flex');
   $('hint').classList.add('hidden');
-  const g = $('guide');
-  g.setAttribute('x1', dot.x); g.setAttribute('y1', dot.y);
-  g.setAttribute('x2', i.cx);  g.setAttribute('y2', i.cy);
-  g.setAttribute('stroke-opacity', '0.9');
-  centerOn((dot.x + i.cx)/2, (dot.y + i.cy)/2);
   restyle();
+  centerOn((dot.x + i.cx)/2, (dot.y + i.cy)/2);
 
   const texto = i.label + '. ' + i.dir + ' ' + i.where;
   if (opts.focus) $('sheetName').focus({ preventScroll: true });
@@ -502,16 +779,16 @@ function updateArrows() {
   $('btnPrev').setAttribute('aria-label', 'Edificio anterior, a la izquierda: ' + p);
   $('btnNext').setAttribute('aria-label', 'Edificio siguiente, a la derecha: ' + n);
 }
-function step(d) { if (selected && !inside) select(neighbor(d), { focus: true }); }
+function step(d) { if (selected) select(neighbor(d), { focus: true }); }
 function closeSheet() {
   if (selected) {
     buttons[selected].classList.remove(...ON); buttons[selected].classList.add(...OFF);
     buttons[selected].setAttribute('aria-pressed', 'false');
   }
   selected = null;
+  detenerRuta(true);
   $('sheet').classList.add('hidden'); $('sheet').classList.remove('flex');
   $('hint').classList.remove('hidden');
-  $('guide').setAttribute('stroke-opacity', '0');
   restyle();
   announce('Panel cerrado. Toca un edificio para ver su información.');
 }
@@ -530,7 +807,9 @@ function speakPosition() {
 }
 function voiceLabel() {
   const b = $('btnVoice');
-  b.textContent = 'Voz automática: ' + (autoVoice ? 'activada' : 'desactivada');
+  b.innerHTML = '<span class="material-icons" aria-hidden="true">' +
+    (autoVoice ? 'volume_up' : 'volume_off') + '</span><span>Voz automática: ' +
+    (autoVoice ? 'activada' : 'desactivada') + '</span>';
   b.setAttribute('aria-pressed', autoVoice ? 'true' : 'false');
   b.setAttribute('aria-label', 'Voz automática: ' + (autoVoice ? 'activada' : 'desactivada') +
     '. Si usas lector de pantalla, desactívala para evitar que dos voces hablen a la vez.');
@@ -543,6 +822,7 @@ $('btnVoice').onclick = () => {
   else speechSynthesis.cancel();
 };
 voiceLabel();
+actualizarBotonRuta();
 
 /* ---------- Modo elegido en la portada ----------
    App.tsx envía { type:'modo', modo } al cargar el mapa. En "no vidente"
@@ -566,8 +846,8 @@ window.setModo = aplicarModo;
 
 /* ---------- GPS: puente con la app Expo ----------
    App.tsx convierte lat/lng a píxeles y envía { type:'position', x, y }.
-   Solo movemos el punto y la guía: no llamamos a select() para que la voz
-   automática no se repita en cada muestra del GPS. */
+   Movemos el punto azul y, si hay una ruta activa, actualizamos el tramo
+   restante y el próximo giro sin volver a seleccionar el edificio. */
 window.setUserPosition = (x, y) => {
   /* El GPS puede venir fuera del plano (coordenadas lejanas o poca precisión).
      Lo fijamos dentro de los límites para que el punto nunca desaparezca. */
@@ -582,9 +862,8 @@ window.setUserPosition = (x, y) => {
   const i = info(selected);
   $('sheetDir').textContent = i.dir;
   $('sheetWhere').textContent = i.where;
-  const g = $('guide');
-  g.setAttribute('x1', x); g.setAttribute('y1', y);
-  g.setAttribute('x2', i.cx); g.setAttribute('y2', i.cy);
+  /* Con la navegación activa, el punto azul avanza por el camino dibujado. */
+  if (navegacion) actualizarNavegacion();
 };
 window.addEventListener('message', (event) => {
   try {
@@ -649,122 +928,23 @@ $('btnClose').onclick = closeSheet;
 $('btnCenter').onclick = () => { centerOn(dot.x, dot.y); speakPosition(); };
 $('btnIn').onclick = () => zoomBy(1.25);
 $('btnOut').onclick = () => zoomBy(0.8);
+$('btnRoute').onclick = () => {
+  if (navegacion) detenerRuta();
+  else if (selected) generarRuta(selected);
+};
+$('btnPrev').onclick = () => step(-1);
+$('btnNext').onclick = () => step(1);
 window.addEventListener('resize', () => {
   const nb = computeBase(); z = clampZ(z * nb / baseZ); baseZ = nb; restyle();
-  if (inside) { const b = BUILDINGS.find(x => x[0] === selected); buildPlan(b[3], b[4]); return; }
+  if (navegacion) { actualizarNavegacion({ silent: true }); return; }
   if (selected) { const i = info(selected); centerOn((dot.x + i.cx)/2, (dot.y + i.cy)/2); return; }
   [ox, oy] = clamp(ox, oy, z); apply();
 });
 
-/* ---------- Interior del edificio ----------
-   Plano ESQUEMÁTICO generado: un pasillo central y salas a ambos lados.
-   Cuando existan planos oficiales por edificio, reemplazar buildPlan(). */
-let inside = false, room = null;
-const ROOM_ON  = ['bg-yellow-400','text-black','border-black'];
-const ROOM_OFF = ['bg-blue-900','text-white','border-slate-900'];
-
-function roomInfo() {
-  $('inRoom').textContent = room ? 'Sala ' + room + ' · Edificio ' + selected : 'Edificio ' + selected;
-  $('inNote').textContent = room
-    ? 'Plano esquemático: todavía no hay datos oficiales de este espacio.'
-    : 'Toca una sala para ver su información.';
-}
-function buildPlan(w, h) {
-  const st = $('inStage'); st.innerHTML = ''; room = null;
-  const AW = Math.max(0, st.clientWidth - 24), AH = Math.max(0, st.clientHeight - 8);
-  const asp = Math.min(2.2, Math.max(0.5, w / h));
-  let cw = AW, ch = cw / asp; if (ch > AH) { ch = AH; cw = ch * asp; }
-  const card = document.createElement('div');
-  card.className = 'absolute box-border rounded-xl border-4 border-black bg-slate-100';
-  card.style.cssText = 'width:' + cw + 'px;height:' + ch + 'px;left:' + ((st.clientWidth - cw)/2) + 'px;top:' + ((st.clientHeight - ch)/2) + 'px';
-  const iw = Math.max(0, cw - 8), ih = Math.max(0, ch - 8), C = 40, g = 6, horiz = asp >= 1, rects = [];
-  const corr = document.createElement('div');
-  corr.className = 'absolute flex items-center justify-center bg-slate-300 text-[13px] font-bold tracking-wide text-slate-700';
-  corr.setAttribute('aria-hidden', 'true');
-  corr.textContent = 'PASILLO';
-  let dx, dy;
-  if (horiz) {
-    const n = Math.max(2, Math.round(iw / 92)), rw = Math.max(30, (iw - g*(n + 1)) / n), rh = Math.max(30, (ih - C - g*3) / 2);
-    corr.style.cssText = 'left:0;top:' + (g + rh + g) + 'px;width:' + iw + 'px;height:' + C + 'px';
-    for (let r = 0; r < 2; r++) for (let i = 0; i < n; i++)
-      rects.push([g + i*(rw + g), r ? g + rh + g + C + g : g, rw, rh]);
-    dx = 20; dy = g + rh + g + C/2;
-  } else {
-    const n = Math.max(2, Math.round(ih / 92)), rh = Math.max(30, (ih - g*(n + 1)) / n), rw = Math.max(30, (iw - C - g*3) / 2);
-    corr.style.cssText = 'left:' + (g + rw + g) + 'px;top:0;width:' + C + 'px;height:' + ih + 'px;writing-mode:vertical-rl';
-    for (let c = 0; c < 2; c++) for (let i = 0; i < n; i++)
-      rects.push([c ? g + rw + g + C + g : g, g + i*(rh + g), rw, rh]);
-    dx = g + rw + g + C/2; dy = ih - 20;
-  }
-  card.appendChild(corr);
-  rects.forEach(([x, y, rw, rh], i) => {
-    const b = document.createElement('button'), k = i + 1;
-    b.className = 'absolute box-border rounded-lg border-[3px] p-0 text-base font-extrabold ' + ROOM_OFF.join(' ');
-    b.style.cssText = 'left:' + x + 'px;top:' + y + 'px;width:' + rw + 'px;height:' + rh + 'px';
-    b.textContent = 'Sala ' + k;
-    b.setAttribute('aria-label', 'Sala ' + k + ', Edificio ' + selected);
-    b.setAttribute('aria-pressed', 'false');
-    b.addEventListener('click', () => {
-      card.querySelectorAll('button').forEach(o => { o.classList.remove(...ROOM_ON); o.classList.add(...ROOM_OFF); o.setAttribute('aria-pressed', 'false'); });
-      b.classList.remove(...ROOM_OFF); b.classList.add(...ROOM_ON); b.setAttribute('aria-pressed', 'true');
-      room = k; roomInfo();
-      speakOrAnnounce('Sala ' + k + '. ' + $('inNote').textContent);
-    });
-    card.appendChild(b);
-  });
-  const d = document.createElement('div');
-  d.setAttribute('role', 'img'); d.setAttribute('aria-label', 'Tu ubicación');
-  d.className = 'pointer-events-none absolute box-border h-7 w-7 rounded-full border-[5px] border-white bg-sky-600 shadow-[0_0_0_3px_#0c4a6e]';
-  d.style.cssText = 'left:' + (dx - 14) + 'px;top:' + (dy - 14) + 'px';
-  card.appendChild(d);
-  st.appendChild(card);
-  roomInfo();
-}
-function enterBuilding() {
-  if (!selected) return;
-  const [id, cx, cy, w, h] = BUILDINGS.find(b => b[0] === selected);
-  inside = true;
-  [ox, oy] = clamp(vp.clientWidth/2 - cx*z, vp.clientHeight/2 - cy*z, z); apply();
-  $('sheet').classList.add('hidden'); $('sheet').classList.remove('flex');
-  vp.inert = true;
-  const el = $('interior'); el.classList.remove('hidden'); el.classList.add('flex');
-  $('inTitle').textContent = 'Edificio ' + id + ' · interior';
-  buildPlan(w, h);
-  $('inExit').focus();
-  speakOrAnnounce('Dentro del Edificio ' + id + '. ' + $('inNote').textContent);
-}
-function exitBuilding() {
-  if (!inside) return;
-  inside = false; vp.inert = false;
-  const el = $('interior'); el.classList.add('hidden'); el.classList.remove('flex');
-  select(selected, { silent: true });
-  $('btnEnter').focus();
-  announce('Has salido del interior. Información del edificio ' + selected + '.');
-}
-$('btnEnter').onclick = enterBuilding;
-$('btnPrev').onclick = () => step(-1);
-$('btnNext').onclick = () => step(1);
-$('inExit').onclick = exitBuilding;
-$('inSpeak').onclick = () => {
-  const texto = $('inRoom').textContent + '. ' + $('inNote').textContent;
-  say(texto); announce(texto);
-};
-
-/* Teclado: flechas para recorrer, Escape para salir y foco atrapado en el diálogo. */
+/* Teclado: flechas para recorrer los edificios. */
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { exitBuilding(); return; }
-  if (!inside) {
-    if (e.key === 'ArrowLeft')  { e.preventDefault(); step(-1); }
-    if (e.key === 'ArrowRight') { e.preventDefault(); step(1); }
-    return;
-  }
-  if (e.key === 'Tab') {
-    const f = [...$('interior').querySelectorAll('button:not([disabled])')];
-    if (!f.length) return;
-    const first = f[0], last = f[f.length - 1];
-    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-  }
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); step(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); step(1); }
 });
 
 /* ---------- Inicio ---------- */

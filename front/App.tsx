@@ -1,16 +1,19 @@
 import '../backend/src/tasks'
 
+import { MaterialIcons_400Regular } from '@expo-google-fonts/material-icons'
+import { useFonts } from 'expo-font'
 import { StatusBar } from 'expo-status-bar'
 import * as Location from 'expo-location'
 import { useEffect, useRef, useState } from 'react'
 import {
   AccessibilityInfo,
-  Button,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native'
+
+import Icono from './Icono'
 
 import {
   createSafetyMonitor,
@@ -98,7 +101,10 @@ function Selector({ onElegir }: { onElegir: (modo: Modo) => void }) {
           pressed && styles.opcionPresionada,
         ]}
       >
-        <Text style={styles.opcionTextoClaro}>Soy vidente</Text>
+        <View style={styles.filaBoton}>
+          <Icono name="visibility" size={30} color="#ffffff" />
+          <Text style={styles.opcionTextoClaro}>Soy vidente</Text>
+        </View>
       </Pressable>
 
       <Pressable
@@ -111,7 +117,10 @@ function Selector({ onElegir }: { onElegir: (modo: Modo) => void }) {
           pressed && styles.opcionPresionada,
         ]}
       >
-        <Text style={styles.opcionTextoOscuro}>Soy no vidente</Text>
+        <View style={styles.filaBoton}>
+          <Icono name="visibility_off" size={30} color="#000000" />
+          <Text style={styles.opcionTextoOscuro}>Soy no vidente</Text>
+        </View>
       </Pressable>
 
       <Pressable
@@ -119,13 +128,19 @@ function Selector({ onElegir }: { onElegir: (modo: Modo) => void }) {
         onPress={() => hablar(opciones)}
         style={({ pressed }) => [styles.escuchar, pressed && styles.opcionPresionada]}
       >
-        <Text style={styles.escucharTexto}>Escuchar las opciones</Text>
+        <View style={styles.filaBoton}>
+          <Icono name="volume_up" size={24} color="#000000" />
+          <Text style={styles.escucharTexto}>Escuchar las opciones</Text>
+        </View>
       </Pressable>
     </View>
   )
 }
 
 export default function App() {
+  /* Iconos de Material Icons (Google Fonts) listos antes de mostrar la UI. */
+  const [fuentesListas] = useFonts({ MaterialIcons: MaterialIcons_400Regular })
+
   const trackerRef = useRef<ForegroundTracker | null>(null)
   const monitorRef = useRef<SafetyMonitor | null>(null)
 
@@ -230,6 +245,14 @@ export default function App() {
     setModo(null)
   }
 
+  if (!fuentesListas) {
+    return (
+      <View style={styles.carga} accessibilityRole="main">
+        <Text style={styles.texto}>Cargando…</Text>
+      </View>
+    )
+  }
+
   if (!modo) return <Selector onElegir={irAModo} />
 
   return (
@@ -246,18 +269,45 @@ export default function App() {
             onPress={volver}
             style={styles.botonVolver}
           >
-            <Text style={styles.textoBoton}>← Modo</Text>
+            <View style={styles.filaBoton}>
+              <Icono name="arrow_back" size={18} color="#f8fafc" />
+              <Text style={styles.textoBoton}>Modo</Text>
+            </View>
           </Pressable>
           <Text style={styles.estado} accessibilityLiveRegion="polite">
             {modo === 'vidente' ? 'Vidente' : 'No vidente'} · {estado} · muestras:{' '}
             {muestras}
           </Text>
-          <View style={styles.boton}>
-            <Button title="GPS" onPress={() => void iniciar()} color="#065f46" />
-          </View>
-          <View style={styles.boton}>
-            <Button title="Detener" onPress={detener} color="#991b1b" />
-          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Iniciar GPS"
+            onPress={() => void iniciar()}
+            style={({ pressed }) => [
+              styles.botonAccion,
+              styles.botonGps,
+              pressed && styles.opcionPresionada,
+            ]}
+          >
+            <View style={styles.filaBoton}>
+              <Icono name="location_on" size={18} color="#ffffff" />
+              <Text style={styles.textoBotonAccion}>GPS</Text>
+            </View>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Detener seguimiento"
+            onPress={detener}
+            style={({ pressed }) => [
+              styles.botonAccion,
+              styles.botonDetener,
+              pressed && styles.opcionPresionada,
+            ]}
+          >
+            <View style={styles.filaBoton}>
+              <Icono name="stop" size={18} color="#ffffff" />
+              <Text style={styles.textoBotonAccion}>Detener</Text>
+            </View>
+          </Pressable>
         </View>
 
         <View style={styles.info}>
@@ -386,8 +436,32 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
-  boton: {
-    width: 84,
+  carga: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filaBoton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  botonAccion: {
+    minHeight: 40,
+    minWidth: 84,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  botonGps: { backgroundColor: '#065f46' },
+  botonDetener: { backgroundColor: '#991b1b' },
+  textoBotonAccion: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
   },
   info: {
     backgroundColor: 'rgba(15, 23, 42, 0.92)',
