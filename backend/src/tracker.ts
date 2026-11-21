@@ -4,8 +4,10 @@ import type { LocationSubscription } from 'expo-location'
 
 import {
   DEFAULT_FOREGROUND_DISTANCE_INTERVAL_M,
+  DEFAULT_FOREGROUND_TIME_INTERVAL_MS,
   DEFAULT_MAX_ACCURACY_M,
   DEFAULT_STATIONARY_SPEED_MPS,
+  DEFAULT_WEB_POLL_MS,
 } from './constants'
 import { createEmitter, type Emitter, type Unsubscribe } from './events'
 import { MovementTracker, toGpsPoint } from './movement'
@@ -22,6 +24,8 @@ export interface ForegroundTrackingOptions {
   accuracy?: AccuracyOption
   distanceIntervalM?: number
   timeIntervalMs?: number
+  /** En web, sondeo extra además de watchPosition (Safari suele espaciar mucho las muestras). */
+  webPollMs?: number
   maxAccuracyM?: number
   stationarySpeedMps?: number
   onError?: (message: string) => void
@@ -90,8 +94,22 @@ async function startWebForegroundTracking(
     { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
   )
 
+  /* Safari y algunos Chrome en Android espacian demasiado watchPosition.
+     Sondeamos además cada 2 s para mantener la presencia fresca. */
+  const pollMs = options.webPollMs ?? DEFAULT_WEB_POLL_MS
+  const pollId = setInterval(() => {
+    navigator.geolocation.getCurrentPosition(emitir, () => {}, {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: 15000,
+    })
+  }, pollMs)
+
   return {
-    stop: () => navigator.geolocation.clearWatch(watchId),
+    stop: () => {
+      clearInterval(pollId)
+      navigator.geolocation.clearWatch(watchId)
+    },
     getPoints: () => tracker.getPoints(),
     getStats: () => tracker.getStats(),
     subscribe: samples.subscribe,
@@ -119,9 +137,7 @@ export async function startForegroundTracking(
       accuracy: options.accuracy ?? Location.Accuracy.High,
       distanceInterval:
         options.distanceIntervalM ?? DEFAULT_FOREGROUND_DISTANCE_INTERVAL_M,
-      ...(options.timeIntervalMs !== undefined
-        ? { timeInterval: options.timeIntervalMs }
-        : {}),
+      timeInterval: options.timeIntervalMs ?? DEFAULT_FOREGROUND_TIME_INTERVAL_MS,
     },
     (location) => {
       const sample = tracker.push(toGpsPoint(location))
