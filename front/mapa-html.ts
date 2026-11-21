@@ -4,7 +4,7 @@ export const MAPA_HTML = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-<meta name="theme-color" content="#e2e8f0">
+<meta name="theme-color" content="#eff0f1">
 <title>Mapa accesible · Campus Casa Central UTFSM</title>
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,27 +22,41 @@ export const MAPA_HTML = `<!doctype html>
   }
   #sheet button { cursor: pointer; }
   /* ---- Base estructural: el visor ocupa exactamente la pantalla ---- */
-  html, body { margin: 0; padding: 0; width: 100%; height: 100vh; height: 100dvh; overflow: hidden; background: #e2e8f0; }
+  html, body { margin: 0; padding: 0; width: 100%; height: 100vh; height: 100dvh; overflow: hidden; background: #eff0f1; }
   body { position: fixed; inset: 0; height: 100vh; height: 100dvh; font-family: system-ui, sans-serif; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; }
-  #viewport { position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; touch-action: none; }
+  #viewport { position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; touch-action: none; background: #eff0f1; }
   #world { position: absolute; left: 0; top: 0; width: 1312px; height: 985px; transform-origin: 0 0; }
   #world svg { position: absolute; left: 0; top: 0; max-width: none; pointer-events: none; }
-  #buildings button { position: absolute; max-width: none; touch-action: manipulation; }
+  #buildings button {
+    position: absolute; max-width: none; touch-action: manipulation;
+    background: #e8f1fb !important; color: #334155 !important;
+    border-color: #cbd2d9 !important;
+    box-shadow: 0 2px 6px rgba(15,23,42,.10);
+    transition: background .15s ease, box-shadow .15s ease;
+  }
+  #buildings button[aria-pressed="true"] {
+    background: #ffffff !important; color: #1d4ed8 !important;
+    border-color: #1d4ed8 !important;
+    box-shadow: 0 4px 14px rgba(29,78,216,.22);
+  }
+  #buildings button:focus-visible { box-shadow: none; }
   #dot, #dotHalo { position: absolute; border-radius: 9999px; box-sizing: border-box; pointer-events: none; }
-  #dot { background: #0284c7; border: 5px solid #fff; }
-  #dotHalo { background: rgba(14,165,233,.3); }
+  #dot { background: #1d4ed8; border: 3px solid #fff; box-shadow: 0 2px 8px rgba(15,23,42,.25); }
+  #dotHalo { background: rgba(29,78,216,.18); }
   #presenceBadge {
     position: fixed; left: max(10px, env(safe-area-inset-left)); top: max(10px, env(safe-area-inset-top));
     z-index: 9; pointer-events: none; display: none; max-width: calc(100% - 20px);
-    box-shadow: 0 4px 14px rgba(0,0,0,.35);
+    background: #ffffff; border: 1px solid #cbd2d9; border-radius: 8px;
+    color: #6b21a8; box-shadow: 0 4px 14px rgba(15,23,42,.14);
   }
-  #presenceBadge.sin-conexion { background: #7f1d1d; }
+  #presenceBadge.sin-conexion { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
   #scaleBar {
     position: fixed; left: max(10px, env(safe-area-inset-left)); top: 58px;
     z-index: 9; pointer-events: none; display: none;
-    border: 3px solid #000; border-top: 0; background: rgba(255,255,255,.92);
-    padding: 1px 4px; font-size: 12px; font-weight: 800; color: #000;
-    box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    border: 1px solid #cbd2d9; border-top: 0; border-radius: 0 0 6px 6px;
+    background: rgba(255,255,255,.96);
+    padding: 2px 6px; font-size: 12px; font-weight: 600; color: #334155;
+    box-shadow: 0 2px 8px rgba(15,23,42,.10);
   }
   #peerLayer text { paint-order: stroke fill; stroke: #fff; stroke-width: 4px; stroke-linejoin: round; }
 
@@ -50,7 +64,17 @@ export const MAPA_HTML = `<!doctype html>
   #hint {
     position: fixed; left: 50%; transform: translateX(-50%); top: max(16px, env(safe-area-inset-top));
     width: calc(100% - 32px); width: calc(100% - max(32px, env(safe-area-inset-left) + env(safe-area-inset-right)));
-    max-width: 24rem; box-sizing: border-box; box-shadow: 0 6px 20px rgba(0,0,0,.3);
+    max-width: 24rem; box-sizing: border-box;
+    background: #ffffff; border: 1px solid #cbd2d9; border-radius: 8px;
+    color: #1c1c1c; box-shadow: 0 4px 14px rgba(15,23,42,.14);
+  }
+  #ayudaBanner {
+    background: #ffffff; border: 1px solid #fecaca; border-left: 4px solid #dc2626;
+    border-radius: 8px; color: #b91c1c; box-shadow: 0 4px 14px rgba(15,23,42,.14);
+  }
+  #ayudaBanner button {
+    border: 1px solid #cbd2d9; border-radius: 6px; background: #e8f1fb;
+    color: #1d4ed8; box-shadow: none;
   }
   #sheet {
     position: fixed; left: 10px; right: 10px;
@@ -111,7 +135,14 @@ export const MAPA_HTML = `<!doctype html>
     display: flex; align-items: center; justify-content: center;
     width: 56px; height: 56px; border-radius: 8px; background: #e8f1fb;
   }
-  #sheetName { font-size: clamp(20px, 6.4vw, 26px); }
+  #sheetName { font-size: clamp(20px, 6.4vw, 26px); color: #1c1c1c; }
+  #sheetDir { color: #1d4ed8; }
+  #sheetWhere { color: #475569; }
+  #sheetRoute { color: #065f46; }
+  #prevId, #nextId { color: #334155; }
+  #interior > header h2 { color: #1c1c1c; }
+  #inRoom { color: #1d4ed8; }
+  #inNote { color: #475569; }
 
   /* Foco muy visible, incluidos los botones del plano (el borde se dibuja hacia adentro) */
   button:focus-visible {
@@ -194,18 +225,18 @@ export const MAPA_HTML = `<!doctype html>
       <defs>
         <!-- Barrio: patrón de manzanas que cubre todo el lienzo -->
         <pattern id="manzanas" width="146" height="108" patternUnits="userSpaceOnUse">
-          <rect width="146" height="108" fill="#e2e8f0"/>
-          <rect x="5" y="5" width="136" height="98" rx="4" fill="#cbd5e1"/>
-          <rect x="11" y="11" width="58" height="38" rx="2" fill="#b6c2cf"/>
-          <rect x="77" y="11" width="58" height="38" rx="2" fill="#c3cdd7"/>
-          <rect x="11" y="59" width="58" height="38" rx="2" fill="#c3cdd7"/>
-          <rect x="77" y="59" width="58" height="38" rx="2" fill="#b6c2cf"/>
+          <rect width="146" height="108" fill="#eff0f1"/>
+          <rect x="5" y="5" width="136" height="98" rx="6" fill="#ffffff"/>
+          <rect x="11" y="11" width="58" height="38" rx="4" fill="#e8f1fb"/>
+          <rect x="77" y="11" width="58" height="38" rx="4" fill="#f1f5f9"/>
+          <rect x="11" y="59" width="58" height="38" rx="4" fill="#f1f5f9"/>
+          <rect x="77" y="59" width="58" height="38" rx="4" fill="#e8f1fb"/>
         </pattern>
         <!-- Áreas verdes del campus -->
         <pattern id="parque" width="72" height="72" patternUnits="userSpaceOnUse">
-          <rect width="72" height="72" fill="#c3d8b8"/>
-          <circle cx="18" cy="18" r="6" fill="#adca9f"/>
-          <circle cx="52" cy="50" r="8" fill="#adca9f"/>
+          <rect width="72" height="72" fill="#dcebd7"/>
+          <circle cx="18" cy="18" r="6" fill="#c8e0c0"/>
+          <circle cx="52" cy="50" r="8" fill="#c8e0c0"/>
         </pattern>
       </defs>
 
@@ -213,27 +244,27 @@ export const MAPA_HTML = `<!doctype html>
       <rect width="1312" height="985" fill="url(#manzanas)"/>
 
       <!-- 2. Campus: desde la calle separadora hasta los bordes sur y este -->
-      <rect x="300" y="312" width="1012" height="673" fill="#d6d3d1"/>
-      <rect x="300" y="312" width="1012" height="88" fill="#dedad4"/>
+      <rect x="300" y="312" width="1012" height="673" fill="#f1f5f9"/>
+      <rect x="300" y="312" width="1012" height="88" fill="#e8f1fb"/>
       <rect x="300" y="620" width="1012" height="365" fill="url(#parque)"/>
 
       <!-- 3. Avenida Placeres: atraviesa TODO el ancho del plano -->
-      <rect x="0" y="278" width="1312" height="34" fill="#475569"/>
-      <line x1="0" y1="295" x2="1312" y2="295" stroke="#fbbf24" stroke-width="2" stroke-dasharray="26 20"/>
+      <rect x="0" y="278" width="1312" height="34" fill="#cbd2d9"/>
+      <line x1="0" y1="295" x2="1312" y2="295" stroke="#2a91d1" stroke-width="2" stroke-dasharray="26 20"/>
 
       <!-- 4. Calle separadora oeste: de arriba abajo, sin dejar hueco -->
-      <rect x="284" y="0" width="16" height="278" fill="#475569"/>
-      <rect x="284" y="312" width="16" height="673" fill="#475569"/>
+      <rect x="284" y="0" width="16" height="278" fill="#cbd2d9"/>
+      <rect x="284" y="312" width="16" height="673" fill="#cbd2d9"/>
 
       <!-- 5. Cancha principal 8007 y tenis (zona inferior derecha) -->
-      <rect x="450" y="450" width="170" height="260" rx="4" fill="#166534"/>
-      <rect x="460" y="460" width="150" height="240" rx="2" fill="none" stroke="#ffffff" stroke-width="2" opacity=".55"/>
-      <line x1="535" y1="460" x2="535" y2="700" stroke="#ffffff" stroke-width="2" opacity=".55"/>
-      <rect x="1130" y="690" width="70" height="120" rx="3" fill="#9a3412"/>
-      <line x1="1130" y1="750" x2="1200" y2="750" stroke="#ffffff" stroke-width="2" opacity=".55"/>
+      <rect x="450" y="450" width="170" height="260" rx="8" fill="#cfe6c8"/>
+      <rect x="460" y="460" width="150" height="240" rx="6" fill="none" stroke="#ffffff" stroke-width="2" opacity=".8"/>
+      <line x1="535" y1="460" x2="535" y2="700" stroke="#ffffff" stroke-width="2" opacity=".8"/>
+      <rect x="1130" y="690" width="70" height="120" rx="6" fill="#ecd9c8"/>
+      <line x1="1130" y1="750" x2="1200" y2="750" stroke="#ffffff" stroke-width="2" opacity=".8"/>
 
       <!-- Ladera / talud al sur de la cancha: curvas de nivel cerca de H -->
-      <g fill="none" stroke="#a8a29e" stroke-width="2" opacity=".7">
+      <g fill="none" stroke="#cbd2d9" stroke-width="2" opacity=".8">
         <path d="M470 790 Q590 730 710 790"/>
         <path d="M460 830 Q590 770 720 830"/>
         <path d="M450 870 Q590 810 730 870"/>
@@ -242,7 +273,7 @@ export const MAPA_HTML = `<!doctype html>
       <!-- 6. Senderos y calles internas: contorno oscuro y centro blanco
              usan EXACTAMENTE los mismos trazos (mismo d en los dos grupos). -->
       <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-        <g stroke="#475569" stroke-width="24">
+        <g stroke="#94a3b8" stroke-width="24">
           <path d="M740 312 L740 317"/>
           <path d="M740 427 L740 445"/>
           <path d="M700 575 L710 605"/>
@@ -286,12 +317,12 @@ export const MAPA_HTML = `<!doctype html>
 
       <!-- 7. Etiquetas -->
       <g font-family="system-ui, sans-serif" font-weight="700" text-anchor="middle">
-        <text x="535" y="585" font-size="20" fill="#ffffff">8007</text>
-        <text x="1165" y="755" font-size="16" fill="#ffffff">TENIS</text>
-        <text x="660" y="301" font-size="20" fill="#ffffff">AVENIDA PLACERES</text>
-        <text x="142" y="160" font-size="17" fill="#475569">BARRIO NORTE</text>
-        <text x="590" y="830" font-size="16" fill="#78716c">LADERA</text>
-        <text x="1170" y="950" font-size="17" fill="#365314">SUBIDA SAN LUIS</text>
+        <text x="535" y="585" font-size="20" fill="#334155">8007</text>
+        <text x="1165" y="755" font-size="16" fill="#334155">TENIS</text>
+        <text x="660" y="301" font-size="20" fill="#334155">AVENIDA PLACERES</text>
+        <text x="142" y="160" font-size="17" fill="#64748b">BARRIO NORTE</text>
+        <text x="590" y="830" font-size="16" fill="#94a3b8">LADERA</text>
+        <text x="1170" y="950" font-size="17" fill="#4d7c0f">SUBIDA SAN LUIS</text>
       </g>
     </svg>
 
@@ -299,9 +330,9 @@ export const MAPA_HTML = `<!doctype html>
     <svg width="1312" height="985" viewBox="0 0 1312 985" aria-hidden="true" class="pointer-events-none absolute left-0 top-0">
       <polyline id="routeDone" points="" fill="none" stroke="#94a3b8" stroke-width="7"
                 stroke-dasharray="14 10" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0"/>
-      <polyline id="routeLine" points="" fill="none" stroke="#0369a1" stroke-width="7"
+      <polyline id="routeLine" points="" fill="none" stroke="#1d4ed8" stroke-width="7"
                 stroke-dasharray="16 12" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0"/>
-      <circle id="routeEnd" cx="690" cy="500" r="8" fill="#0369a1" stroke="#ffffff" stroke-width="3" opacity="0"/>
+      <circle id="routeEnd" cx="690" cy="500" r="8" fill="#1d4ed8" stroke="#ffffff" stroke-width="3" opacity="0"/>
     </svg>
 
     <!-- Botones de edificios (los crea el script) -->
@@ -310,7 +341,7 @@ export const MAPA_HTML = `<!doctype html>
     <!-- Detalles de forma (patios y salientes). Van encima de los botones pero
          no capturan eventos: el control accesible sigue siendo cada botón. -->
     <svg width="1312" height="985" viewBox="0 0 1312 985" aria-hidden="true" class="pointer-events-none absolute left-0 top-0">
-      <g fill="none" stroke="#0f172a" stroke-width="3" stroke-dasharray="7 5" opacity=".75">
+      <g fill="none" stroke="#94a3b8" stroke-width="3" stroke-dasharray="7 5" opacity=".9">
         <rect x="810" y="485" width="90" height="50" rx="4"/>
         <path d="M775 625 L825 625 L825 615"/>
         <path d="M875 825 L925 825 L925 800"/>
@@ -328,9 +359,9 @@ export const MAPA_HTML = `<!doctype html>
     </svg>
 
     <!-- Punto azul: ubicación de la persona -->
-    <div id="dotHalo" aria-hidden="true" class="pointer-events-none absolute h-10 w-10 rounded-full bg-sky-500/30"></div>
+    <div id="dotHalo" aria-hidden="true" class="pointer-events-none absolute h-10 w-10 rounded-full bg-[#1d4ed8]/20"></div>
     <div id="dot" role="img" aria-label="Tu ubicación"
-         class="pointer-events-none absolute box-border h-7 w-7 rounded-full border-[5px] border-white bg-sky-600 shadow-[0_0_0_3px_#0c4a6e]"></div>
+         class="pointer-events-none absolute box-border h-7 w-7 rounded-full border-[3px] border-white bg-[#1d4ed8] shadow-[0_2px_8px_rgba(15,23,42,.25)]"></div>
   </div>
 </main>
 
@@ -495,8 +526,8 @@ function esCiego() { return PRESENCIA.rol === 'no-vidente'; }
 let autoVoice = true;   /* voz automática activada por defecto */
 try { if (localStorage.getItem('autoVoice') === 'off') autoVoice = false; } catch (e) {}
 const buttons = {};
-const ON  = ['bg-yellow-400','text-black','border-black','border-[5px]'];
-const OFF = ['bg-blue-900','text-white','border-slate-900','border-[3px]'];
+const ON  = ['bg-white','text-[#1d4ed8]','border-[#1d4ed8]','border-[5px]'];
+const OFF = ['bg-[#e8f1fb]','text-[#334155]','border-[#cbd2d9]','border-[3px]'];
 
 /* Un único punto de anuncio para lectores de pantalla. */
 let avisoTimer = null;
@@ -555,7 +586,7 @@ function computeBase() {
 function placeDot() {
   const d = 28 / z, hh = 40 / z;
   Object.assign($('dot').style, { left: (dot.x - d/2) + 'px', top: (dot.y - d/2) + 'px', width: d + 'px', height: d + 'px',
-    borderWidth: (5 / z) + 'px', boxShadow: '0 0 0 ' + (3 / z) + 'px #0c4a6e' });
+    borderWidth: (3 / z) + 'px', boxShadow: '0 2px 8px rgba(15,23,42,.25)' });
   Object.assign($('dotHalo').style, { left: (dot.x - hh/2) + 'px', top: (dot.y - hh/2) + 'px', width: hh + 'px', height: hh + 'px' });
 }
 function actualizarEscala() {
@@ -1358,7 +1389,7 @@ function construirRedCaminos() {
     }
     return indice.get(clave);
   }
-  document.querySelectorAll('g[stroke="#475569"] path').forEach((p) => {
+  document.querySelectorAll('g[stroke="#94a3b8"] path').forEach((p) => {
     const d = p.getAttribute('d') || '';
     const pts = [...d.matchAll(/[ML]\\s*(-?[\\d.]+)[ ,]+(-?[\\d.]+)/g)]
       .map((m) => ({ x: Number(m[1]), y: Number(m[2]) }));
@@ -1974,8 +2005,8 @@ window.addEventListener('resize', () => {
    Plano ESQUEMÁTICO generado: un pasillo central y salas a ambos lados.
    Cuando existan planos oficiales por edificio, reemplazar buildPlan(). */
 let inside = false, room = null;
-const ROOM_ON  = ['bg-yellow-400','text-black','border-black'];
-const ROOM_OFF = ['bg-blue-900','text-white','border-slate-900'];
+const ROOM_ON  = ['bg-white','text-[#1d4ed8]','border-[#1d4ed8]'];
+const ROOM_OFF = ['bg-[#e8f1fb]','text-[#334155]','border-[#cbd2d9]'];
 
 function roomInfo() {
   $('inRoom').textContent = room ? 'Sala ' + room + ' · Edificio ' + selected : 'Edificio ' + selected;
@@ -1989,11 +2020,11 @@ function buildPlan(w, h) {
   const asp = Math.min(2.2, Math.max(0.5, w / h));
   let cw = AW, ch = cw / asp; if (ch > AH) { ch = AH; cw = ch * asp; }
   const card = document.createElement('div');
-  card.className = 'absolute box-border rounded-xl border-4 border-black bg-slate-100';
-  card.style.cssText = 'width:' + cw + 'px;height:' + ch + 'px;left:' + ((st.clientWidth - cw)/2) + 'px;top:' + ((st.clientHeight - ch)/2) + 'px';
+  card.className = 'absolute box-border rounded-lg border border-[#cbd2d9] bg-white';
+  card.style.cssText = 'width:' + cw + 'px;height:' + ch + 'px;left:' + ((st.clientWidth - cw)/2) + 'px;top:' + ((st.clientHeight - ch)/2) + 'px;box-shadow:0 4px 14px rgba(15,23,42,.14)';
   const iw = Math.max(0, cw - 8), ih = Math.max(0, ch - 8), C = 40, g = 6, horiz = asp >= 1, rects = [];
   const corr = document.createElement('div');
-  corr.className = 'absolute flex items-center justify-center bg-slate-300 text-[13px] font-bold tracking-wide text-slate-700';
+  corr.className = 'absolute flex items-center justify-center bg-[#f1f5f9] text-[13px] font-bold tracking-wide text-[#64748b]';
   corr.setAttribute('aria-hidden', 'true');
   corr.textContent = 'PASILLO';
   let dx, dy;
@@ -2028,7 +2059,7 @@ function buildPlan(w, h) {
   });
   const d = document.createElement('div');
   d.setAttribute('role', 'img'); d.setAttribute('aria-label', 'Tu ubicación');
-  d.className = 'pointer-events-none absolute box-border h-7 w-7 rounded-full border-[5px] border-white bg-sky-600 shadow-[0_0_0_3px_#0c4a6e]';
+  d.className = 'pointer-events-none absolute box-border h-7 w-7 rounded-full border-[3px] border-white bg-[#1d4ed8] shadow-[0_2px_8px_rgba(15,23,42,.25)]';
   d.style.cssText = 'left:' + (dx - 14) + 'px;top:' + (dy - 14) + 'px';
   card.appendChild(d);
   st.appendChild(card);
