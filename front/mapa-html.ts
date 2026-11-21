@@ -69,6 +69,71 @@ export const MAPA_HTML = `<!doctype html>
   }
   #peerLayer text { paint-order: stroke fill; stroke: #fff; stroke-width: 4px; stroke-linejoin: round; }
 
+  /* ---- Reporte de incidencias: solo lo ve quien está en modo vidente ---- */
+  #btnIncidencia {
+    /* Abajo a la izquierda, por debajo del panel del edificio (#sheet):
+       ambos se apilan sin taparse y el botón queda siempre al alcance del pulgar. */
+    position: fixed; left: max(10px, env(safe-area-inset-left)); bottom: max(10px, env(safe-area-inset-bottom));
+    z-index: 12; display: flex; align-items: center; gap: 4px;
+    min-height: 48px; padding: 0 12px; box-sizing: border-box;
+    border: 1px solid #cbd2d9; border-radius: 8px;
+    background: #ffffff; color: #b45309;
+    box-shadow: 0 4px 14px rgba(15,23,42,.14);
+    font-size: 14px; font-weight: 800;
+  }
+  #btnIncidencia[aria-pressed="true"] { background: #fffbeb; border-color: #f59e0b; color: #92400e; }
+  /* Vidente es el modo por defecto: el botón se ve desde el primer pintado,
+     incluso si el mensaje de la portada tarda o no llega. */
+  body[data-modo="no-vidente"] #btnIncidencia { display: none !important; }
+  #btnIncidencia .incidenciaNum.hidden { display: none; }
+  #btnIncidencia .incidenciaNum {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 22px; height: 22px; padding: 0 5px; border-radius: 999px;
+    background: #b91c1c; color: #fff; font-size: 12px; font-weight: 800;
+  }
+  #incidenciaHint {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    top: max(66px, calc(env(safe-area-inset-top) + 56px));
+    z-index: 11; display: none; align-items: center; gap: 8px;
+    max-width: calc(100% - 24px); padding: 9px 14px; box-sizing: border-box;
+    background: #ffffff; border: 1px solid #cbd2d9; border-left: 4px solid #f59e0b;
+    border-radius: 8px; box-shadow: 0 4px 14px rgba(15,23,42,.14);
+    color: #92400e; font-size: 14px; font-weight: 800; text-align: center;
+  }
+  body.reporte-incidencias #incidenciaHint { display: flex; }
+  #world #incidenciaLayer { pointer-events: none; }
+  #incidenciaLayer path.tramoClic {
+    visibility: hidden; pointer-events: none; cursor: pointer;
+  }
+  body.reporte-incidencias #incidenciaLayer path.tramoClic {
+    visibility: visible; pointer-events: stroke;
+  }
+  #incidenciaLayer path.tramoClic:hover { stroke: #f59e0b !important; }
+  #incidenciaDialog {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 56px);
+    z-index: 15; display: none; flex-direction: column; gap: 10px;
+    width: calc(100% - 24px); max-width: 25rem; padding: 14px; box-sizing: border-box;
+    background: #ffffff; border: 1px solid #cbd2d9; border-left: 4px solid #2a91d1;
+    border-radius: 8px; box-shadow: 0 4px 14px rgba(15,23,42,.18);
+  }
+  #incidenciaDialog.flex { display: flex; }
+  #incidenciaDialog h2 { margin: 0; color: #1c1c1c; font-size: 19px; font-weight: 800; }
+  #incSubtitulo { margin: 0; color: #475569; font-size: 14px; line-height: 1.35; }
+  #incTipos { display: flex; flex-wrap: wrap; gap: 6px; }
+  #incidenciaDialog button {
+    min-height: 48px; padding: 0 12px; border: 1px solid #cbd2d9; border-radius: 6px;
+    background: #e8f1fb; color: #1d4ed8; font-size: 14px; font-weight: 800;
+    box-shadow: none;
+  }
+  #incTipos button[aria-pressed="true"] {
+    background: #1d4ed8; border-color: #1d4ed8; color: #ffffff;
+  }
+  #incAcciones { display: flex; flex-wrap: wrap; gap: 6px; }
+  #incConfirmar { background: #b91c1c !important; border-color: #b91c1c !important; color: #ffffff !important; }
+  #incCancelar { background: #f1f5f9 !important; color: #475569 !important; }
+  #incLevantar[aria-pressed="true"] { background: #065f46; border-color: #065f46; color: #ffffff; }
+
   /* Elementos flotantes: nunca deben salirse del área visible */
   #hint {
     position: fixed; left: 50%; transform: translateX(-50%); top: max(16px, env(safe-area-inset-top));
@@ -224,6 +289,9 @@ export const MAPA_HTML = `<!doctype html>
     Acerca y aleja el mapa con la rueda del ratón o pellizcando la pantalla.
     En modo no vidente aparecen dos flechas abajo: cambian el edificio con la voz y
     al tocar cualquier otro punto se genera la ruta y se guía el camino por voz.
+    En modo vidente, el botón "Reportar un tramo" permite marcar un sendero como
+    bloqueado, dañado, en obras u otro problema; el aviso se comparte y las rutas
+    dejan de usar ese tramo.
   </p>
   <div id="world" class="absolute left-0 top-0 origin-top-left" style="width:1312px;height:985px">
 
@@ -349,6 +417,15 @@ export const MAPA_HTML = `<!doctype html>
       </g>
     </svg>
 
+    <!-- Incidencias de senderos. Va antes de los botones para no taparlos.
+         Los tramos clickeables solo aparecen en modo reporte (videntes);
+         los tramos bloqueados se ven siempre, incluido el modo no vidente. -->
+    <svg id="incidenciaLayer" width="1312" height="985" viewBox="0 0 1312 985" class="absolute left-0 top-0 pointer-events-none">
+      <g id="tramosClickeables"></g>
+      <g id="tramosBloqueados"></g>
+      <g id="tramoPreview"></g>
+    </svg>
+
     <!-- Botones de edificios (los crea el script) -->
     <div id="buildings"></div>
 
@@ -396,6 +473,35 @@ export const MAPA_HTML = `<!doctype html>
     Ir a ayudar
   </button>
 </div>
+
+<!-- Reporte de tramos con problemas: solo se muestra en modo vidente -->
+<button id="btnIncidencia" type="button" aria-pressed="false"
+        aria-label="Reportar un tramo bloqueado o dañado">
+  <span class="material-icons" aria-hidden="true" style="font-size:22px">report_problem</span>
+  <span>Reportar tramo</span>
+  <span id="incidenciaNum" class="incidenciaNum hidden" aria-hidden="true">0</span>
+</button>
+<div id="incidenciaHint" role="status" aria-live="polite">
+  <span class="material-icons" aria-hidden="true">report_problem</span>
+  <span>Modo reporte: toca el tramo del sendero con problemas</span>
+</div>
+
+<section id="incidenciaDialog" role="dialog" aria-modal="false"
+         aria-labelledby="incTitulo" aria-describedby="incSubtitulo">
+  <h2 id="incTitulo">Reportar problema en el sendero</h2>
+  <p id="incSubtitulo"></p>
+  <div id="incTipos" role="group" aria-label="Tipo de problema">
+    <button type="button" data-tipo="Bloqueado" aria-pressed="true">Bloqueado</button>
+    <button type="button" data-tipo="Dañado" aria-pressed="false">Dañado</button>
+    <button type="button" data-tipo="En obras" aria-pressed="false">En obras</button>
+    <button type="button" data-tipo="Otro" aria-pressed="false">Otro</button>
+  </div>
+  <div id="incAcciones">
+    <button id="incConfirmar" type="button">Marcar tramo</button>
+    <button id="incLevantar" type="button" class="hidden">Levantar bloqueo</button>
+    <button id="incCancelar" type="button" class="btnCancelar">Cancelar</button>
+  </div>
+</section>
 
 <!-- Panel que aparece al elegir un edificio -->
 <section id="sheet" role="region" aria-label="Información del edificio seleccionado"
@@ -538,6 +644,51 @@ const DIRS = ['norte','noreste','este','sureste','sur','suroeste','oeste','noroe
 const METROS_POR_PIXEL = 0.75; /* el mismo valor que usa App.tsx para el GPS */
 const CENTRO = { x: 690, y: 500 };
 
+/* ---------- Incidencias en los senderos ----------
+   Un vidente marca un tramo como bloqueado, dañado, en obras u otro problema.
+   El aviso viaja por MQTT y TODOS los mapas excluyen ese tramo al calcular
+   rutas: el mismo grafo sirve al vidente y a la persona guiada por voz. */
+const INCIDENCIA_TOPIC = 'hackatonlyoss/campus/incidencias/v1';
+const INCIDENCIA_TTL = 30 * 60 * 1000; /* 30 min sin confirmación → se levanta */
+const INCIDENCIAS = {
+  activas: new Map(),   // 'índice:tramo' -> { tipo, por, ts }
+  locales: new Set(),   // claves reportadas por esta sesión (se republican al reconectar)
+  modo: false,          // modo reporte, solo vidente
+  seleccion: null,      // { i, s, clave } del tramo tocado
+  tipo: 'Bloqueado',
+  cargadas: false,      // los reportes guardados ya se restauraron
+};
+function claveTramo(i, s) { return i + ':' + s; }
+function estaBloqueado(clave) { return INCIDENCIAS.activas.has(clave); }
+/* Segmento dibujado más cercano a un punto. Sirve para etiquetar los conectores
+   de las entradas: así un bloqueo no se puede esquivar por un atajo invisible. */
+function segmentoMasCercano(x, y) {
+  let clave = null, menor = Infinity;
+  PATHS.forEach((path, pi) => {
+    for (let s = 0; s < path.length - 1; s++) {
+      const [ax, ay] = path[s], [bx, by] = path[s + 1];
+      const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+      const t = l2 ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2)) : 0;
+      const d = Math.hypot(x - (ax + t * dx), y - (ay + t * dy));
+      if (d < menor) { menor = d; clave = claveTramo(pi, s); }
+    }
+  });
+  return { clave, dist: menor };
+}
+function describirTramo(i, s) {
+  const [a, b] = [PATHS[i][s], PATHS[i][s + 1]];
+  const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+  let cerca = null, menor = Infinity;
+  BUILDINGS.forEach(([id, cx, cy, w, h]) => {
+    const d = Math.hypot(mx - cx, my - cy);
+    if (d < menor) { menor = d; cerca = id; }
+  });
+  const nombre = cerca
+    ? (CANCHAS.has(cerca) ? etiquetaDestino(cerca) : 'edificio ' + cerca)
+    : 'el campus';
+  return 'Sendero ' + (i + 1) + ', tramo ' + (s + 1) + ' · cerca de ' + nombre;
+}
+
 /* Ubicación de la persona (simulada). El GPS real llama a setUserPosition(x, y, geo)
    con coordenadas relativas al centro del plano. */
 let dot = { x: CENTRO.x, y: CENTRO.y };
@@ -647,6 +798,274 @@ function restyle() {
   d.setAttribute('stroke-width', 7 / z);
   d.setAttribute('stroke-dasharray', (14 / z) + ' ' + (10 / z));
   $('routeEnd').setAttribute('r', 8 / z);
+  actualizarEscalaIncidencias();
+}
+
+/* ---------- Incidencias: dibujo, reporte y recálculo ---------- */
+const NS_SVG = 'http://www.w3.org/2000/svg';
+/* El zoom cambia mucho más seguido que los bloqueos: ajustamos solo el grosor
+   de lo ya dibujado en vez de reconstruir toda la capa en cada pellizco. */
+function actualizarEscalaIncidencias() {
+  const bloqueos = $('tramosBloqueados'), previa = $('tramoPreview');
+  if (!bloqueos || !previa) return;
+  $('tramosClickeables').querySelectorAll('path.tramoClic').forEach((p) => {
+    p.setAttribute('stroke-width', (26 / z).toFixed(2));
+  });
+  bloqueos.querySelectorAll('[data-incidencia="linea"]').forEach((p) => {
+    p.setAttribute('stroke-width', (9 / z).toFixed(2));
+    p.setAttribute('stroke-dasharray', (13 / z).toFixed(2) + ' ' + (8 / z).toFixed(2));
+  });
+  bloqueos.querySelectorAll('[data-incidencia="marca"]').forEach((c) => {
+    c.setAttribute('r', (10 / z).toFixed(2));
+    c.setAttribute('stroke-width', (2 / z).toFixed(2));
+  });
+  bloqueos.querySelectorAll('text[data-my]').forEach((t) => {
+    t.setAttribute('y', Number(t.getAttribute('data-my')) + 4 / z);
+    t.setAttribute('font-size', (15 / z).toFixed(2));
+  });
+  previa.querySelectorAll('[data-incidencia="previa"]').forEach((p) => {
+    p.setAttribute('stroke-width', (12 / z).toFixed(2));
+  });
+}
+function pintarIncidencias() {
+  const capa = $('tramosClickeables'), bloqueos = $('tramosBloqueados'), previa = $('tramoPreview');
+  if (!capa || !bloqueos || !previa) return;
+  capa.textContent = ''; bloqueos.textContent = ''; previa.textContent = '';
+  PATHS.forEach((path, pi) => {
+    for (let s = 0; s < path.length - 1; s++) {
+      const [ax, ay] = path[s], [bx, by] = path[s + 1];
+      const clave = claveTramo(pi, s);
+      const d = 'M' + ax + ' ' + ay + ' L' + bx + ' ' + by;
+      const nombre = describirTramo(pi, s);
+      const info = INCIDENCIAS.activas.get(clave);
+
+      /* Zona táctil transparente: solo visible y sensible al toque en modo reporte. */
+      const hit = document.createElementNS(NS_SVG, 'path');
+      hit.setAttribute('d', d);
+      hit.setAttribute('class', 'tramoClic');
+      hit.setAttribute('fill', 'none');
+      hit.setAttribute('stroke', '#93c5fd');
+      hit.setAttribute('stroke-width', (26 / z).toFixed(2));
+      hit.setAttribute('stroke-linecap', 'round');
+      hit.setAttribute('role', 'button');
+      hit.setAttribute('tabindex', '0');
+      hit.setAttribute('aria-label', 'Reportar problema: ' + nombre);
+      hit.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!justDragged) abrirDialogoIncidencia(pi, s);
+      });
+      hit.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault(); e.stopPropagation();
+          abrirDialogoIncidencia(pi, s);
+        }
+      });
+      capa.appendChild(hit);
+
+      if (info) {
+        const g = document.createElementNS(NS_SVG, 'g');
+        const titulo = document.createElementNS(NS_SVG, 'title');
+        titulo.textContent = nombre + '. ' + info.tipo +
+          '. La ruta no utiliza este tramo.';
+        const linea = document.createElementNS(NS_SVG, 'path');
+        linea.setAttribute('d', d);
+        linea.setAttribute('fill', 'none');
+        linea.setAttribute('stroke', '#b91c1c');
+        linea.setAttribute('stroke-width', (9 / z).toFixed(2));
+        linea.setAttribute('stroke-dasharray', (13 / z).toFixed(2) + ' ' + (8 / z).toFixed(2));
+        linea.setAttribute('stroke-linecap', 'round');
+        linea.setAttribute('data-incidencia', 'linea');
+        const mx = (ax + bx) / 2, my = (ay + by) / 2;
+        const circulo = document.createElementNS(NS_SVG, 'circle');
+        circulo.setAttribute('cx', mx); circulo.setAttribute('cy', my);
+        circulo.setAttribute('r', (10 / z).toFixed(2));
+        circulo.setAttribute('fill', '#b91c1c');
+        circulo.setAttribute('stroke', '#ffffff');
+        circulo.setAttribute('stroke-width', (2 / z).toFixed(2));
+        circulo.setAttribute('data-incidencia', 'marca');
+        const cruz = document.createElementNS(NS_SVG, 'text');
+        cruz.setAttribute('x', mx); cruz.setAttribute('y', my + 4 / z);
+        cruz.setAttribute('data-my', my);
+        cruz.setAttribute('text-anchor', 'middle');
+        cruz.setAttribute('font-size', (15 / z).toFixed(2));
+        cruz.setAttribute('font-weight', '900');
+        cruz.setAttribute('fill', '#ffffff');
+        cruz.textContent = '×';
+        g.appendChild(titulo); g.appendChild(linea);
+        g.appendChild(circulo); g.appendChild(cruz);
+        bloqueos.appendChild(g);
+      }
+
+      if (INCIDENCIAS.seleccion && INCIDENCIAS.seleccion.clave === clave) {
+        const prev = document.createElementNS(NS_SVG, 'path');
+        prev.setAttribute('d', d);
+        prev.setAttribute('fill', 'none');
+        prev.setAttribute('stroke', '#f59e0b');
+        prev.setAttribute('stroke-width', (12 / z).toFixed(2));
+        prev.setAttribute('stroke-opacity', '.85');
+        prev.setAttribute('stroke-linecap', 'round');
+        prev.setAttribute('data-incidencia', 'previa');
+        previa.appendChild(prev);
+      }
+    }
+  });
+  actualizarBotonIncidencia();
+}
+function actualizarBotonIncidencia() {
+  const b = $('btnIncidencia');
+  if (!b) return;
+  b.style.display = PRESENCIA.rol !== 'no-vidente' ? 'flex' : 'none';
+  b.setAttribute('aria-pressed', INCIDENCIAS.modo ? 'true' : 'false');
+  const n = INCIDENCIAS.activas.size;
+  b.setAttribute('aria-label', (INCIDENCIAS.modo
+    ? 'Salir del modo reporte de incidencias. '
+    : 'Reportar un tramo bloqueado o dañado. ') + n + ' tramos con problemas.');
+  const num = $('incidenciaNum');
+  if (num) { num.textContent = n; num.classList.toggle('hidden', n === 0); }
+}
+function alternarModoIncidencias(forzar) {
+  const nuevo = typeof forzar === 'boolean' ? forzar : !INCIDENCIAS.modo;
+  if (nuevo === INCIDENCIAS.modo) return;
+  INCIDENCIAS.modo = nuevo && PRESENCIA.rol !== 'no-vidente';
+  document.body.classList.toggle('reporte-incidencias', INCIDENCIAS.modo);
+  if (!INCIDENCIAS.modo) cerrarDialogoIncidencia();
+  pintarIncidencias();
+  announce(INCIDENCIAS.modo
+    ? 'Modo reporte activado. Toca el tramo del sendero que tiene un problema.'
+    : 'Modo reporte desactivado.');
+}
+function abrirDialogoIncidencia(i, s) {
+  if (PRESENCIA.rol === 'no-vidente' || !INCIDENCIAS.modo) return;
+  const clave = claveTramo(i, s), actual = INCIDENCIAS.activas.get(clave);
+  INCIDENCIAS.seleccion = { i, s, clave };
+  INCIDENCIAS.tipo = actual ? actual.tipo : 'Bloqueado';
+  $('incSubtitulo').textContent = describirTramo(i, s) +
+    (actual ? '. Estado actual: ' + actual.tipo + '.' : '.');
+  actualizarDialogoIncidencia();
+  $('incidenciaDialog').classList.add('flex');
+  pintarIncidencias();
+}
+function actualizarDialogoIncidencia() {
+  $('incTipos').querySelectorAll('button').forEach((b) => {
+    b.setAttribute('aria-pressed', b.dataset.tipo === INCIDENCIAS.tipo ? 'true' : 'false');
+  });
+  const actual = INCIDENCIAS.seleccion && INCIDENCIAS.activas.get(INCIDENCIAS.seleccion.clave);
+  $('incConfirmar').textContent = actual ? 'Actualizar reporte' : 'Marcar tramo';
+  $('incLevantar').classList.toggle('hidden', !actual);
+}
+function cerrarDialogoIncidencia() {
+  $('incidenciaDialog').classList.remove('flex');
+  INCIDENCIAS.seleccion = null;
+  pintarIncidencias();
+}
+function guardarIncidenciasLocales() {
+  const datos = [];
+  INCIDENCIAS.locales.forEach((c) => {
+    const v = INCIDENCIAS.activas.get(c);
+    if (v) datos.push({ clave: c, tipo: v.tipo, ts: v.ts });
+  });
+  try { localStorage.setItem('incidenciasLocales', JSON.stringify(datos)); } catch (e) {}
+}
+function cargarIncidenciasLocales() {
+  try {
+    const datos = JSON.parse(localStorage.getItem('incidenciasLocales') || '[]');
+    if (!Array.isArray(datos)) return;
+    datos.forEach((d) => {
+      if (typeof d.clave !== 'string' || !/^\\d+:\\d+$/.test(d.clave)) return;
+      const [pi, si] = d.clave.split(':').map(Number);
+      if (!PATHS[pi] || si < 0 || si >= PATHS[pi].length - 1) return;
+      const ts = Number(d.ts) || Date.now();
+      if (Date.now() - ts > INCIDENCIA_TTL) return;
+      INCIDENCIAS.activas.set(d.clave, {
+        tipo: d.tipo || 'Bloqueado', por: PRESENCIA.id, ts,
+      });
+      INCIDENCIAS.locales.add(d.clave);
+    });
+  } catch (e) {}
+}
+function publicarIncidencia(clave, accion, tipo, ts) {
+  const ws = PRESENCIA.socket;
+  if (!ws || ws.readyState !== 1 || !PRESENCIA.conectado) return;
+  const cuerpo = {
+    id: PRESENCIA.id, rol: 'vidente', accion, tramo: clave,
+    tipo: tipo || null, ts: ts || Date.now(),
+  };
+  ws.send(mqttPaquete(3, 0, [
+    ...mqttTexto(INCIDENCIA_TOPIC), ...bytesTexto(JSON.stringify(cuerpo)),
+  ]));
+}
+function publicarIncidenciasLocales() {
+  INCIDENCIAS.locales.forEach((clave) => {
+    const v = INCIDENCIAS.activas.get(clave);
+    if (v) publicarIncidencia(clave, 'bloquear', v.tipo, v.ts);
+  });
+}
+function recibirIncidencia(mensaje) {
+  if (!mensaje || typeof mensaje.tramo !== 'string' || !/^\\d+:\\d+$/.test(mensaje.tramo)) return;
+  const [pi, si] = mensaje.tramo.split(':').map(Number);
+  if (!PATHS[pi] || si < 0 || si >= PATHS[pi].length - 1) return;
+  const clave = claveTramo(pi, si), ts = Number(mensaje.ts) || Date.now();
+  const nombre = describirTramo(pi, si);
+  let cambio = false;
+  if (mensaje.accion === 'desbloquear') {
+    cambio = INCIDENCIAS.activas.delete(clave);
+    INCIDENCIAS.locales.delete(clave);
+  } else if (mensaje.accion === 'bloquear') {
+    const actual = INCIDENCIAS.activas.get(clave);
+    if (!actual || ts >= actual.ts) {
+      INCIDENCIAS.activas.set(clave, {
+        tipo: mensaje.tipo || 'Bloqueado', por: mensaje.id, ts,
+      });
+      cambio = true;
+    }
+    if (mensaje.id === PRESENCIA.id) INCIDENCIAS.locales.add(clave);
+  } else return;
+  if (!cambio) return;
+  guardarIncidenciasLocales();
+  const quien = mensaje.id === PRESENCIA.id ? 'Reportaste' : 'Un vidente reportó';
+  trasCambioIncidencias(mensaje.accion === 'bloquear'
+    ? quien + ' ' + String(mensaje.tipo || 'un problema').toLowerCase() + ' en ' + nombre + '.'
+    : 'Se levantó el bloqueo en ' + nombre + '.', true);
+}
+function confirmarIncidencia() {
+  const sel = INCIDENCIAS.seleccion;
+  if (!sel) return;
+  const tipo = INCIDENCIAS.tipo, ts = Date.now();
+  INCIDENCIAS.activas.set(sel.clave, { tipo, por: PRESENCIA.id, ts });
+  INCIDENCIAS.locales.add(sel.clave);
+  guardarIncidenciasLocales();
+  publicarIncidencia(sel.clave, 'bloquear', tipo, ts);
+  cerrarDialogoIncidencia();
+  trasCambioIncidencias('Tramo marcado como ' + tipo.toLowerCase() +
+    '. Las rutas se recalculan sin usarlo.', true);
+}
+function levantarIncidencia() {
+  const sel = INCIDENCIAS.seleccion;
+  if (!sel) return;
+  const ts = Date.now();
+  INCIDENCIAS.activas.delete(sel.clave);
+  INCIDENCIAS.locales.delete(sel.clave);
+  guardarIncidenciasLocales();
+  publicarIncidencia(sel.clave, 'desbloquear', '', ts);
+  cerrarDialogoIncidencia();
+  trasCambioIncidencias('Bloqueo levantado. La ruta vuelve a usar ese tramo.', true);
+}
+function trasCambioIncidencias(mensaje, avisar) {
+  pintarIncidencias();
+  if (navegacion) {
+    const nav = navegacion, r = mejorRuta(nav.destino);
+    if (r) {
+      iniciarNavegacion(nav.id, r, true);
+      if (avisar) speakOrAnnounce(mensaje + ' Ruta recalculada. Quedan ' +
+        Math.round(navegacion.total * METROS_POR_PIXEL) + ' metros.');
+    } else {
+      detenerRuta(true);
+      if (avisar) speakOrAnnounce(mensaje + ' No hay una ruta alternativa.');
+    }
+  } else if (avisar) {
+    announce(mensaje);
+  }
+  if (RUTA_AYUDA.activa) recalcularRutaAyuda();
 }
 
 /* ---------- Mapa: posición y zoom ---------- */
@@ -703,14 +1122,15 @@ const GRAFO = (() => {
     if (!n) { n = { x, y, i: nodos.length, entrada: null }; nodos.push(n); }
     return n;
   }
-  function unir(a, b, factor) {
+  function unir(a, b, factor, tramo) {
     if (a.i === b.i) return;
-    aristas.push({ a: a.i, b: b.i,
+    aristas.push({ a: a.i, b: b.i, tramo: tramo || null,
       d: Math.hypot(a.x - b.x, a.y - b.y) * (factor || 1) });
   }
-  PATHS.forEach(path => {
+  PATHS.forEach((path, pi) => {
     const ns = path.map(([x, y]) => nodo(x, y));
-    for (let i = 0; i < ns.length - 1; i++) unir(ns[i], ns[i + 1], 1);
+    for (let i = 0; i < ns.length - 1; i++)
+      unir(ns[i], ns[i + 1], 1, claveTramo(pi, i));
   });
   /* Solo se unen los puntos que están dibujados como sendero. Antes había
      enlaces cortos entre cualquier par de nodos y la ruta "recortaba" por
@@ -723,7 +1143,12 @@ const GRAFO = (() => {
     entradaNodo[id] = n.i;
     nodos.forEach(p => {
       const d = Math.hypot(p.x - x, p.y - y);
-      if (p.i !== n.i && d <= 60) unir(n, p, d <= 12 ? 1 : 1.5);
+      if (p.i !== n.i && d <= 60) {
+        /* El conector hereda el tramo dibujado más cercano: si ese tramo se
+           reporta bloqueado, el conector tampoco se puede usar de atajo. */
+        const seg = segmentoMasCercano((p.x + x) / 2, (p.y + y) / 2);
+        unir(n, p, d <= 12 ? 1 : 1.5, seg.clave);
+      }
     });
   });
   return { nodos, aristas, entradaNodo };
@@ -751,6 +1176,7 @@ function mejorRuta(destino) {
     GRAFO.aristas.forEach(e => {
       const v = e.a === u ? e.b : e.b === u ? e.a : -1;
       if (v < 0 || visto[v]) return;
+      if (e.tramo && estaBloqueado(e.tramo)) return;
       const nd = dist[u] + e.d;
       if (nd < dist[v]) { dist[v] = nd; prev[v] = u; }
     });
@@ -1183,9 +1609,11 @@ function mqttLeer(datos) {
           0, 1,
           ...mqttTexto(PRESENCIA_TOPIC), 0,
           ...mqttTexto(AYUDA_TOPIC), 0,
+          ...mqttTexto(INCIDENCIA_TOPIC), 0,
         ]));
         publicarPresencia(true);
         publicarAyuda(true);
+        publicarIncidenciasLocales();
       }
       actualizarPresencia();
     } else if (tipo === 3) {
@@ -1196,6 +1624,7 @@ function mqttLeer(datos) {
       const mensaje = JSON.parse(new TextDecoder().decode(datos.slice(i, fin)));
       if (tema === PRESENCIA_TOPIC) recibirPresencia(mensaje);
       else if (tema === AYUDA_TOPIC) recibirAyuda(mensaje);
+      else if (tema === INCIDENCIA_TOPIC) recibirIncidencia(mensaje);
     }
     i = fin;
   }
@@ -1421,7 +1850,7 @@ function construirRedCaminos() {
     }
     return indice.get(clave);
   }
-  document.querySelectorAll('g[stroke="#94a3b8"][stroke-width="24"] path').forEach((p) => {
+  document.querySelectorAll('g[stroke="#94a3b8"][stroke-width="24"] path').forEach((p, pi) => {
     const d = p.getAttribute('d') || '';
     const pts = [...d.matchAll(/[ML]\\s*(-?[\\d.]+)[ ,]+(-?[\\d.]+)/g)]
       .map((m) => ({ x: Number(m[1]), y: Number(m[2]) }));
@@ -1430,8 +1859,9 @@ function construirRedCaminos() {
       if (i > 0) {
         const b = nodo(pts[i - 1].x, pts[i - 1].y);
         const w = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
-        nodos[a].vecinos.push({ i: b, w });
-        nodos[b].vecinos.push({ i: a, w });
+        const tramo = claveTramo(pi, i - 1);
+        nodos[a].vecinos.push({ i: b, w, tramo });
+        nodos[b].vecinos.push({ i: a, w, tramo });
       }
     }
   });
@@ -1463,6 +1893,7 @@ function rutaPorSenderos(desde, hasta) {
     if (actual === fin) break;
     visitado.add(actual);
     for (const v of RED_CAMINOS[actual].vecinos) {
+      if (v.tramo && estaBloqueado(v.tramo)) continue;
       const alternativa = dist[actual] + v.w;
       if (alternativa < dist[v.i]) { dist[v.i] = alternativa; prev[v.i] = actual; }
     }
@@ -1681,6 +2112,24 @@ function actualizarAyudaBanner() {
   boton.textContent = RUTA_AYUDA.activa ? 'Ver ruta' : 'Ir a ayudar';
 }
 $('btnIrAyuda')?.addEventListener('click', generarRutaAyuda);
+
+/* ---------- Botones de reporte de incidencias (solo videntes) ---------- */
+$('btnIncidencia').onclick = () => alternarModoIncidencias();
+$('incCancelar').onclick = cerrarDialogoIncidencia;
+$('incConfirmar').onclick = confirmarIncidencia;
+$('incLevantar').onclick = levantarIncidencia;
+$('incTipos').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-tipo]');
+  if (!b) return;
+  INCIDENCIAS.tipo = b.dataset.tipo;
+  actualizarDialogoIncidencia();
+});
+document.addEventListener('click', (e) => {
+  if (!$('incidenciaDialog').classList.contains('flex')) return;
+  const t = e.target;
+  if (t && typeof t.closest === 'function' && t.closest('#incidenciaDialog')) return;
+  cerrarDialogoIncidencia();
+});
 window.setAyuda = (activo) => {
   const nuevo = !!activo;
   if (nuevo === AYUDA.activo) return;
@@ -1823,10 +2272,15 @@ function configurarPresencia(rol) {
   PRESENCIA.rol = rol;
   PRESENCIA.x = dot.x;
   PRESENCIA.y = dot.y;
+  if (!INCIDENCIAS.cargadas) {
+    cargarIncidenciasLocales();
+    INCIDENCIAS.cargadas = true;
+  }
   if (!PRESENCIA.socket && !PRESENCIA.reintento) mqttConectar();
   publicarPresencia(true);
   pintarPares();
   actualizarPresencia();
+  pintarIncidencias();
 }
 /* Expirar pares que dejan de emitir y mantener vivo el canal MQTT. */
 setInterval(() => {
@@ -1839,6 +2293,18 @@ setInterval(() => {
     }
   }
   if (AYUDA.pidiendo.size !== antesAyuda) { pintarAyudas(); actualizarAyudaBanner(); }
+  let expiraron = false;
+  for (const [clave, inc] of INCIDENCIAS.activas) {
+    if (Date.now() - inc.ts > INCIDENCIA_TTL) {
+      INCIDENCIAS.activas.delete(clave);
+      INCIDENCIAS.locales.delete(clave);
+      expiraron = true;
+    }
+  }
+  if (expiraron) {
+    guardarIncidenciasLocales();
+    trasCambioIncidencias('Un reporte de incidencia expiró.', false);
+  }
   const antes = PRESENCIA.pares.size;
   for (const [id, p] of PRESENCIA.pares) {
     if (Date.now() - p.ts > 12000) PRESENCIA.pares.delete(id);
@@ -1893,6 +2359,7 @@ function aplicarModo(modo) {
     announce('Modo vidente. Toca un edificio para ver la ruta.');
   }
   configurarPresencia(modo);
+  if (modo === 'no-vidente' && INCIDENCIAS.modo) alternarModoIncidencias(false);
   if (modo === 'no-vidente') {
     if (inside) exitBuilding();
     /* Arrancamos con el edificio más cercano al punto azul. Las flechas cambian
@@ -2141,10 +2608,12 @@ $('inSpeak').onclick = () => {
 /* Teclado: flechas para recorrer, Escape para salir y foco atrapado en el diálogo. */
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
-    if (inside) exitBuilding();
+    if ($('incidenciaDialog').classList.contains('flex')) cerrarDialogoIncidencia();
+    else if (inside) exitBuilding();
     else if (selected && !esCiego()) closeSheet();
     return;
   }
+  if ($('incidenciaDialog').classList.contains('flex')) return;
   if (!inside) {
     /* En modo no vidente, Enter o Espacio fuera de las flechas confirman. */
     if (esCiego() && elegirCiego && (e.key === 'Enter' || e.key === ' ')) {
@@ -2169,6 +2638,16 @@ document.addEventListener('keydown', (e) => {
 /* ---------- Inicio ---------- */
 baseZ = computeBase(); z = baseZ; restyle();
 centerOn(dot.x, dot.y);
+
+/* Cuando el plano se abre suelto en el navegador no hay app Expo que envíe
+   { type:'modo' }, así que el modo se toma de la URL (y por defecto es vidente).
+   Dentro del iframe de la app se respeta el mensaje de la portada. */
+try {
+  if (window.parent === window) {
+    const modoUrl = new URLSearchParams(location.search).get('modo');
+    aplicarModo(modoUrl === 'no-vidente' ? 'no-vidente' : 'vidente');
+  }
+} catch (e) {}
 </script>
 </body>
 </html>

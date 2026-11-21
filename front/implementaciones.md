@@ -90,6 +90,31 @@ accesible y un anuncio por voz con la distancia y dirección. La ruta se
 recalcula mientras la persona se mueve y se borra automáticamente si el pedido
 se cancela, expira o se cambia de modo.
 
+### Reporte de senderos bloqueados o dañados
+
+En modo **vidente** aparece abajo a la izquierda el botón **Reportar tramo**
+(con contador de tramos con problemas). Al activarlo, cada segmento de sendero
+se vuelve tocable —también con teclado, `Tab` + `Enter`— y se abre una card
+donde se elige el motivo: **Bloqueado**, **Dañado**, **En obras** u **Otro**.
+El tramo se dibuja en rojo con una `×`, y el mismo diálogo permite
+**Actualizar reporte** o **Levantar bloqueo**.
+
+El aviso se publica en el tema MQTT
+`hackatonlyoss/campus/incidencias/v1` (mismo broker WSS que presencia y ayuda)
+con un ID efímero, `tramo` (`índice:segmento` de `PATHS`), motivo y `ts`. Todos
+los mapas suscritos —incluidas las personas **no videntes**— dejan de usar ese
+tramo: `mejorRuta()` descarta las aristas del grafo que pasan por él, y los
+conectores de las entradas heredan el tramo dibujado más cercano para que no
+exista un atajo invisible. La red de senderos de la ruta roja de ayuda también
+respeta los bloqueos. Si hay una navegación activa, al recibir el aviso se
+recalcula y se anuncia por voz cuánto queda; si no hay alternativa se avisa de
+que no se puede llegar.
+
+Los reportes propios se guardan en `localStorage` y se republican al
+reconectar; caducan solos a los 30 minutos. Si el broker no está disponible,
+el bloqueo sigue aplicando en el mapa local. Solo se comparte el ID efímero,
+el tipo de problema y el tramo; no se envían nombres ni historial.
+
 El generador de rutas de Danko se puede conectar sin tocar este código
 registrándolo desde el mapa:
 
