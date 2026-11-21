@@ -36,7 +36,9 @@ que el GPS funciona igual en los dos casos.
 ## Ver avances en local
 
 Ya hay una app Expo mínima en esta misma carpeta con un panel que muestra
-estado del GPS, última posición, estadísticas y alertas:
+estado del GPS, velocidad en km/h, última posición, estadísticas y alertas.
+Al cargar la pantalla se pide permiso y se inicia el seguimiento solo; los
+botones `GPS` / `Detener` siguen disponibles para reiniciarlo o pausarlo.
 
 ```sh
 cd front

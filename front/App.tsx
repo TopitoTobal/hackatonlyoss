@@ -52,6 +52,8 @@ export default function App() {
   const [estadisticas, setEstadisticas] = useState('—')
   const [alerta, setAlerta] = useState('Sin alertas')
   const [muestras, setMuestras] = useState(0)
+  const [velocidad, setVelocidad] = useState('—')
+  const arrancandoRef = useRef(false)
 
   useEffect(() => {
     monitorRef.current = createSafetyMonitor({
@@ -64,6 +66,9 @@ export default function App() {
       setAlerta(nueva.text)
     })
 
+    // En cuanto se monta la pantalla pedimos permiso y empezamos a seguir el GPS.
+    void iniciar(true)
+
     return () => {
       omitirAlerta()
       trackerRef.current?.stop()
@@ -71,7 +76,10 @@ export default function App() {
     }
   }, [])
 
-  async function iniciar() {
+  async function iniciar(auto = false) {
+    if (trackerRef.current || arrancandoRef.current) return
+
+    arrancandoRef.current = true
     setEstado('Solicitando permisos…')
     setMuestras(0)
 
@@ -86,18 +94,21 @@ export default function App() {
 
       tracker.subscribe((muestra) => {
         setPunto(aPuntoPlano(muestra.latitude, muestra.longitude))
+        setVelocidad(formatSpeed(muestra.computedSpeedMps))
         setUltimaPosicion(
-          `${muestra.latitude.toFixed(5)}, ${muestra.longitude.toFixed(5)} · ${formatSpeed(muestra.computedSpeedMps)} · ±${muestra.accuracyM?.toFixed(0) ?? '?'} m${muestra.isAccurate ? '' : ' (baja precisión)'}`,
+          `${muestra.latitude.toFixed(5)}, ${muestra.longitude.toFixed(5)} · ±${muestra.accuracyM?.toFixed(0) ?? '?'} m${muestra.isAccurate ? '' : ' (baja precisión)'}`,
         )
         setEstadisticas(movementStatsToText(tracker.getStats()))
         setMuestras((total) => total + 1)
       })
 
-      setEstado('Siguiendo ubicación')
+      setEstado(auto ? 'Siguiendo ubicación (auto)' : 'Siguiendo ubicación')
     } catch (error) {
       setEstado(
         `Error: ${error instanceof Error ? error.message : String(error)}`,
       )
+    } finally {
+      arrancandoRef.current = false
     }
   }
 
@@ -106,6 +117,7 @@ export default function App() {
     trackerRef.current = null
     setEstado('Detenido')
     setMuestras(0)
+    setVelocidad('—')
   }
 
   return (
@@ -120,7 +132,7 @@ export default function App() {
             {estado} · muestras: {muestras}
           </Text>
           <View style={styles.boton}>
-            <Button title="GPS" onPress={iniciar} color="#065f46" />
+            <Button title="GPS" onPress={() => void iniciar()} color="#065f46" />
           </View>
           <View style={styles.boton}>
             <Button title="Detener" onPress={detener} color="#991b1b" />
@@ -128,6 +140,9 @@ export default function App() {
         </View>
 
         <View style={styles.info}>
+          <Text style={styles.texto} numberOfLines={2}>
+            Velocidad: {velocidad}
+          </Text>
           <Text style={styles.texto} numberOfLines={2}>
             {ultimaPosicion}
           </Text>
