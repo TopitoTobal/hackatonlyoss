@@ -3,7 +3,52 @@ import { Linking, Platform } from 'react-native'
 
 import type { PermissionOutcome } from './types'
 
+/* Safari iOS no implementa navigator.permissions.query({ name: 'geolocation' }).
+   expo-location intenta usarlo en web y falla antes de mostrar el diálogo.
+   En web pedimos el permiso directamente con getCurrentPosition(), que sí
+   dispara el prompt de Safari cuando se llama desde un gesto del usuario. */
+export async function ensureWebGeolocationPermissions(): Promise<PermissionOutcome> {
+  if (typeof navigator === 'undefined' || !navigator.geolocation) {
+    return {
+      ok: false,
+      reason: 'unavailable',
+      message: 'Este navegador no soporta geolocalización.',
+      canAskAgain: false,
+    }
+  }
+
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      () =>
+        resolve({
+          ok: true,
+          foreground: {
+            status: Location.PermissionStatus.GRANTED,
+            granted: true,
+            canAskAgain: true,
+            expires: 'never',
+          },
+        }),
+      (error) => {
+        const denegado = error.code === error.PERMISSION_DENIED
+        resolve({
+          ok: false,
+          reason: denegado ? 'foreground-denied' : 'unavailable',
+          message: denegado
+            ? 'Permiso de ubicación denegado. Actívalo en Ajustes → Safari → Sitios web → Ubicación.'
+            : 'No se pudo obtener la ubicación. Revisa que el sitio se abra por HTTPS.',
+          canAskAgain: !denegado,
+        })
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 },
+    )
+  })
+}
+
 export async function ensureForegroundPermissions(): Promise<PermissionOutcome> {
+  /* En web usamos el camino directo: evita navigator.permissions (Safari iOS). */
+  if (Platform.OS === 'web') return ensureWebGeolocationPermissions()
+
   const servicesEnabled = await Location.hasServicesEnabledAsync()
 
   if (!servicesEnabled) {

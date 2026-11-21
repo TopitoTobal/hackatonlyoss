@@ -17,6 +17,7 @@ import Icono from './Icono'
 
 import {
   createSafetyMonitor,
+  ensureForegroundPermissions,
   formatSpeed,
   movementStatsToText,
   safetyAlerts,
@@ -34,20 +35,25 @@ import { RUTAS, modoDeRuta, type Modo } from './modo'
 const PAREDES: WallSegment[] = []
 const CAMINO: RoutePath = { id: 'demo', points: [] }
 
-/* El plano del mapa mide 1312x985 px y su centro es (690, 500).
-   La referencia geográfica del centro es el campus (20.67, -103.35).
-   TODO: sustituir por una georreferenciación real del plano. */
-const PLANO = { centroX: 690, centroY: 500 }
-const REFERENCIA = { latitude: 20.67, longitude: -103.35 }
+/* Prototipo: el primer fix GPS preciso se ancla al centro del plano (690, 500).
+   Los puntos siguientes son desplazamientos relativos desde ahí, con la misma
+   escala de 0,75 m por píxel. No hay georreferenciación absoluta todavía. */
+const CENTRO = { x: 690, y: 500 }
 const METROS_POR_PIXEL = 0.75
 
-function aPuntoPlano(latitude: number, longitude: number): PuntoPlano {
+type Origen = { latitude: number; longitude: number }
+
+function aPuntoPlano(
+  latitude: number,
+  longitude: number,
+  origen: Origen,
+): PuntoPlano {
   const metrosPorGradoLat = 111_320
   const metrosPorGradoLng =
-    111_320 * Math.cos((REFERENCIA.latitude * Math.PI) / 180)
-  const dx = ((longitude - REFERENCIA.longitude) * metrosPorGradoLng) / METROS_POR_PIXEL
-  const dy = (-(latitude - REFERENCIA.latitude) * metrosPorGradoLat) / METROS_POR_PIXEL
-  return { x: PLANO.centroX + dx, y: PLANO.centroY + dy }
+    111_320 * Math.cos((origen.latitude * Math.PI) / 180)
+  const dx = ((longitude - origen.longitude) * metrosPorGradoLng) / METROS_POR_PIXEL
+  const dy = (-(latitude - origen.latitude) * metrosPorGradoLat) / METROS_POR_PIXEL
+  return { x: CENTRO.x + dx, y: CENTRO.y + dy }
 }
 
 function rutaActual(): string | undefined {
@@ -79,7 +85,13 @@ function hablar(texto: string) {
 
 /* Portada equivalente a index (4).html: elige vidente / no vidente antes
    de pedir permisos de GPS o cargar el mapa. */
-function Selector({ onElegir }: { onElegir: (modo: Modo) => void }) {
+function Selector({
+  onElegir,
+  onPedirGPS,
+}: {
+  onElegir: (modo: Modo) => void
+  onPedirGPS: () => void
+}) {
   const opciones =
     '¿Eres una persona vidente o no vidente? Primera opción: Soy vidente. Segunda opción: Soy no vidente.'
 
@@ -94,7 +106,7 @@ function Selector({ onElegir }: { onElegir: (modo: Modo) => void }) {
       <Pressable
         accessibilityRole="link"
         accessibilityLabel="Soy vidente. Abrir mapa visual."
-        onPress={() => onElegir('vidente')}
+        onPress={() => { onPedirGPS(); onElegir('vidente') }}
         style={({ pressed }) => [
           styles.opcion,
           styles.opcionVidente,
@@ -110,7 +122,7 @@ function Selector({ onElegir }: { onElegir: (modo: Modo) => void }) {
       <Pressable
         accessibilityRole="link"
         accessibilityLabel="Soy no vidente. Abrir mapa con voz automática."
-        onPress={() => onElegir('no-vidente')}
+        onPress={() => { onPedirGPS(); onElegir('no-vidente') }}
         style={({ pressed }) => [
           styles.opcion,
           styles.opcionNoVidente,
@@ -146,8 +158,8 @@ export default function App() {
 
   const [modo, setModo] = useState<Modo | null>(() => modoActual())
   const [punto, setPunto] = useState<PuntoPlano>({
-    x: PLANO.centroX,
-    y: PLANO.centroY,
+    x: CENTRO.x,
+    y: CENTRO.y,
   })
   const [estado, setEstado] = useState('Detenido')
   const [ultimaPosicion, setUltimaPosicion] = useState('—')
@@ -155,7 +167,9 @@ export default function App() {
   const [alerta, setAlerta] = useState('Sin alertas')
   const [muestras, setMuestras] = useState(0)
   const [velocidad, setVelocidad] = useState('—')
+  const [pidiendoAyuda, setPidiendoAyuda] = useState(false)
   const arrancandoRef = useRef(false)
+  const origenRef = useRef<Origen | null>(null)
 
   useEffect(() => {
     const win: any = globalThis as any
@@ -194,6 +208,8 @@ export default function App() {
     arrancandoRef.current = true
     setEstado('Solicitando permisos…')
     setMuestras(0)
+    origenRef.current = null
+    setPunto({ x: CENTRO.x, y: CENTRO.y })
 
     try {
       const tracker = await startForegroundTracking({
@@ -205,7 +221,25 @@ export default function App() {
       trackerRef.current = tracker
 
       tracker.subscribe((muestra) => {
-        setPunto(aPuntoPlano(muestra.latitude, muestra.longitude))
+        if (muestra.isAccurate) {
+          if (!origenRef.current) {
+            origenRef.current = {
+              latitude: muestra.latitude,
+              longitude: muestra.longitude,
+            }
+          }
+          const plano = aPuntoPlano(
+            muestra.latitude,
+            muestra.longitude,
+            origenRef.current,
+          )
+          setPunto({
+            ...plano,
+            latitude: muestra.latitude,
+            longitude: muestra.longitude,
+            accuracyM: muestra.accuracyM,
+          })
+        }
         setVelocidad(formatSpeed(muestra.computedSpeedMps))
         setUltimaPosicion(
           `${muestra.latitude.toFixed(5)}, ${muestra.longitude.toFixed(5)} · ±${muestra.accuracyM?.toFixed(0) ?? '?'} m${muestra.isAccurate ? '' : ' (baja precisión)'}`,
@@ -224,18 +258,28 @@ export default function App() {
     }
   }
 
+  async function pedirGPS() {
+    const permiso = await ensureForegroundPermissions()
+    if (!permiso.ok) setEstado(`Error GPS: ${permiso.message}`)
+  }
+
   function detener() {
     trackerRef.current?.stop()
     trackerRef.current = null
     setEstado('Detenido')
     setMuestras(0)
     setVelocidad('—')
+    origenRef.current = null
+    setPunto({ x: CENTRO.x, y: CENTRO.y })
+    setPidiendoAyuda(false)
   }
 
   function irAModo(nuevo: Modo) {
     const win: any = globalThis as any
     if (win.history?.pushState) win.history.pushState({}, '', RUTAS[nuevo])
-    setPunto({ x: PLANO.centroX, y: PLANO.centroY })
+    origenRef.current = null
+    setPunto({ x: CENTRO.x, y: CENTRO.y })
+    setPidiendoAyuda(false)
     setModo(nuevo)
   }
 
@@ -253,13 +297,13 @@ export default function App() {
     )
   }
 
-  if (!modo) return <Selector onElegir={irAModo} />
+  if (!modo) return <Selector onElegir={irAModo} onPedirGPS={() => void pedirGPS()} />
 
   return (
     <View style={styles.contenedor} accessibilityRole="main">
       <StatusBar style="dark" />
 
-      <Mapa posicion={punto} modo={modo} />
+      <Mapa posicion={punto} modo={modo} ayuda={pidiendoAyuda} />
 
       <View style={styles.overlay} pointerEvents="box-none">
         <View style={styles.barra}>
@@ -308,6 +352,29 @@ export default function App() {
               <Text style={styles.textoBotonAccion}>Detener</Text>
             </View>
           </Pressable>
+          {modo === 'no-vidente' && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                pidiendoAyuda
+                  ? 'Cancelar petición de ayuda a las personas videntes'
+                  : 'Pedir ayuda: avisar a las personas videntes de que necesito ayuda'
+              }
+              onPress={() => setPidiendoAyuda((activo) => !activo)}
+              style={({ pressed }) => [
+                styles.botonAccion,
+                pidiendoAyuda ? styles.botonAyudaActivo : styles.botonAyuda,
+                pressed && styles.opcionPresionada,
+              ]}
+            >
+              <View style={styles.filaBoton}>
+                <Icono name="help" size={18} color="#ffffff" />
+                <Text style={styles.textoBotonAccion}>
+                  {pidiendoAyuda ? 'Cancelar ayuda' : 'Pedir ayuda'}
+                </Text>
+              </View>
+            </Pressable>
+          )}
         </View>
 
         <View style={styles.info}>
@@ -323,6 +390,13 @@ export default function App() {
           <Text style={styles.alerta} accessibilityLiveRegion="polite">
             {alerta}
           </Text>
+          {modo === 'no-vidente' && (
+            <Text style={styles.texto} accessibilityLiveRegion="assertive">
+              {pidiendoAyuda
+                ? 'Petición de ayuda activa: los videntes pueden verte.'
+                : 'Sin petición de ayuda.'}
+            </Text>
+          )}
         </View>
       </View>
     </View>
@@ -458,6 +532,8 @@ const styles = StyleSheet.create({
   },
   botonGps: { backgroundColor: '#065f46' },
   botonDetener: { backgroundColor: '#991b1b' },
+  botonAyuda: { backgroundColor: '#7c3aed' },
+  botonAyudaActivo: { backgroundColor: '#4c1d95' },
   textoBotonAccion: {
     color: '#ffffff',
     fontSize: 14,

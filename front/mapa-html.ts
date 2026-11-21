@@ -29,6 +29,20 @@ export const MAPA_HTML = `<!doctype html>
   #dot, #dotHalo { position: absolute; border-radius: 9999px; box-sizing: border-box; pointer-events: none; }
   #dot { background: #0284c7; border: 5px solid #fff; }
   #dotHalo { background: rgba(14,165,233,.3); }
+  #presenceBadge {
+    position: fixed; left: max(10px, env(safe-area-inset-left)); top: max(10px, env(safe-area-inset-top));
+    z-index: 9; pointer-events: none; display: none; max-width: calc(100% - 20px);
+    box-shadow: 0 4px 14px rgba(0,0,0,.35);
+  }
+  #presenceBadge.sin-conexion { background: #7f1d1d; }
+  #scaleBar {
+    position: fixed; left: max(10px, env(safe-area-inset-left)); top: 58px;
+    z-index: 9; pointer-events: none; display: none;
+    border: 3px solid #000; border-top: 0; background: rgba(255,255,255,.92);
+    padding: 1px 4px; font-size: 12px; font-weight: 800; color: #000;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  }
+  #peerLayer text { paint-order: stroke fill; stroke: #fff; stroke-width: 4px; stroke-linejoin: round; }
 
   /* Elementos flotantes: nunca deben salirse del área visible */
   #hint {
@@ -44,7 +58,18 @@ export const MAPA_HTML = `<!doctype html>
     overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
   }
   #sheet.flex { display: flex; }
+  #interior {
+    position: fixed; inset: 0; display: none; flex-direction: column; box-sizing: border-box; z-index: 20;
+    padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+    background: rgba(255,255,255,.94);
+  }
+  #interior.flex { display: flex; }
   #hint.hidden { display: none; }
+  #inStage { flex: 1 1 auto; min-height: 0; min-width: 0; }
+  #inInfo {
+    flex: 0 0 auto; max-height: 45vh; max-height: 45dvh;
+    overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  }
   #sheetName { font-size: clamp(20px, 6.4vw, 26px); }
 
   /* Foco muy visible, incluidos los botones del plano (el borde se dibuja hacia adentro) */
@@ -62,23 +87,32 @@ export const MAPA_HTML = `<!doctype html>
   /* Pantallas bajas: compactar sin ocultar información */
   @media (max-height: 700px) {
     #sheet { padding: 10px; gap: 6px; }
-    #sheet button { min-height: 48px; }
+    #sheet button, #interior button { min-height: 48px; }
     #sheetDir { font-size: 17px; }
     #sheetWhere { font-size: 15px; }
+    #inInfo { max-height: 40vh; max-height: 40dvh; }
   }
-  /* Celular en horizontal: el panel pasa a un lado */
+  /* Celular en horizontal: el panel y el interior pasan a un lado */
   @media (max-height: 500px) and (orientation: landscape) {
     #sheet {
       left: auto; right: max(10px, env(safe-area-inset-right)); top: max(10px, env(safe-area-inset-top)); bottom: 10px;
       width: min(380px, 50vw); max-width: none; margin: 0;
       max-height: calc(100dvh - 20px); padding: 8px; gap: 4px;
     }
-    #sheet button { min-height: 44px; }
+    #sheet button, #interior button { min-height: 44px; }
     #sheetName { font-size: 20px; }
     #sheetDir { font-size: 16px; }
     #sheetWhere { font-size: 14px; }
     #sheet > div:first-child button { min-width: 56px; }
     #hint { max-width: 22rem; }
+    #interior { flex-flow: row wrap; align-content: flex-start; }
+    #interior > header { flex: 0 0 100%; padding: 6px 12px; gap: 8px; }
+    #interior > header h2 { font-size: 1.25rem; }
+    #interior > header button { min-height: 44px; padding-left: 14px; padding-right: 14px; }
+    #inStage { flex: 1 1 56%; }
+    #inInfo { flex: 0 1 38%; margin: 8px; max-height: calc(100dvh - 76px); padding: 10px; }
+    #inRoom { font-size: 18px; }
+    #inNote { display: block; font-size: 14px; }
   }
   @media (max-width: 340px) {
     #sheet button { font-size: 15px; }
@@ -86,7 +120,7 @@ export const MAPA_HTML = `<!doctype html>
   }
   @media (forced-colors: active) {
     button:focus-visible { outline-color: Highlight; box-shadow: none; }
-    #sheet { border-color: CanvasText; }
+    #sheet, #inInfo, #interior > header button { border-color: CanvasText; }
   }
 </style>
 </head>
@@ -241,6 +275,12 @@ export const MAPA_HTML = `<!doctype html>
       </g>
     </svg>
 
+    <!-- Personas no videntes conectadas: solo se dibujan en modo vidente -->
+    <svg width="1312" height="985" viewBox="0 0 1312 985" aria-hidden="true" class="pointer-events-none absolute left-0 top-0">
+      <g id="peerLayer"></g>
+      <g id="ayudaLayer"></g>
+    </svg>
+
     <!-- Punto azul: ubicación de la persona -->
     <div id="dotHalo" aria-hidden="true" class="pointer-events-none absolute h-10 w-10 rounded-full bg-sky-500/30"></div>
     <div id="dot" role="img" aria-label="Tu ubicación"
@@ -252,6 +292,15 @@ export const MAPA_HTML = `<!doctype html>
 <div id="hint" aria-hidden="true"
      class="pointer-events-none absolute left-1/2 top-4 w-[calc(100%-32px)] max-w-sm -translate-x-1/2 rounded-full bg-black px-4 py-3 text-center text-[15px] font-bold text-white sm:text-[17px]">
   Toca un edificio · Usa <span class="material-icons" aria-hidden="true">chevron_left</span> <span class="material-icons" aria-hidden="true">chevron_right</span>
+</div>
+
+<div id="presenceBadge" role="status" aria-live="polite" aria-atomic="true"
+     class="rounded-full border-[3px] border-black bg-purple-800 px-3 py-2 text-[14px] font-extrabold text-white">
+  0 no videntes conectadas
+</div>
+<div id="scaleBar"><span id="scaleText">20 m</span></div>
+<div id="ayudaBanner" role="status" aria-live="assertive" aria-atomic="true"
+     class="hidden rounded-full border-[3px] border-black bg-red-700 px-3 py-2 text-[14px] font-extrabold text-white">
 </div>
 
 <!-- Panel que aparece al elegir un edificio -->
@@ -279,6 +328,21 @@ export const MAPA_HTML = `<!doctype html>
     <button id="btnIn" aria-label="Acercar" class="inline-flex min-h-14 items-center justify-center rounded-[10px] border-[3px] border-black bg-black text-white"><span class="material-icons" aria-hidden="true" style="font-size:30px">add</span></button>
     <button id="btnOut" aria-label="Alejar" class="inline-flex min-h-14 items-center justify-center rounded-[10px] border-[3px] border-black bg-black text-white"><span class="material-icons" aria-hidden="true" style="font-size:30px">remove</span></button>
     <button id="btnVoice" aria-pressed="true" class="col-span-4 inline-flex min-h-12 items-center justify-center gap-2 rounded-[10px] border-[3px] border-black bg-white text-base font-extrabold text-black"></button>
+  </div>
+</section>
+
+<!-- Vista interior: el resto del mapa queda desenfocado detrás -->
+<section id="interior" role="dialog" aria-modal="true" aria-labelledby="inTitle" aria-describedby="inNote"
+         class="absolute inset-0 z-20 hidden flex-col bg-white/95">
+  <header class="flex items-center gap-3 p-3">
+    <button id="inExit" class="inline-flex min-h-14 items-center justify-center gap-2 rounded-[10px] border-[3px] border-black bg-white px-5 text-lg font-extrabold text-black"><span class="material-icons" aria-hidden="true">arrow_back</span>Salir</button>
+    <h2 id="inTitle" class="m-0 text-2xl font-extrabold"></h2>
+  </header>
+  <div id="inStage" class="relative min-h-0 flex-1"></div>
+  <div id="inInfo" class="m-3 flex flex-col gap-2 rounded-2xl border-4 border-black bg-yellow-200 p-3.5">
+    <p id="inRoom" class="m-0 text-[22px] font-extrabold"></p>
+    <p id="inNote" class="m-0 text-base font-medium leading-snug"></p>
+    <button id="inSpeak" class="inline-flex min-h-14 items-center justify-center gap-2 rounded-[10px] border-[3px] border-black bg-black text-lg font-extrabold text-white"><span class="material-icons" aria-hidden="true">volume_up</span>Escuchar</button>
   </div>
 </section>
 
@@ -348,10 +412,11 @@ const ENTRADAS = {
 
 const DIRS = ['norte','noreste','este','sureste','sur','suroeste','oeste','noroeste'];
 const METROS_POR_PIXEL = 0.75; /* el mismo valor que usa App.tsx para el GPS */
+const CENTRO = { x: 690, y: 500 };
 
-/* Ubicación de la persona (simulada). El GPS real llama a setUserPosition(x, y)
-   con coordenadas ya convertidas a píxeles del plano. */
-let dot = { x: 690, y: 500 };
+/* Ubicación de la persona (simulada). El GPS real llama a setUserPosition(x, y, geo)
+   con coordenadas relativas al centro del plano. */
+let dot = { x: CENTRO.x, y: CENTRO.y };
 
 /* ---------- Estado ---------- */
 const $ = (id) => document.getElementById(id);
@@ -398,7 +463,7 @@ BUILDINGS.forEach(([id, cx, cy, w, h]) => {
 
 /* El zoom base depende del tamaño de la pantalla; los elementos táctiles
    mantienen un tamaño constante en pantalla sin importar el zoom. */
-const ZMAX = 3;
+const ZMAX = 12;
 /* Zoom mínimo "cover", como en Google Maps: el plano siempre cubre el viewport.
    Así nunca aparece fondo vacío alrededor del mapa al alejar al máximo. */
 function minZoom() {
@@ -414,6 +479,18 @@ function placeDot() {
     borderWidth: (5 / z) + 'px', boxShadow: '0 0 0 ' + (3 / z) + 'px #0c4a6e' });
   Object.assign($('dotHalo').style, { left: (dot.x - hh/2) + 'px', top: (dot.y - hh/2) + 'px', width: hh + 'px', height: hh + 'px' });
 }
+function actualizarEscala() {
+  const bar = $('scaleBar');
+  if (!bar) return;
+  let metros = 1;
+  for (const m of [1, 2, 5, 10, 20, 50]) {
+    if ((m / METROS_POR_PIXEL) * z <= 120) metros = m;
+    else break;
+  }
+  bar.style.display = 'block';
+  bar.style.width = ((metros / METROS_POR_PIXEL) * z).toFixed(1) + 'px';
+  $('scaleText').textContent = metros + ' m';
+}
 function restyle() {
   const px = (n) => (n / z).toFixed(2) + 'px';
   BUILDINGS.forEach(([id, cx, cy, w, h]) => {
@@ -424,6 +501,8 @@ function restyle() {
     st.borderWidth = px(id === selected ? 5 : 3);
   });
   placeDot();
+  pintarPares();
+  actualizarEscala();
   const g = $('routeLine'), d = $('routeDone');
   g.setAttribute('stroke-width', 7 / z);
   g.setAttribute('stroke-dasharray', (16 / z) + ' ' + (12 / z));
@@ -824,11 +903,602 @@ $('btnVoice').onclick = () => {
 voiceLabel();
 actualizarBotonRuta();
 
+
+/* ---------- Presencia: personas no videntes conectadas ----------
+   Canal público MQTT sobre WSS, sin credenciales. Cada sesión usa un ID
+   efímero y no se guarda nombre, ruta ni historial. Si el broker falla,
+   el mapa y el GPS siguen funcionando igual; solo se pierde la capa social. */
+const PRESENCIA_TOPIC = 'hackatonlyoss/campus/presencia/v1';
+const AYUDA_TOPIC = 'hackatonlyoss/campus/ayuda/v1';
+const PRESENCIA_BROKER = 'wss://broker.emqx.io:8084/mqtt';
+const PRESENCIA = {
+  id: 'NV-' + Math.random().toString(36).slice(2, 8).toUpperCase(),
+  rol: null,
+  geo: null,      // fix satelital actual (para estimar y publicar)
+  origen: null,   // primer fix preciso: ancla del marco GPS del plano
+  x: dot.x,
+  y: dot.y,
+  pares: new Map(),
+  observaciones: new Map(),
+  roles: new Map(),
+  filtro: new Map(),
+  conectado: false,
+  ultimoEnvio: 0,
+  ultimoAnuncio: -1,
+  socket: null,
+  reintento: null,
+};
+/* Pedidos de ayuda: solo se muestran a personas videntes y caducan solos. */
+const AYUDA = {
+  activo: false,
+  ultimoEnvio: 0,
+  pidiendo: new Map(),
+};
+
+function bytesTexto(texto) { return new TextEncoder().encode(texto); }
+function mqttTexto(texto) {
+  const b = bytesTexto(texto);
+  return [b.length >> 8, b.length & 255, ...b];
+}
+function mqttLongitud(n) {
+  const out = [];
+  do { let d = n % 128; n = Math.floor(n / 128); if (n) d |= 128; out.push(d); } while (n);
+  return out;
+}
+function mqttPaquete(tipo, banderas, cuerpo) {
+  return new Uint8Array([(tipo << 4) | banderas, ...mqttLongitud(cuerpo.length), ...cuerpo]);
+}
+function mqttPing() { return new Uint8Array([0xc0, 0x00]); }
+
+function mqttConectar() {
+  let ws;
+  try { ws = new WebSocket(PRESENCIA_BROKER, 'mqtt'); }
+  catch (e) { programarReintento(); return; }
+  PRESENCIA.socket = ws;
+  ws.binaryType = 'arraybuffer';
+  ws.onopen = () => {
+    PRESENCIA.conectado = false;
+    ws.send(mqttPaquete(1, 0, [...mqttTexto('MQTT'), 4, 2, 0, 60, ...mqttTexto(PRESENCIA.id)]));
+  };
+  ws.onmessage = (evt) => {
+    try { mqttLeer(new Uint8Array(evt.data)); } catch (e) {}
+  };
+  ws.onerror = () => { try { ws.close(); } catch (e) {} };
+  ws.onclose = () => {
+    if (PRESENCIA.socket === ws) { PRESENCIA.socket = null; PRESENCIA.conectado = false; }
+    actualizarPresencia();
+    programarReintento();
+  };
+}
+function programarReintento() {
+  if (PRESENCIA.reintento) return;
+  PRESENCIA.reintento = setTimeout(() => {
+    PRESENCIA.reintento = null;
+    mqttConectar();
+  }, 5000);
+}
+function mqttLeer(datos) {
+  let i = 0;
+  const tipo = datos[i++] >> 4;
+  let multiplicador = 1, longitud = 0, octeto;
+  do { octeto = datos[i++]; longitud += (octeto & 127) * multiplicador; multiplicador *= 128; } while (octeto & 128);
+  const fin = i + longitud;
+  if (tipo === 2) {
+    PRESENCIA.conectado = (datos[i + 1] & 1) === 0;
+    if (PRESENCIA.conectado && PRESENCIA.socket) {
+      PRESENCIA.socket.send(mqttPaquete(8, 2, [
+        0, 1,
+        ...mqttTexto(PRESENCIA_TOPIC), 0,
+        ...mqttTexto(AYUDA_TOPIC), 0,
+      ]));
+      publicarPresencia(true);
+      publicarAyuda(true);
+    }
+    actualizarPresencia();
+  } else if (tipo === 3) {
+    const tam = (datos[i] << 8) | datos[i + 1];
+    i += 2;
+    const tema = new TextDecoder().decode(datos.slice(i, i + tam));
+    i += tam;
+    const mensaje = JSON.parse(new TextDecoder().decode(datos.slice(i, fin)));
+    if (tema === PRESENCIA_TOPIC) recibirPresencia(mensaje);
+    else if (tema === AYUDA_TOPIC) recibirAyuda(mensaje);
+  }
+}
+function publicarPresencia(fuerza = false) {
+  const ws = PRESENCIA.socket;
+  if (!ws || ws.readyState !== 1 || !PRESENCIA.conectado || !PRESENCIA.rol) return;
+  const ahora = Date.now();
+  if (!fuerza && ahora - PRESENCIA.ultimoEnvio < 900) return;
+  PRESENCIA.ultimoEnvio = ahora;
+  /* Publicamos el GPS satelital CRUDO, nunca la posición ya fusionada.
+     Si publicáramos el estimado, otros nodos lo re-fusionarían y el
+     movimiento de uno arrastraría la posición del otro (bucle de realimentación). */
+  const g = PRESENCIA.geo;
+  const lat = g && Number.isFinite(g.latitude) ? g.latitude : null;
+  const lng = g && Number.isFinite(g.longitude) ? g.longitude : null;
+  const acc = g && Number.isFinite(g.accuracyM) ? g.accuracyM : null;
+  const cuerpo = {
+    id: PRESENCIA.id,
+    rol: PRESENCIA.rol,
+    x: Math.round(PRESENCIA.x),
+    y: Math.round(PRESENCIA.y),
+    lat: Number.isFinite(lat) ? Number(lat.toFixed(6)) : null,
+    lng: Number.isFinite(lng) ? Number(lng.toFixed(6)) : null,
+    acc: Number.isFinite(acc) ? Math.round(acc) : null,
+    ts: ahora,
+    obs: [...PRESENCIA.pares.values()]
+      .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))
+      .map((p) => ({
+        id: p.id,
+        lat: p.lat,
+        lng: p.lng,
+        acc: p.acc,
+        rol: p.rol,
+        ts: p.ts,
+      })),
+  };
+  ws.send(mqttPaquete(3, 0, [...mqttTexto(PRESENCIA_TOPIC), ...bytesTexto(JSON.stringify(cuerpo))]));
+}
+function geoAPlano(lat, lng) {
+  /* Usamos SIEMPRE el primer fix como origen. Si se usara el fix actual,
+     cada vez que la persona camina se recalibraría el marco y los pares
+     caerían desplazados justo en la dirección contraria al movimiento. */
+  const o = PRESENCIA.origen || PRESENCIA.geo;
+  if (!o || !Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  const metrosPorGradoLat = 111320;
+  const metrosPorGradoLng = 111320 * Math.cos((o.latitude * Math.PI) / 180);
+  const dx = ((lng - o.longitude) * metrosPorGradoLng) / METROS_POR_PIXEL;
+  const dy = (-(lat - o.latitude) * metrosPorGradoLat) / METROS_POR_PIXEL;
+  return { x: CENTRO.x + dx, y: CENTRO.y + dy };
+}
+const AUTO_INTERIOR = { dentro: 0, fuera: 0, activo: false, bloqueo: 0 };
+function edificioEn(x, y) {
+  const MARGEN = 8; /* ~6 m: tolerancia a ruido GPS en espacios pequeños */
+  for (const [id, cx, cy, w, h] of BUILDINGS) {
+    if (Math.abs(x - cx) <= w / 2 + MARGEN && Math.abs(y - cy) <= h / 2 + MARGEN) {
+      return id;
+    }
+  }
+  return null;
+}
+function distM(a, b) {
+  const dLat = (b.lat - a.lat) * 111320;
+  const dLng = (b.lng - a.lng) * 111320 * Math.cos((a.lat * Math.PI) / 180);
+  return Math.hypot(dLat, dLng);
+}
+function accValida(acc) {
+  return Math.min(40, Math.max(3, Number.isFinite(acc) ? acc : 15));
+}
+/* Peso de una señal. El reporte que un nodo hace de SÍ MISMO manda;
+   lo que otro dice sobre él es solo una corrección secundaria y caduca antes. */
+function pesoDe(o, ahora) {
+  const acc = accValida(o.acc);
+  const conf = o.propio
+    ? 1
+    : 0.35 * ((o.rol === 'vidente' || PRESENCIA.roles.get(o.observador) === 'vidente') ? 1.6 : 1);
+  const decaimiento = o.propio ? 12000 : 5000;
+  return conf * Math.exp(-Math.max(0, ahora - o.ts) / decaimiento) / (acc * acc + 25);
+}
+function promediar(lista, ahora) {
+  let suma = 0, lat = 0, lng = 0;
+  for (const o of lista) {
+    const peso = pesoDe(o, ahora);
+    suma += peso; lat += o.lat * peso; lng += o.lng * peso;
+  }
+  if (!suma) return null;
+  return {
+    lat: lat / suma,
+    lng: lng / suma,
+    acc: Math.max(1, Math.min(30, Math.sqrt(1 / suma))),
+    ts: ahora,
+  };
+}
+/* Estimador del grafo, árbol de confianza:
+   1) referencia = reportes propios del nodo (su GPS satelital);
+   2) una observación de tercero que contradiga esa referencia se descarta;
+   3) las restantes solo afinan la posición, nunca la arrastran. */
+function estimar(id) {
+  const ahora = Date.now();
+  const lista = [];
+  if (id === PRESENCIA.id && PRESENCIA.geo) {
+    lista.push({
+      lat: PRESENCIA.geo.latitude,
+      lng: PRESENCIA.geo.longitude,
+      acc: PRESENCIA.geo.accuracyM,
+      ts: ahora,
+      observador: '@yo',
+      rol: PRESENCIA.rol,
+      propio: true,
+    });
+  }
+  for (const [observador, mapa] of PRESENCIA.observaciones) {
+    const o = mapa.get(id);
+    if (o) {
+      lista.push({
+        ...o,
+        observador,
+        rol: o.rol || PRESENCIA.roles.get(observador),
+        propio: o.propio === true,
+      });
+    }
+  }
+  if (!lista.length) return null;
+  const propias = lista.filter((o) => o.propio);
+  const referencia = promediar(propias.length ? propias : lista, ahora);
+  if (!referencia) return null;
+  const aceptadas = propias.length ? propias.slice() : [];
+  for (const o of lista) {
+    if (o.propio) continue;
+    const limite = Math.max(25, 3 * accValida(o.acc) + 3 * accValida(referencia.acc));
+    if (distM(referencia, o) <= limite) aceptadas.push(o);
+  }
+  const resultado = promediar(aceptadas, ahora);
+  if (!resultado) return null;
+  resultado.n = aceptadas.length;
+  resultado.propias = propias.length;
+  resultado.confirmado = propias.some((o) => ahora - o.ts < 3000);
+  return resultado;
+}
+/* Filtro temporal tipo Kalman 1D sobre lat/lng: quita jitter del GPS satelital
+   y descarta saltos aislados. La incertidumbre crece con el tiempo sin datos. */
+function suavizar(id, crudo) {
+  const anterior = PRESENCIA.filtro.get(id);
+  if (!anterior) {
+    const salida = { ...crudo };
+    PRESENCIA.filtro.set(id, salida);
+    return salida;
+  }
+  const dt = Math.max(0, crudo.ts - anterior.ts);
+  const accPred = Math.min(40, accValida(anterior.acc) + Math.sqrt(dt / 1000) * 0.8);
+  const salto = distM(anterior, crudo);
+  /* Un salto grande se acepta solo si el propio nodo lo confirma con una
+     muestra fresca y es compatible con una velocidad de 8 m/s. Así el
+     movimiento real no se pierde, pero un tercero desactualizado no arrastra. */
+  const movimientoReal = crudo.confirmado && salto <= Math.max(30, 8 * (dt / 1000) + 3 * accPred);
+  if (salto > Math.max(25, 3 * accPred) && !movimientoReal) {
+    const salida = { ...anterior, ts: crudo.ts, n: crudo.n, acc: accPred, rechazado: true };
+    PRESENCIA.filtro.set(id, salida);
+    return salida;
+  }
+  const accMed = accValida(crudo.acc);
+  let K = (accPred * accPred) / (accPred * accPred + accMed * accMed + 25);
+  if (crudo.confirmado) K = Math.max(K, 0.85);
+  const salida = {
+    lat: anterior.lat + K * (crudo.lat - anterior.lat),
+    lng: anterior.lng + K * (crudo.lng - anterior.lng),
+    acc: Math.max(1, Math.sqrt((1 - K) * accPred * accPred)),
+    n: crudo.n,
+    ts: crudo.ts,
+    rechazado: false,
+  };
+  PRESENCIA.filtro.set(id, salida);
+  return salida;
+}
+function recalcularPares() {
+  const yoCrudo = estimar(PRESENCIA.id);
+  if (yoCrudo) suavizar(PRESENCIA.id, yoCrudo);
+  PRESENCIA.pares.forEach((p, id) => {
+    const crudo = estimar(id);
+    if (!crudo) return;
+    const f = suavizar(id, crudo);
+    const punto = geoAPlano(f.lat, f.lng);
+    if (!punto) return;
+    p.x = punto.x;
+    p.y = punto.y;
+    p.accFus = f.acc;
+    p.n = f.n;
+    p.edificio = edificioEn(punto.x, punto.y);
+  });
+}
+function verificarInteriorAuto() {
+  if (PRESENCIA.rol !== 'no-vidente' || Date.now() < AUTO_INTERIOR.bloqueo) return;
+  const yo = PRESENCIA.filtro.get(PRESENCIA.id);
+  const punto = yo ? geoAPlano(yo.lat, yo.lng) : null;
+  const id = punto ? edificioEn(punto.x, punto.y) : null;
+  if (id) {
+    AUTO_INTERIOR.dentro++;
+    AUTO_INTERIOR.fuera = 0;
+    if (AUTO_INTERIOR.dentro >= 3 && (!inside || selected !== id)) {
+      AUTO_INTERIOR.activo = true;
+      if (inside) { inside = false; vp.inert = false; }
+      select(id, { silent: true });
+      enterBuilding();
+    }
+  } else {
+    AUTO_INTERIOR.fuera++;
+    AUTO_INTERIOR.dentro = 0;
+    if (AUTO_INTERIOR.fuera >= 3 && inside && AUTO_INTERIOR.activo) {
+      AUTO_INTERIOR.activo = false;
+      exitBuilding();
+    }
+  }
+}
+function direccionHacia(x, y) {
+  const dx = x - dot.x, dy = y - dot.y, dist = Math.hypot(dx, dy);
+  if (dist < 40) return 'junto a ti';
+  const ang = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
+  return 'a ' + Math.round(dist * METROS_POR_PIXEL) + ' metros al ' +
+    DIRS[Math.round(ang / 45) % 8];
+}
+function publicarAyuda(fuerza = false) {
+  const ws = PRESENCIA.socket;
+  if (!ws || ws.readyState !== 1 || !PRESENCIA.conectado) return;
+  if (PRESENCIA.rol !== 'no-vidente') return;
+  const ahora = Date.now();
+  if (!fuerza && ahora - AYUDA.ultimoEnvio < 3000) return;
+  AYUDA.ultimoEnvio = ahora;
+  const g = PRESENCIA.geo;
+  const cuerpo = {
+    id: PRESENCIA.id,
+    rol: 'no-vidente',
+    activo: AYUDA.activo,
+    lat: g && Number.isFinite(g.latitude) ? Number(g.latitude.toFixed(6)) : null,
+    lng: g && Number.isFinite(g.longitude) ? Number(g.longitude.toFixed(6)) : null,
+    acc: g && Number.isFinite(g.accuracyM) ? Math.round(g.accuracyM) : null,
+    x: Math.round(PRESENCIA.x),
+    y: Math.round(PRESENCIA.y),
+    ts: ahora,
+  };
+  ws.send(mqttPaquete(3, 0, [...mqttTexto(AYUDA_TOPIC), ...bytesTexto(JSON.stringify(cuerpo))]));
+}
+function recibirAyuda(mensaje) {
+  if (!mensaje || !mensaje.id || mensaje.id === PRESENCIA.id) return;
+  if (!Number.isFinite(mensaje.lat) || !Number.isFinite(mensaje.lng)) return;
+  const id = String(mensaje.id).slice(0, 12);
+  if (!mensaje.activo) {
+    if (AYUDA.pidiendo.delete(id)) {
+      announce('La petición de ayuda de ' + id + ' fue cancelada.');
+    }
+  } else if (PRESENCIA.rol === 'vidente') {
+    const punto = geoAPlano(mensaje.lat, mensaje.lng);
+    const eraNueva = !AYUDA.pidiendo.has(id);
+    AYUDA.pidiendo.set(id, {
+      id,
+      x: punto ? punto.x : (Number.isFinite(mensaje.x) ? mensaje.x : dot.x),
+      y: punto ? punto.y : (Number.isFinite(mensaje.y) ? mensaje.y : dot.y),
+      acc: Number.isFinite(mensaje.acc) ? mensaje.acc : 15,
+      ts: Date.now(),
+    });
+    if (eraNueva) announce('Petición de ayuda de ' + id + '. ' + direccionHacia(AYUDA.pidiendo.get(id).x, AYUDA.pidiendo.get(id).y) + '.');
+  }
+  pintarAyudas();
+  actualizarAyudaBanner();
+}
+function pintarAyudas() {
+  const capa = $('ayudaLayer');
+  if (!capa) return;
+  capa.textContent = '';
+  if (PRESENCIA.rol !== 'vidente') return;
+  const NS = 'http://www.w3.org/2000/svg';
+  AYUDA.pidiendo.forEach((a) => {
+    const g = document.createElementNS(NS, 'g');
+    const titulo = document.createElementNS(NS, 'title');
+    titulo.textContent = 'Petición de ayuda de ' + a.id + '. ' + direccionHacia(a.x, a.y);
+    g.appendChild(titulo);
+    const r = document.createElementNS(NS, 'circle');
+    r.setAttribute('cx', a.x); r.setAttribute('cy', a.y);
+    r.setAttribute('r', Math.max(7, 18 / z));
+    r.setAttribute('fill', '#b91c1c'); r.setAttribute('stroke', '#fff');
+    r.setAttribute('stroke-width', Math.max(2, 4 / z));
+    g.appendChild(r);
+    const t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', a.x); t.setAttribute('y', a.y + 7 / z);
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('font-size', Math.max(16, 26 / z));
+    t.setAttribute('font-weight', '900'); t.setAttribute('fill', '#fff');
+    t.textContent = '!';
+    g.appendChild(t);
+    capa.appendChild(g);
+  });
+}
+function actualizarAyudaBanner() {
+  const banner = $('ayudaBanner');
+  if (!banner) return;
+  if (PRESENCIA.rol === 'no-vidente' && AYUDA.activo) {
+    banner.classList.remove('hidden');
+    banner.classList.remove('bg-red-700');
+    banner.classList.add('bg-purple-800');
+    banner.textContent = 'Tu petición de ayuda está activa. Los videntes pueden verte.';
+    return;
+  }
+  if (PRESENCIA.rol !== 'vidente' || AYUDA.pidiendo.size === 0) {
+    banner.classList.add('hidden');
+    return;
+  }
+  banner.classList.remove('hidden');
+  banner.classList.remove('bg-purple-800');
+  banner.classList.add('bg-red-700');
+  const texto = [...AYUDA.pidiendo.values()]
+    .map((a) => a.id + ' ' + direccionHacia(a.x, a.y))
+    .join(' · ');
+  banner.textContent = 'Pedido de ayuda: ' + texto;
+}
+window.setAyuda = (activo) => {
+  const nuevo = !!activo;
+  if (nuevo === AYUDA.activo) return;
+  AYUDA.activo = nuevo;
+  publicarAyuda(true);
+  actualizarAyudaBanner();
+  if (nuevo) announce('Petición de ayuda enviada a las personas videntes.');
+  else announce('Petición de ayuda cancelada.');
+};
+
+function recibirPresencia(mensaje) {
+  if (!mensaje || mensaje.id === PRESENCIA.id) return;
+  if (!Number.isFinite(mensaje.lat) || !Number.isFinite(mensaje.lng)) return;
+  const observador = mensaje.id;
+  PRESENCIA.roles.set(observador, mensaje.rol);
+  const mapa = PRESENCIA.observaciones.get(observador) || new Map();
+  mapa.set(observador, {
+    lat: mensaje.lat,
+    lng: mensaje.lng,
+    acc: Number.isFinite(mensaje.acc) ? mensaje.acc : 15,
+    propio: true,
+    ts: mensaje.ts || Date.now(),
+  });
+  for (const o of (Array.isArray(mensaje.obs) ? mensaje.obs : [])) {
+    if (!o || o.id === observador || o.id === PRESENCIA.id) continue;
+    if (!Number.isFinite(o.lat) || !Number.isFinite(o.lng)) continue;
+    mapa.set(o.id, {
+      lat: o.lat,
+      lng: o.lng,
+      acc: Number.isFinite(o.acc) ? o.acc : 15,
+      rol: o.rol,
+      propio: false,
+      ts: o.ts || Date.now(),
+    });
+  }
+  PRESENCIA.observaciones.set(observador, mapa);
+
+  if (mensaje.rol === 'no-vidente') {
+    PRESENCIA.pares.set(observador, {
+      id: observador,
+      lat: mensaje.lat,
+      lng: mensaje.lng,
+      acc: Number.isFinite(mensaje.acc) ? mensaje.acc : 15,
+      rol: mensaje.rol,
+      x: 0,
+      y: 0,
+      accFus: Number.isFinite(mensaje.acc) ? mensaje.acc : 15,
+      n: 1,
+      edificio: null,
+      ts: mensaje.ts || Date.now(),
+      etiqueta: String(observador).slice(0, 6),
+    });
+  }
+  recalcularPares();
+  verificarInteriorAuto();
+  publicarPresencia();
+  pintarPares();
+  actualizarPresencia();
+}
+function paresVisibles() {
+  if (PRESENCIA.rol !== 'vidente') return [];
+  return [...PRESENCIA.pares.values()].sort((a, b) => a.etiqueta.localeCompare(b.etiqueta));
+}
+function pintarPares() {
+  const capa = $('peerLayer');
+  if (!capa) return;
+  capa.textContent = '';
+  const NS = 'http://www.w3.org/2000/svg';
+  paresVisibles().forEach((p) => {
+    if (p.edificio) {
+      const b = BUILDINGS.find((x) => x[0] === p.edificio);
+      if (b) {
+        const marco = document.createElementNS(NS, 'rect');
+        marco.setAttribute('x', b[1] - b[3] / 2 - 10 / z);
+        marco.setAttribute('y', b[2] - b[4] / 2 - 10 / z);
+        marco.setAttribute('width', b[3] + 20 / z);
+        marco.setAttribute('height', b[4] + 20 / z);
+        marco.setAttribute('fill', 'none');
+        marco.setAttribute('stroke', '#7c3aed');
+        marco.setAttribute('stroke-width', 3 / z);
+        marco.setAttribute('stroke-dasharray', (9 / z) + ' ' + (6 / z));
+        capa.appendChild(marco);
+      }
+    }
+    if (Number.isFinite(p.accFus) && p.accFus > 0) {
+      const halo = document.createElementNS(NS, 'circle');
+      halo.setAttribute('cx', p.x);
+      halo.setAttribute('cy', p.y);
+      halo.setAttribute('r', Math.max(2, p.accFus / METROS_POR_PIXEL));
+      halo.setAttribute('fill', 'none');
+      halo.setAttribute('stroke', '#7c3aed');
+      halo.setAttribute('stroke-width', 2 / z);
+      halo.setAttribute('stroke-dasharray', (5 / z) + ' ' + (4 / z));
+      halo.setAttribute('opacity', '.6');
+      capa.appendChild(halo);
+    }
+    const circulo = document.createElementNS(NS, 'circle');
+    circulo.setAttribute('cx', p.x);
+    circulo.setAttribute('cy', p.y);
+    circulo.setAttribute('r', 12 / z);
+    circulo.setAttribute('fill', '#7c3aed');
+    circulo.setAttribute('stroke', '#ffffff');
+    circulo.setAttribute('stroke-width', 4 / z);
+    const texto = document.createElementNS(NS, 'text');
+    texto.setAttribute('x', p.x);
+    texto.setAttribute('y', p.y - 20 / z);
+    texto.setAttribute('text-anchor', 'middle');
+    texto.setAttribute('font-size', 14 / z);
+    texto.setAttribute('font-weight', '800');
+    texto.setAttribute('fill', '#4c1d95');
+    const dist = Math.round(Math.hypot(p.x - dot.x, p.y - dot.y) * METROS_POR_PIXEL);
+    texto.textContent = p.etiqueta + (z >= 2 ? ' · ' + dist + ' m' : '') +
+      (p.n > 1 ? ' · ' + p.n + ' señales' : '');
+    capa.appendChild(circulo);
+    capa.appendChild(texto);
+  });
+}
+function actualizarPresencia() {
+  const badge = $('presenceBadge');
+  if (!badge) return;
+  const n = paresVisibles().length;
+  badge.style.display = PRESENCIA.rol === 'vidente' ? 'block' : 'none';
+  badge.classList.toggle('sin-conexion', !PRESENCIA.conectado);
+  badge.textContent = PRESENCIA.conectado
+    ? n + ' no vidente' + (n === 1 ? '' : 's') + ' conectada' + (n === 1 ? '' : 's')
+    : 'Presencia sin conexión';
+  if (PRESENCIA.rol === 'vidente' && n !== PRESENCIA.ultimoAnuncio) {
+    PRESENCIA.ultimoAnuncio = n;
+    announce(n + ' persona' + (n === 1 ? '' : 's') + ' no vidente' + (n === 1 ? '' : 's') +
+      ' conectada' + (n === 1 ? '' : 's') + ' en el mapa.');
+  }
+}
+function configurarPresencia(rol) {
+  PRESENCIA.rol = rol;
+  PRESENCIA.x = dot.x;
+  PRESENCIA.y = dot.y;
+  if (!PRESENCIA.socket && !PRESENCIA.reintento) mqttConectar();
+  publicarPresencia(true);
+  pintarPares();
+  actualizarPresencia();
+}
+/* Expirar pares que dejan de emitir y mantener vivo el canal MQTT. */
+setInterval(() => {
+  publicarAyuda();
+  const antesAyuda = AYUDA.pidiendo.size;
+  for (const [id, a] of AYUDA.pidiendo) {
+    if (Date.now() - a.ts > 12000) AYUDA.pidiendo.delete(id);
+  }
+  if (AYUDA.pidiendo.size !== antesAyuda) { pintarAyudas(); actualizarAyudaBanner(); }
+  const antes = PRESENCIA.pares.size;
+  for (const [id, p] of PRESENCIA.pares) {
+    if (Date.now() - p.ts > 12000) PRESENCIA.pares.delete(id);
+  }
+  if (PRESENCIA.pares.size !== antes) { pintarPares(); actualizarPresencia(); }
+  for (const [observador, mapa] of PRESENCIA.observaciones) {
+    for (const [id, o] of mapa) {
+      if (Date.now() - o.ts > 20000) mapa.delete(id);
+    }
+    if (!mapa.size) {
+      PRESENCIA.observaciones.delete(observador);
+      PRESENCIA.roles.delete(observador);
+    }
+  }
+  for (const id of PRESENCIA.filtro.keys()) {
+    if (id !== PRESENCIA.id && !PRESENCIA.pares.has(id)) PRESENCIA.filtro.delete(id);
+  }
+}, 3000);
+setInterval(() => {
+  if (PRESENCIA.socket && PRESENCIA.socket.readyState === 1) publicarPresencia(true);
+}, 10000);
+setInterval(() => {
+  if (PRESENCIA.socket && PRESENCIA.socket.readyState === 1) PRESENCIA.socket.send(mqttPing());
+}, 45000);
+
 /* ---------- Modo elegido en la portada ----------
    App.tsx envía { type:'modo', modo } al cargar el mapa. En "no vidente"
    forcamos la voz; en "vidente" dejamos solo el aviso silencioso para
    lectores de pantalla. El botón de la interfaz puede cambiarlo después. */
 function aplicarModo(modo) {
+  /* El mapa recibe el modo en cada muestra GPS; solo reaccionamos al cambio. */
+  if (PRESENCIA.rol === modo) return;
+  if (AYUDA.activo && modo !== 'no-vidente') {
+    AYUDA.activo = false;
+    publicarAyuda(true);
+  }
   document.body.dataset.modo = modo;
   if (modo === 'no-vidente') {
     autoVoice = true;
@@ -841,20 +1511,34 @@ function aplicarModo(modo) {
     voiceLabel();
     announce('Modo vidente. Toca un edificio para ver la ruta.');
   }
+  configurarPresencia(modo);
 }
 window.setModo = aplicarModo;
 
 /* ---------- GPS: puente con la app Expo ----------
-   App.tsx convierte lat/lng a píxeles y envía { type:'position', x, y }.
+   App.tsx ancla el primer fix al centro del plano (690, 500) y envía
+   { type:'position', x, y } como desplazamientos relativos desde ahí.
    Movemos el punto azul y, si hay una ruta activa, actualizamos el tramo
    restante y el próximo giro sin volver a seleccionar el edificio. */
-window.setUserPosition = (x, y) => {
+window.setUserPosition = (x, y, geo) => {
   /* El GPS puede venir fuera del plano (coordenadas lejanas o poca precisión).
      Lo fijamos dentro de los límites para que el punto nunca desaparezca. */
   const MARGEN = 16;
   x = Math.min(1312 - MARGEN, Math.max(MARGEN, x));
   y = Math.min(985 - MARGEN, Math.max(MARGEN, y));
   dot = { x, y };
+  if (geo && Number.isFinite(geo.latitude) && Number.isFinite(geo.longitude)) {
+    PRESENCIA.geo = geo;
+    if (!PRESENCIA.origen) PRESENCIA.origen = geo;
+  }
+  PRESENCIA.x = dot.x;
+  PRESENCIA.y = dot.y;
+  recalcularPares();
+  verificarInteriorAuto();
+  publicarPresencia();
+  publicarAyuda();
+  pintarAyudas();
+  actualizarAyudaBanner();
   placeDot();
   /* Centramos la vista en el punto sin anunciar ni volver a seleccionar nada. */
   centerOn(x, y);
@@ -872,7 +1556,14 @@ window.addEventListener('message', (event) => {
       aplicarModo(data.modo);
     }
     if (data && data.type === 'position' && Number.isFinite(data.x) && Number.isFinite(data.y)) {
-      window.setUserPosition(data.x, data.y);
+      window.setUserPosition(data.x, data.y, {
+        latitude: data.latitude,
+        longitude: data.longitude,
+        accuracyM: data.accuracyM,
+      });
+    }
+    if (data && data.type === 'ayuda' && typeof data.activo === 'boolean') {
+      window.setAyuda(data.activo);
     }
   } catch (e) {}
 });
@@ -941,10 +1632,117 @@ window.addEventListener('resize', () => {
   [ox, oy] = clamp(ox, oy, z); apply();
 });
 
-/* Teclado: flechas para recorrer los edificios. */
+/* ---------- Interior del edificio ----------
+   Plano ESQUEMÁTICO generado: un pasillo central y salas a ambos lados.
+   Cuando existan planos oficiales por edificio, reemplazar buildPlan(). */
+let inside = false, room = null;
+const ROOM_ON  = ['bg-yellow-400','text-black','border-black'];
+const ROOM_OFF = ['bg-blue-900','text-white','border-slate-900'];
+
+function roomInfo() {
+  $('inRoom').textContent = room ? 'Sala ' + room + ' · Edificio ' + selected : 'Edificio ' + selected;
+  $('inNote').textContent = room
+    ? 'Plano esquemático: todavía no hay datos oficiales de este espacio.'
+    : 'Toca una sala para ver su información.';
+}
+function buildPlan(w, h) {
+  const st = $('inStage'); st.innerHTML = ''; room = null;
+  const AW = Math.max(0, st.clientWidth - 24), AH = Math.max(0, st.clientHeight - 8);
+  const asp = Math.min(2.2, Math.max(0.5, w / h));
+  let cw = AW, ch = cw / asp; if (ch > AH) { ch = AH; cw = ch * asp; }
+  const card = document.createElement('div');
+  card.className = 'absolute box-border rounded-xl border-4 border-black bg-slate-100';
+  card.style.cssText = 'width:' + cw + 'px;height:' + ch + 'px;left:' + ((st.clientWidth - cw)/2) + 'px;top:' + ((st.clientHeight - ch)/2) + 'px';
+  const iw = Math.max(0, cw - 8), ih = Math.max(0, ch - 8), C = 40, g = 6, horiz = asp >= 1, rects = [];
+  const corr = document.createElement('div');
+  corr.className = 'absolute flex items-center justify-center bg-slate-300 text-[13px] font-bold tracking-wide text-slate-700';
+  corr.setAttribute('aria-hidden', 'true');
+  corr.textContent = 'PASILLO';
+  let dx, dy;
+  if (horiz) {
+    const n = Math.max(2, Math.round(iw / 92)), rw = Math.max(30, (iw - g*(n + 1)) / n), rh = Math.max(30, (ih - C - g*3) / 2);
+    corr.style.cssText = 'left:0;top:' + (g + rh + g) + 'px;width:' + iw + 'px;height:' + C + 'px';
+    for (let r = 0; r < 2; r++) for (let i = 0; i < n; i++)
+      rects.push([g + i*(rw + g), r ? g + rh + g + C + g : g, rw, rh]);
+    dx = 20; dy = g + rh + g + C/2;
+  } else {
+    const n = Math.max(2, Math.round(ih / 92)), rh = Math.max(30, (ih - g*(n + 1)) / n), rw = Math.max(30, (iw - C - g*3) / 2);
+    corr.style.cssText = 'left:' + (g + rw + g) + 'px;top:0;width:' + C + 'px;height:' + ih + 'px;writing-mode:vertical-rl';
+    for (let c = 0; c < 2; c++) for (let i = 0; i < n; i++)
+      rects.push([c ? g + rw + g + C + g : g, g + i*(rh + g), rw, rh]);
+    dx = g + rw + g + C/2; dy = ih - 20;
+  }
+  card.appendChild(corr);
+  rects.forEach(([x, y, rw, rh], i) => {
+    const b = document.createElement('button'), k = i + 1;
+    b.className = 'absolute box-border rounded-lg border-[3px] p-0 text-base font-extrabold ' + ROOM_OFF.join(' ');
+    b.style.cssText = 'left:' + x + 'px;top:' + y + 'px;width:' + rw + 'px;height:' + rh + 'px';
+    b.textContent = 'Sala ' + k;
+    b.setAttribute('aria-label', 'Sala ' + k + ', Edificio ' + selected);
+    b.setAttribute('aria-pressed', 'false');
+    b.addEventListener('click', () => {
+      card.querySelectorAll('button').forEach(o => { o.classList.remove(...ROOM_ON); o.classList.add(...ROOM_OFF); o.setAttribute('aria-pressed', 'false'); });
+      b.classList.remove(...ROOM_OFF); b.classList.add(...ROOM_ON); b.setAttribute('aria-pressed', 'true');
+      room = k; roomInfo();
+      speakOrAnnounce('Sala ' + k + '. ' + $('inNote').textContent);
+    });
+    card.appendChild(b);
+  });
+  const d = document.createElement('div');
+  d.setAttribute('role', 'img'); d.setAttribute('aria-label', 'Tu ubicación');
+  d.className = 'pointer-events-none absolute box-border h-7 w-7 rounded-full border-[5px] border-white bg-sky-600 shadow-[0_0_0_3px_#0c4a6e]';
+  d.style.cssText = 'left:' + (dx - 14) + 'px;top:' + (dy - 14) + 'px';
+  card.appendChild(d);
+  st.appendChild(card);
+  roomInfo();
+}
+function enterBuilding() {
+  if (!selected) return;
+  const [id, cx, cy, w, h] = BUILDINGS.find(b => b[0] === selected);
+  inside = true;
+  [ox, oy] = clamp(vp.clientWidth/2 - cx*z, vp.clientHeight/2 - cy*z, z); apply();
+  $('sheet').classList.add('hidden'); $('sheet').classList.remove('flex');
+  vp.inert = true;
+  const el = $('interior'); el.classList.remove('hidden'); el.classList.add('flex');
+  $('inTitle').textContent = 'Edificio ' + id + ' · interior';
+  buildPlan(w, h);
+  $('inExit').focus();
+  speakOrAnnounce('Dentro del Edificio ' + id + '. ' + $('inNote').textContent);
+}
+function exitBuilding() {
+  if (!inside) return;
+  inside = false; vp.inert = false;
+  const el = $('interior'); el.classList.add('hidden'); el.classList.remove('flex');
+  select(selected, { silent: true });
+  $('btnRoute').focus();
+  announce('Has salido del interior. Información del edificio ' + selected + '.');
+}
+$('inExit').onclick = () => {
+  AUTO_INTERIOR.activo = false;
+  AUTO_INTERIOR.dentro = 0;
+  AUTO_INTERIOR.bloqueo = Date.now() + 15000;
+  exitBuilding();
+};
+$('inSpeak').onclick = () => {
+  const texto = $('inRoom').textContent + '. ' + $('inNote').textContent;
+  say(texto); announce(texto);
+};
+
+/* Teclado: flechas para recorrer, Escape para salir y foco atrapado en el diálogo. */
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowLeft')  { e.preventDefault(); step(-1); }
-  if (e.key === 'ArrowRight') { e.preventDefault(); step(1); }
+  if (e.key === 'Escape') { exitBuilding(); return; }
+  if (!inside) {
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); step(-1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); step(1); }
+    return;
+  }
+  if (e.key === 'Tab') {
+    const f = [...$('interior').querySelectorAll('button:not([disabled])')];
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
 });
 
 /* ---------- Inicio ---------- */

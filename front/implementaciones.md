@@ -5,13 +5,109 @@ Este archivo es el handoff para quien construye el mapa con Tailwind: aquí est�
 todo lo que ya puedes consumir desde `front/`. El mapa vive en
 `front/index.html` y se carga desde `App.tsx` a través de `Mapa.tsx`
 (`WebView` en nativo, `Mapa.web.tsx` con `iframe` en web), enviándole la
-ubicación del GPS con `postMessage({ type: 'position', x, y })`.
-La conversión lat/lng → píxeles del plano está en `App.tsx` (`aPuntoPlano`)
-y usa una referencia aproximada pendiente de georreferenciar.
-`setUserPosition()` solo actualiza el punto y recalcula la ruta activa, sin
-volver a seleccionar el edificio ni repetir la voz automática en cada muestra.
-El botón **Generar ruta** reemplazó al antiguo "Entrar al edificio": traza el
-recorrido más corto por los senderos hasta la entrada del edificio elegido.
+ubicación del GPS con `postMessage({ type: 'position', x, y, latitude, longitude, accuracyM })`
+y el estado del pedido de ayuda con `postMessage({ type: 'ayuda', activo })`.
+La conversión lat/lng → píxeles del plano está en `App.tsx` (`aPuntoPlano`).
+En el prototipo el primer fix GPS preciso se ancla al centro del plano
+`(690, 500)` y los puntos siguientes son desplazamientos relativos desde ahí
+(0,75 m por píxel).
+`setUserPosition()` mueve el punto azul y, si hay una navegación activa,
+actualiza el tramo restante y el próximo giro sin volver a seleccionar el
+edificio ni repetir la voz automática en cada muestra.
+Además, en web el seguimiento usa `navigator.geolocation.watchPosition()` directo
+en `backend/src/tracker.ts` (con una primera muestra vía `getCurrentPosition()`),
+porque el `watchPositionAsync` de `expo-location` no entregaba muestras en Safari
+iOS. Las muestras siguen siendo `MovementSample` normales: speed, stats, alertas
+y filtro por `isAccurate` quedan igual.
+
+En iOS Safari, `expo-location` intenta usar `navigator.permissions.query` (no
+soportado por Safari) y falla antes de mostrar el diálogo. Por eso `backend/src/
+permissions.ts` usa en web un camino directo con `navigator.geolocation.
+getCurrentPosition()`, disparado desde el toque del usuario en los botones de la
+portada. Si se abre una URL con `?modo=` directo, el botón **Activar GPS** de la
+barra permite pedir el permiso manualmente. La web debe servirse por HTTPS
+(Netlify lo hace); por HTTP en una IP local Safari no pedirá la ubicación.
+
+El botón **Generar ruta** traza el recorrido más corto por los senderos hasta la
+entrada del edificio elegido. El interior de los edificios es esquemático hasta
+que haya planos oficiales.
+
+En modo **vidente** el mapa muestra a las personas **no videntes conectadas**
+como puntos morados con un ID corto y efímero, y un contador accesible arriba a
+la izquierda. La presencia usa MQTT sobre WSS
+(`wss://broker.emqx.io:8084/mqtt`, tema `hackatonlyoss/campus/presencia/v1`):
+sin credenciales, sin nombres y sin historial. Los pares expiran a los 12 s sin
+actualización. Si el broker no está disponible, la capa se oculta y el GPS y la
+voz siguen funcionando con normalidad.
+
+### Pedido de ayuda (botón del teléfono)
+
+En modo **no vidente** aparece un botón **Pedir ayuda** en la barra superior.
+Al tocarlo se publica un aviso en el tema MQTT
+`hackatonlyoss/campus/ayuda/v1` (mismo broker WSS que la presencia) con el ID
+efímero, el rol, `lat`/`lng`/`acc` del GPS satelital crudo y un `ts`. Mientras
+está activo se repite cada 3 s; al volver a tocar el botón se publica
+`activo: false` y desaparece. Cambiar de modo o detener el GPS también cancela
+el pedido.
+
+En modo **vidente**, cada pedido activo se dibuja como un marcador rojo con un
+`!` y un anillo, con `<title>` accesible, y aparece un banner rojo arriba con
+el ID y la distancia/dirección (`"NV-XXXX a 12 metros al norte"`). El aviso se
+anuncia por `aria-live="assertive"` al llegar, y se cancela/expira a los 12 s
+sin actualización. En el teléfono de quien pide ayuda, el botón cambia a
+**Cancelar ayuda** y un texto `aria-live="assertive"` confirma el estado.
+
+La posición que se envía es la del GPS del emisor y se convierte con el mismo
+marco de primer fix (`geoAPlano`), por lo que el marcador cae donde corresponde
+aunque cada celular haya empezado en un lugar distinto. No se envían nombres,
+rutas ni historial; solo el ID efímero y la ubicación mientras el pedido está
+activo. Si el broker falla, el botón y el GPS siguen funcionando, pero nadie
+recibe el aviso.
+
+La precisión se fusiona entre pares siguiendo el RFC, con un **árbol de
+confianza** que evita el arrastre entre personas:
+
+- Cada mensaje publica su **GPS satelital crudo** (`lat`, `lng`, `acc`) y un
+  campo `obs` con lo que oyó de otros nodos. Nunca se publica la posición ya
+  fusionada: hacerlo creaba un bucle de realimentación y, cuando alguien se
+  alejaba, su estimado arrastraba al del otro.
+- El reporte que un nodo hace **de sí mismo** es la referencia (`propio: true`).
+  Las observaciones de terceros entran solo como corrección secundaria, con
+  peso `0.35` (o `0.56` si el observador es vidente), decaimiento de 5 s y un
+  filtro de coherencia: si difieren de la referencia más de `max(25 m, 3σpropia + 3σajena)`
+  se descartan.
+- Sobre esa referencia se aplica un **filtro temporal tipo Kalman** en lat/lng.
+  La incertidumbre crece `0.8 m × √Δt` sin datos. Un salto grande se sigue
+  (ganancia ≥ 0.85) solo si el nodo propio lo confirma con una muestra fresca
+  y es compatible con 8 m/s; si no, se descarta como outlier.
+- El resultado alimenta la detección de interior, pero **no se publica**.
+  El anillo morado usa la σ fusionada: con 1 señal de ±12 m da ~13 m, con 3
+  señales consistentes baja a ~7,5 m y con 5 a ~5,8 m. En pantalla se indica
+  el número de señales cuando es mayor que 1. **No se usa altura ni piso**:
+  el RFC sigue vigente para BLE/UWB y el grafo completo.
+
+El mismo marco compartido permite detectar edificio: `edificioEn()` prueba los
+rectángulos de `BUILDINGS` con ~6 m de tolerancia. Si la persona en modo
+**no vidente** queda dentro de un edificio durante 3 muestras seguidas, el mapa
+selecciona esa **letra** y abre automáticamente su vista interior; si sale,
+vuelve al mapa. La salida manual bloquea la reentrada automática por 15 s. En
+el mapa del vidente, el edificio donde está cada par se resalta con un marco
+morado discontinuo.
+
+Cada dispositivo publica también su `latitude`/`longitude`/`accuracyM` crudos.
+El receptor convierte la posición ajena con **su propio primer fix como origen**
+(`PRESENCIA.origen` dentro de `geoAPlano`), así los puntos caen en el mismo
+marco local aunque cada celular haya empezado en un lugar distinto. Ese ancla
+**no se recalibra con cada muestra**: si se usara el fix actual, al caminar los
+pares se desplazarían justo en la dirección contraria (norte→sur, este→oeste).
+El plano es norte-arriba / este-derecha: la latitud creciente resta `y` y la
+longitud creciente suma `x`, lo mismo que usa `App.tsx` en `aPuntoPlano()`.
+Las indicaciones por voz salen de `info()` con `atan2(dx, -dy)`, por lo que
+`0°` es norte, `90°` este, `180°` sur y `270°` oeste. El zoom llega a **12×**,
+con una barra de escala métrica arriba a la izquierda. Al acercar, cada par
+muestra un anillo discontinuo con su precisión GPS (`accuracyM`) y la distancia
+al punto propio en metros. Con esto el salón de la hackathon se puede
+inspeccionar a pocos metros (de 1 a 10 m por píxel de pantalla según el zoom).
 
 ### Accesibilidad y responsive
 
@@ -72,7 +168,8 @@ que el GPS funciona igual en los dos casos.
 Ya hay una app Expo mínima en esta misma carpeta con un panel que muestra
 estado del GPS, velocidad en km/h, última posición, estadísticas y alertas.
 Al cargar la pantalla se pide permiso y se inicia el seguimiento solo; los
-botones `GPS` / `Detener` siguen disponibles para reiniciarlo o pausarlo.
+botones `Activar GPS` / `Detener` siguen disponibles para reiniciarlo o pausarlo,
+y en modo no vidente se suma `Pedir ayuda` / `Cancelar ayuda`.
 
 ```sh
 cd front

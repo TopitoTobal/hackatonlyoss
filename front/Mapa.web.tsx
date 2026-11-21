@@ -8,9 +8,11 @@ import type { PuntoPlano } from './Mapa'
 export default function Mapa({
   posicion,
   modo,
+  ayuda = false,
 }: {
   posicion: PuntoPlano
   modo: Modo
+  ayuda?: boolean
 }) {
   const hostRef = useRef<any>(null)
   const iframeRef = useRef<any>(null)
@@ -27,7 +29,7 @@ export default function Mapa({
     host.appendChild(iframe)
     iframeRef.current = iframe
 
-    const alCargar = () => enviar(iframe, posicion, modo)
+    const alCargar = () => enviar(iframe, posicion, modo, ayuda)
     iframe.addEventListener('load', alCargar)
 
     return () => {
@@ -40,17 +42,18 @@ export default function Mapa({
   }, [])
 
   useEffect(() => {
-    if (iframeRef.current) enviar(iframeRef.current, posicion, modo)
-  }, [posicion, modo])
+    if (iframeRef.current) enviar(iframeRef.current, posicion, modo, ayuda)
+  }, [posicion, modo, ayuda])
 
   return <View ref={hostRef} style={styles.mapa} />
 }
 
-function enviar(iframe: any, posicion: PuntoPlano, modo: Modo) {
+function enviar(iframe: any, posicion: PuntoPlano, modo: Modo, ayuda: boolean) {
   const win = iframe.contentWindow
   if (!win) return
   win.postMessage(JSON.stringify({ type: 'modo', modo }), '*')
   win.postMessage(JSON.stringify({ type: 'position', ...posicion }), '*')
+  win.postMessage(JSON.stringify({ type: 'ayuda', activo: ayuda }), '*')
 }
 
 const styles = StyleSheet.create({
