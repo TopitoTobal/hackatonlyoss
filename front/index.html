@@ -114,38 +114,84 @@
   </p>
   <div id="world" class="absolute left-0 top-0 origin-top-left" style="width:1312px;height:985px">
 
-    <!-- Plano base: terreno, cancha, calles y pasillos -->
+    <!-- Plano base nuevo: cobertura continua de borde a borde.
+         No hay zonas lisas sobrantes: manzanas, avenidas y campus llegan
+         hasta los cuatro bordes del lienzo de 1312 x 985. -->
     <svg width="1312" height="985" viewBox="0 0 1312 985" aria-hidden="true" class="pointer-events-none absolute left-0 top-0">
-      <rect width="1312" height="985" fill="#e2e8f0"/>
-      <path d="M345 300 H960 V470 L1010 520 V600 L1130 650 L1200 740 L1290 790 L1270 830 L1180 960 H600 L410 900 V700 L345 600 Z" fill="#d6d3d1"/>
-      <path d="M415 735 L700 775 L880 835 L960 880 L1100 890 L1230 800 L1180 960 H610 L415 905 Z" fill="#a7c4a0"/>
-      <rect x="462" y="485" width="146" height="220" rx="4" fill="#166534"/>
-      <rect x="1062" y="672" width="64" height="128" rx="3" fill="#9a3412"/>
+      <defs>
+        <!-- Barrio: patrón de manzanas que cubre todo el lienzo -->
+        <pattern id="manzanas" width="146" height="108" patternUnits="userSpaceOnUse">
+          <rect width="146" height="108" fill="#e2e8f0"/>
+          <rect x="5" y="5" width="136" height="98" rx="4" fill="#cbd5e1"/>
+          <rect x="11" y="11" width="58" height="38" rx="2" fill="#b6c2cf"/>
+          <rect x="77" y="11" width="58" height="38" rx="2" fill="#c3cdd7"/>
+          <rect x="11" y="59" width="58" height="38" rx="2" fill="#c3cdd7"/>
+          <rect x="77" y="59" width="58" height="38" rx="2" fill="#b6c2cf"/>
+        </pattern>
+        <!-- Áreas verdes del campus -->
+        <pattern id="parque" width="72" height="72" patternUnits="userSpaceOnUse">
+          <rect width="72" height="72" fill="#c3d8b8"/>
+          <circle cx="18" cy="18" r="6" fill="#adca9f"/>
+          <circle cx="52" cy="50" r="8" fill="#adca9f"/>
+        </pattern>
+      </defs>
+
+      <!-- 1. Fondo continuo: ningún borde queda sin dibujar -->
+      <rect width="1312" height="985" fill="url(#manzanas)"/>
+
+      <!-- 2. Campus: desde la calle separadora hasta los bordes sur y este -->
+      <rect x="300" y="312" width="1012" height="673" fill="#d6d3d1"/>
+      <rect x="300" y="312" width="1012" height="88" fill="#dedad4"/>
+      <rect x="300" y="620" width="1012" height="365" fill="url(#parque)"/>
+
+      <!-- 3. Avenida Placeres: atraviesa TODO el ancho del plano -->
       <rect x="0" y="278" width="1312" height="34" fill="#475569"/>
+      <line x1="0" y1="295" x2="1312" y2="295" stroke="#fbbf24" stroke-width="2" stroke-dasharray="26 20"/>
+
+      <!-- 4. Calle separadora oeste: de arriba abajo, sin dejar hueco -->
+      <rect x="284" y="0" width="16" height="278" fill="#475569"/>
+      <rect x="284" y="312" width="16" height="673" fill="#475569"/>
+
+      <!-- 5. Canchas y zonas deportivas -->
+      <rect x="462" y="485" width="146" height="220" rx="4" fill="#166534"/>
+      <rect x="472" y="495" width="126" height="200" rx="2" fill="none" stroke="#ffffff" stroke-width="2" opacity=".55"/>
+      <line x1="535" y1="495" x2="535" y2="695" stroke="#ffffff" stroke-width="2" opacity=".55"/>
+      <rect x="1062" y="672" width="64" height="128" rx="3" fill="#9a3412"/>
+      <line x1="1062" y1="736" x2="1126" y2="736" stroke="#ffffff" stroke-width="2" opacity=".55"/>
+
+      <!-- 6. Calles internas: llegan hasta los bordes del campus -->
       <g fill="none" stroke-linecap="round" stroke-linejoin="round">
         <g stroke="#475569" stroke-width="24">
           <path d="M655 461 C655 490 662 500 690 502 L722 505"/>
           <path d="M690 502 C670 510 665 540 668 580 L690 700 L705 770 L890 800"/>
           <path d="M600 462 L940 462 L950 560 L985 600"/>
-          <path d="M600 462 L470 440 L385 430"/>
+          <path d="M600 462 L470 440 L385 430 L300 430"/>
           <path d="M880 600 L880 730 L945 800"/>
-          <path d="M890 800 L945 880 L1130 885"/>
-          <path d="M1020 700 L1060 740 L1190 800"/>
+          <path d="M890 800 L945 880 L1130 885 L1312 900"/>
+          <path d="M1020 700 L1060 740 L1190 800 L1312 830"/>
+          <path d="M705 770 L705 985"/>
+          <path d="M365 312 L365 430"/>
         </g>
         <g stroke="#ffffff" stroke-width="16">
           <path d="M655 461 C655 490 662 500 690 502 L722 505"/>
           <path d="M690 502 C670 510 665 540 668 580 L690 700 L705 770 L890 800"/>
           <path d="M600 462 L940 462 L950 560 L985 600"/>
-          <path d="M600 462 L470 440 L385 430"/>
+          <path d="M600 462 L470 440 L385 430 L300 430"/>
           <path d="M880 600 L880 730 L945 800"/>
-          <path d="M890 800 L945 880 L1130 885"/>
-          <path d="M1020 700 L1060 740 L1190 800"/>
+          <path d="M890 800 L945 880 L1130 885 L1312 900"/>
+          <path d="M1020 700 L1060 740 L1190 800 L1312 830"/>
+          <path d="M705 770 L705 985"/>
+          <path d="M365 312 L365 430"/>
         </g>
       </g>
-      <g font-family="system-ui, sans-serif" font-size="20" font-weight="700" fill="#ffffff" text-anchor="middle">
-        <text x="535" y="600">CANCHA</text>
-        <text x="1094" y="740" font-size="16">TENIS</text>
-        <text x="660" y="301">AVENIDA PLACERES</text>
+
+      <!-- 7. Etiquetas -->
+      <g font-family="system-ui, sans-serif" font-weight="700" text-anchor="middle">
+        <text x="535" y="600" font-size="20" fill="#ffffff">CANCHA</text>
+        <text x="1094" y="740" font-size="16" fill="#ffffff">TENIS</text>
+        <text x="660" y="301" font-size="20" fill="#ffffff">AVENIDA PLACERES</text>
+        <text x="142" y="160" font-size="17" fill="#475569">BARRIO NORTE</text>
+        <text x="1170" y="950" font-size="17" fill="#365314">CAMPUS SUR</text>
       </g>
     </svg>
 

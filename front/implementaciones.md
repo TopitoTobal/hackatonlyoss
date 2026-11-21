@@ -27,6 +27,11 @@ El interior de los edificios es esquemático hasta que haya planos oficiales.
 - Zoom estilo Google Maps: `minZoom()` es dinámico (`max(ancho/1312, alto/985)`)
   y el plano siempre cubre la pantalla; `clamp()` impide panear más allá de sus
   bordes, así que al alejar al máximo no aparece fondo vacío ni se corta la UI.
+- El plano base se redibujó como mapa continuo: un patrón de manzanas cubre todo
+  el lienzo y el campus, la Avenida Placeres y las calles llegan hasta los cuatro
+  bordes. No quedan franjas lisas ("bordes blancos") alrededor del dibujo.
+  Las coordenadas de los 15 edificios no cambiaron, así que el GPS y las guías
+  siguen siendo válidas.
 - En el diálogo interior el foco queda atrapado, `Escape` sale y el fondo se
   marca `inert`. Lighthouse: accesibilidad y buenas prácticas 1.00.
 
