@@ -264,6 +264,7 @@ export default function App() {
   const [muestras, setMuestras] = useState(0)
   const [velocidad, setVelocidad] = useState('—')
   const [pidiendoAyuda, setPidiendoAyuda] = useState(false)
+  const [infoAbierta, setInfoAbierta] = useState(false)
   const arrancandoRef = useRef(false)
   const origenRef = useRef<Origen | null>(null)
 
@@ -477,24 +478,65 @@ export default function App() {
         </View>
 
         <View style={styles.info}>
-          <Text style={styles.texto} numberOfLines={2}>
-            Velocidad: {velocidad}
-          </Text>
-          <Text style={styles.texto} numberOfLines={2}>
-            {ultimaPosicion}
-          </Text>
-          <Text style={styles.texto} numberOfLines={2}>
-            {estadisticas}
-          </Text>
-          <Text style={styles.alerta} accessibilityLiveRegion="polite">
-            {alerta}
-          </Text>
-          {modo === 'no-vidente' && (
-            <Text style={styles.texto} accessibilityLiveRegion="assertive">
-              {pidiendoAyuda
-                ? 'Petición de ayuda activa: los videntes pueden verte.'
-                : 'Sin petición de ayuda.'}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              infoAbierta
+                ? 'Ocultar información detallada de GPS'
+                : 'Mostrar información detallada de GPS: muestra, posición y estadísticas'
+            }
+            accessibilityState={{ expanded: infoAbierta }}
+            onPress={() => setInfoAbierta((abierta) => !abierta)}
+            style={({ pressed }) => [
+              styles.infoBoton,
+              pressed && styles.opcionPresionada,
+            ]}
+          >
+            <View style={styles.iconoInfo}>
+              <Icono name="info" size={20} color="#1d4ed8" />
+            </View>
+            <Text style={styles.infoTitulo}>Información</Text>
+            <Text style={styles.infoValor}>{velocidad}</Text>
+            <Icono
+              name={infoAbierta ? 'expand_less' : 'expand_more'}
+              size={20}
+              color="#64748b"
+            />
+          </Pressable>
+
+          {alerta ? (
+            <Text style={styles.alerta} accessibilityLiveRegion="polite">
+              {alerta}
             </Text>
+          ) : null}
+          {modo === 'no-vidente' && pidiendoAyuda && (
+            <Text style={styles.alerta} accessibilityLiveRegion="assertive">
+              Petición de ayuda activa: los videntes pueden verte.
+            </Text>
+          )}
+
+          {infoAbierta && (
+            <View style={styles.infoDetalle}>
+              <Text style={styles.texto} numberOfLines={2}>
+                Velocidad: {velocidad}
+              </Text>
+              <Text style={styles.texto} numberOfLines={2}>
+                Muestras: {muestras}
+              </Text>
+              <Text style={styles.texto} numberOfLines={2}>
+                {ultimaPosicion}
+              </Text>
+              <Text style={styles.texto} numberOfLines={2}>
+                {estadisticas}
+              </Text>
+              {modo === 'no-vidente' && (
+                <Text style={styles.texto} accessibilityLiveRegion="assertive">
+                  {pidiendoAyuda
+                    ? 'Petición de ayuda activa: los videntes pueden verte.'
+                    : 'Sin petición de ayuda.'}
+                </Text>
+              )}
+            </View>
           )}
           </View>
         </View>
@@ -757,6 +799,42 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 2,
+  },
+  infoBoton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    minHeight: 40,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#cbd2d9',
+    backgroundColor: '#f8fafc',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  iconoInfo: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: '#e8f1fb',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoTitulo: {
+    color: '#1c1c1c',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  infoValor: {
+    color: '#1d4ed8',
+    fontSize: 13,
+    fontWeight: '700',
+    flex: 1,
+    textAlign: 'right',
+  },
+  infoDetalle: {
+    gap: 4,
+    paddingTop: 2,
   },
   texto: {
     color: '#334155',
