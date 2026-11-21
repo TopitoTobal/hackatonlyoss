@@ -598,6 +598,7 @@ const PRESENCIA = {
   x: dot.x,
   y: dot.y,
   pares: new Map(),
+  observaciones: new Map(),
   conectado: false,
   ultimoEnvio: 0,
   ultimoAnuncio: -1,
@@ -686,6 +687,9 @@ function publicarPresencia(fuerza = false) {
     lng: g && Number.isFinite(g.longitude) ? Number(g.longitude.toFixed(6)) : null,
     acc: g && Number.isFinite(g.accuracyM) ? Math.round(g.accuracyM) : null,
     ts: ahora,
+    obs: [...PRESENCIA.pares.values()]
+      .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))
+      .map((p) => ({ id: p.id, lat: p.lat, lng: p.lng, acc: p.acc, ts: p.ts })),
   };
   ws.send(mqttPaquete(3, 0, [...mqttTexto(PRESENCIA_TOPIC), ...bytesTexto(JSON.stringify(cuerpo))]));
 }
@@ -698,21 +702,122 @@ function geoAPlano(lat, lng) {
   const dy = (-(lat - o.latitude) * metrosPorGradoLat) / METROS_POR_PIXEL;
   return { x: CENTRO.x + dx, y: CENTRO.y + dy };
 }
+const AUTO_INTERIOR = { dentro: 0, fuera: 0, activo: false, bloqueo: 0 };
+function edificioEn(x, y) {
+  const MARGEN = 8; /* ~6 m: tolerancia a ruido GPS en espacios pequeños */
+  for (const [id, cx, cy, w, h] of BUILDINGS) {
+    if (Math.abs(x - cx) <= w / 2 + MARGEN && Math.abs(y - cy) <= h / 2 + MARGEN) {
+      return id;
+    }
+  }
+  return null;
+}
+function fusionar(id) {
+  const ahora = Date.now();
+  const lista = [];
+  if (id === PRESENCIA.id && PRESENCIA.geo) {
+    lista.push({
+      lat: PRESENCIA.geo.latitude,
+      lng: PRESENCIA.geo.longitude,
+      acc: PRESENCIA.geo.accuracyM,
+      ts: ahora,
+    });
+  }
+  for (const mapa of PRESENCIA.observaciones.values()) {
+    const o = mapa.get(id);
+    if (o) lista.push(o);
+  }
+  if (!lista.length) return null;
+  let suma = 0, lat = 0, lng = 0;
+  for (const o of lista) {
+    const acc = Math.min(40, Math.max(3, Number.isFinite(o.acc) ? o.acc : 15));
+    const peso = Math.exp(-Math.max(0, ahora - o.ts) / 12000) / (acc * acc + 25);
+    suma += peso; lat += o.lat * peso; lng += o.lng * peso;
+  }
+  if (!suma) return null;
+  return {
+    lat: lat / suma,
+    lng: lng / suma,
+    acc: Math.max(1, Math.min(30, Math.sqrt(1 / suma))),
+    n: lista.length,
+  };
+}
+function recalcularPares() {
+  PRESENCIA.pares.forEach((p, id) => {
+    const f = fusionar(id);
+    if (!f) return;
+    const punto = geoAPlano(f.lat, f.lng);
+    if (!punto) return;
+    p.x = punto.x;
+    p.y = punto.y;
+    p.accFus = f.acc;
+    p.n = f.n;
+    p.edificio = edificioEn(punto.x, punto.y);
+  });
+}
+function verificarInteriorAuto() {
+  if (PRESENCIA.rol !== 'no-vidente' || Date.now() < AUTO_INTERIOR.bloqueo) return;
+  const yo = fusionar(PRESENCIA.id);
+  const punto = yo ? geoAPlano(yo.lat, yo.lng) : null;
+  const id = punto ? edificioEn(punto.x, punto.y) : null;
+  if (id) {
+    AUTO_INTERIOR.dentro++;
+    AUTO_INTERIOR.fuera = 0;
+    if (AUTO_INTERIOR.dentro >= 3 && (!inside || selected !== id)) {
+      AUTO_INTERIOR.activo = true;
+      if (inside) { inside = false; vp.inert = false; }
+      select(id, { silent: true });
+      enterBuilding();
+    }
+  } else {
+    AUTO_INTERIOR.fuera++;
+    AUTO_INTERIOR.dentro = 0;
+    if (AUTO_INTERIOR.fuera >= 3 && inside && AUTO_INTERIOR.activo) {
+      AUTO_INTERIOR.activo = false;
+      exitBuilding();
+    }
+  }
+}
 function recibirPresencia(mensaje) {
   if (!mensaje || mensaje.id === PRESENCIA.id) return;
-  if (mensaje.rol !== 'no-vidente') return;
-  const punto = geoAPlano(mensaje.lat, mensaje.lng) ||
-    (Number.isFinite(mensaje.x) && Number.isFinite(mensaje.y)
-      ? { x: mensaje.x, y: mensaje.y }
-      : null);
-  if (!punto) return;
-  PRESENCIA.pares.set(mensaje.id, {
-    x: punto.x,
-    y: punto.y,
-    acc: Number.isFinite(mensaje.acc) ? mensaje.acc : null,
-    ts: Date.now(),
-    etiqueta: String(mensaje.id || 'NV').slice(0, 6),
+  if (!Number.isFinite(mensaje.lat) || !Number.isFinite(mensaje.lng)) return;
+  const observador = mensaje.id;
+  const mapa = PRESENCIA.observaciones.get(observador) || new Map();
+  mapa.set(observador, {
+    lat: mensaje.lat,
+    lng: mensaje.lng,
+    acc: Number.isFinite(mensaje.acc) ? mensaje.acc : 15,
+    ts: mensaje.ts || Date.now(),
   });
+  for (const o of (Array.isArray(mensaje.obs) ? mensaje.obs : [])) {
+    if (!o || o.id === observador || o.id === PRESENCIA.id) continue;
+    if (!Number.isFinite(o.lat) || !Number.isFinite(o.lng)) continue;
+    mapa.set(o.id, {
+      lat: o.lat,
+      lng: o.lng,
+      acc: Number.isFinite(o.acc) ? o.acc : 15,
+      ts: o.ts || Date.now(),
+    });
+  }
+  PRESENCIA.observaciones.set(observador, mapa);
+
+  if (mensaje.rol === 'no-vidente') {
+    PRESENCIA.pares.set(observador, {
+      id: observador,
+      lat: mensaje.lat,
+      lng: mensaje.lng,
+      acc: Number.isFinite(mensaje.acc) ? mensaje.acc : 15,
+      x: 0,
+      y: 0,
+      accFus: Number.isFinite(mensaje.acc) ? mensaje.acc : 15,
+      n: 1,
+      edificio: null,
+      ts: mensaje.ts || Date.now(),
+      etiqueta: String(observador).slice(0, 6),
+    });
+  }
+  recalcularPares();
+  verificarInteriorAuto();
   pintarPares();
   actualizarPresencia();
 }
@@ -726,11 +831,26 @@ function pintarPares() {
   capa.textContent = '';
   const NS = 'http://www.w3.org/2000/svg';
   paresVisibles().forEach((p) => {
-    if (Number.isFinite(p.acc) && p.acc > 0) {
+    if (p.edificio) {
+      const b = BUILDINGS.find((x) => x[0] === p.edificio);
+      if (b) {
+        const marco = document.createElementNS(NS, 'rect');
+        marco.setAttribute('x', b[1] - b[3] / 2 - 10 / z);
+        marco.setAttribute('y', b[2] - b[4] / 2 - 10 / z);
+        marco.setAttribute('width', b[3] + 20 / z);
+        marco.setAttribute('height', b[4] + 20 / z);
+        marco.setAttribute('fill', 'none');
+        marco.setAttribute('stroke', '#7c3aed');
+        marco.setAttribute('stroke-width', 3 / z);
+        marco.setAttribute('stroke-dasharray', (9 / z) + ' ' + (6 / z));
+        capa.appendChild(marco);
+      }
+    }
+    if (Number.isFinite(p.accFus) && p.accFus > 0) {
       const halo = document.createElementNS(NS, 'circle');
       halo.setAttribute('cx', p.x);
       halo.setAttribute('cy', p.y);
-      halo.setAttribute('r', Math.max(2, p.acc / METROS_POR_PIXEL));
+      halo.setAttribute('r', Math.max(2, p.accFus / METROS_POR_PIXEL));
       halo.setAttribute('fill', 'none');
       halo.setAttribute('stroke', '#7c3aed');
       halo.setAttribute('stroke-width', 2 / z);
@@ -753,7 +873,8 @@ function pintarPares() {
     texto.setAttribute('font-weight', '800');
     texto.setAttribute('fill', '#4c1d95');
     const dist = Math.round(Math.hypot(p.x - dot.x, p.y - dot.y) * METROS_POR_PIXEL);
-    texto.textContent = p.etiqueta + (z >= 2 ? ' · ' + dist + ' m' : '');
+    texto.textContent = p.etiqueta + (z >= 2 ? ' · ' + dist + ' m' : '') +
+      (p.n > 1 ? ' · ' + p.n + ' señales' : '');
     capa.appendChild(circulo);
     capa.appendChild(texto);
   });
@@ -789,6 +910,12 @@ setInterval(() => {
     if (Date.now() - p.ts > 12000) PRESENCIA.pares.delete(id);
   }
   if (PRESENCIA.pares.size !== antes) { pintarPares(); actualizarPresencia(); }
+  for (const [observador, mapa] of PRESENCIA.observaciones) {
+    for (const [id, o] of mapa) {
+      if (Date.now() - o.ts > 20000) mapa.delete(id);
+    }
+    if (!mapa.size) PRESENCIA.observaciones.delete(observador);
+  }
 }, 3000);
 setInterval(() => {
   if (PRESENCIA.socket && PRESENCIA.socket.readyState === 1) publicarPresencia(true);
@@ -838,6 +965,8 @@ window.setUserPosition = (x, y, geo) => {
   PRESENCIA.x = dot.x;
   PRESENCIA.y = dot.y;
   publicarPresencia();
+  recalcularPares();
+  verificarInteriorAuto();
   placeDot();
   /* Centramos la vista en el punto sin anunciar ni volver a seleccionar nada. */
   centerOn(x, y);
@@ -1011,7 +1140,12 @@ function exitBuilding() {
 $('btnEnter').onclick = enterBuilding;
 $('btnPrev').onclick = () => step(-1);
 $('btnNext').onclick = () => step(1);
-$('inExit').onclick = exitBuilding;
+$('inExit').onclick = () => {
+  AUTO_INTERIOR.activo = false;
+  AUTO_INTERIOR.dentro = 0;
+  AUTO_INTERIOR.bloqueo = Date.now() + 15000;
+  exitBuilding();
+};
 $('inSpeak').onclick = () => {
   const texto = $('inRoom').textContent + '. ' + $('inNote').textContent;
   say(texto); announce(texto);

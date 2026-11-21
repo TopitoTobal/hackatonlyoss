@@ -22,6 +22,22 @@ sin credenciales, sin nombres y sin historial. Los pares expiran a los 12 s sin
 actualización. Si el broker no está disponible, la capa se oculta y el GPS y la
 voz siguen funcionando con normalidad.
 
+La precisión se fusiona entre pares: cada mensaje lleva un campo `obs` con las
+posiciones que ese nodo oyó directamente. Para cada persona se juntan todas las
+observaciones (la propia más las de quienes la ven) y se promedian con pesos
+`1/(accuracy² + 25)` y decaimiento temporal. El anillo morado usa esa precisión
+fusionada: con 1 señal de ±12 m da ~13 m, con 3 da ~7,5 m y con 5 da ~5,8 m.
+En pantalla se indica el número de señales cuando es mayor que 1. **No se usa
+altura ni piso**: el RFC sigue vigente para BLE/UWB y grafo completo.
+
+El mismo marco compartido permite detectar edificio: `edificioEn()` prueba los
+rectángulos de `BUILDINGS` con ~6 m de tolerancia. Si la persona en modo
+**no vidente** queda dentro de un edificio durante 3 muestras seguidas, el mapa
+selecciona esa **letra** y abre automáticamente su vista interior; si sale,
+vuelve al mapa. La salida manual bloquea la reentrada automática por 15 s. En
+el mapa del vidente, el edificio donde está cada par se resalta con un marco
+morado discontinuo.
+
 Cada dispositivo publica también su `latitude`/`longitude`/`accuracyM` crudos.
 El receptor convierte la posición ajena con **su propio primer fix como origen**
 (`geoAPlano`), así los puntos caen en el mismo marco local aunque cada celular

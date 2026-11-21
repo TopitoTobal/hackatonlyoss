@@ -1,6 +1,9 @@
 # Sistema Descentralizado de Localización Relativa en Campus Universitario
 
-> **Estado:** propuesta / RFC. No está implementada.
+> **Estado:** propuesta / RFC. Implementada en forma simplificada en `front/index.html`
+> (presencia MQTT, fusión por promedio ponderado de observaciones, sin altura y
+> entrada automática al interior del edificio). Quedan pendientes BLE/UWB,
+> barómetro y el grafo completo descrito más abajo.
 > **Fecha:** 2026-11-21.
 > **Relación con el repo:** extiende el módulo de GPS de `backend/src` y el mapa de `front/` sin cambiar sus contratos públicos.
 
