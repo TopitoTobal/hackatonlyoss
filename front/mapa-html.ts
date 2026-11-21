@@ -262,6 +262,7 @@ export const MAPA_HTML = `<!doctype html>
     <!-- Personas no videntes conectadas: solo se dibujan en modo vidente -->
     <svg width="1312" height="985" viewBox="0 0 1312 985" aria-hidden="true" class="pointer-events-none absolute left-0 top-0">
       <g id="peerLayer"></g>
+      <g id="ayudaLayer"></g>
     </svg>
 
     <!-- Punto azul: ubicación de la persona -->
@@ -282,6 +283,9 @@ export const MAPA_HTML = `<!doctype html>
   0 no videntes conectadas
 </div>
 <div id="scaleBar"><span id="scaleText">20 m</span></div>
+<div id="ayudaBanner" role="status" aria-live="assertive" aria-atomic="true"
+     class="hidden rounded-full border-[3px] border-black bg-red-700 px-3 py-2 text-[14px] font-extrabold text-white">
+</div>
 
 <!-- Panel que aparece al elegir un edificio -->
 <section id="sheet" role="region" aria-label="Información del edificio seleccionado"
@@ -590,6 +594,7 @@ voiceLabel();
    efímero y no se guarda nombre, ruta ni historial. Si el broker falla,
    el mapa y el GPS siguen funcionando igual; solo se pierde la capa social. */
 const PRESENCIA_TOPIC = 'hackatonlyoss/campus/presencia/v1';
+const AYUDA_TOPIC = 'hackatonlyoss/campus/ayuda/v1';
 const PRESENCIA_BROKER = 'wss://broker.emqx.io:8084/mqtt';
 const PRESENCIA = {
   id: 'NV-' + Math.random().toString(36).slice(2, 8).toUpperCase(),
@@ -607,6 +612,12 @@ const PRESENCIA = {
   ultimoAnuncio: -1,
   socket: null,
   reintento: null,
+};
+/* Pedidos de ayuda: solo se muestran a personas videntes y caducan solos. */
+const AYUDA = {
+  activo: false,
+  ultimoEnvio: 0,
+  pidiendo: new Map(),
 };
 
 function bytesTexto(texto) { return new TextEncoder().encode(texto); }
@@ -660,8 +671,13 @@ function mqttLeer(datos) {
   if (tipo === 2) {
     PRESENCIA.conectado = (datos[i + 1] & 1) === 0;
     if (PRESENCIA.conectado && PRESENCIA.socket) {
-      PRESENCIA.socket.send(mqttPaquete(8, 2, [0, 1, ...mqttTexto(PRESENCIA_TOPIC), 0]));
+      PRESENCIA.socket.send(mqttPaquete(8, 2, [
+        0, 1,
+        ...mqttTexto(PRESENCIA_TOPIC), 0,
+        ...mqttTexto(AYUDA_TOPIC), 0,
+      ]));
       publicarPresencia(true);
+      publicarAyuda(true);
     }
     actualizarPresencia();
   } else if (tipo === 3) {
@@ -669,9 +685,9 @@ function mqttLeer(datos) {
     i += 2;
     const tema = new TextDecoder().decode(datos.slice(i, i + tam));
     i += tam;
-    if (tema !== PRESENCIA_TOPIC) return;
     const mensaje = JSON.parse(new TextDecoder().decode(datos.slice(i, fin)));
-    recibirPresencia(mensaje);
+    if (tema === PRESENCIA_TOPIC) recibirPresencia(mensaje);
+    else if (tema === AYUDA_TOPIC) recibirAyuda(mensaje);
   }
 }
 function publicarPresencia(fuerza = false) {
@@ -883,6 +899,116 @@ function verificarInteriorAuto() {
     }
   }
 }
+function direccionHacia(x, y) {
+  const dx = x - dot.x, dy = y - dot.y, dist = Math.hypot(dx, dy);
+  if (dist < 40) return 'junto a ti';
+  const ang = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
+  return 'a ' + Math.round(dist * METROS_POR_PIXEL) + ' metros al ' +
+    DIRS[Math.round(ang / 45) % 8];
+}
+function publicarAyuda(fuerza = false) {
+  const ws = PRESENCIA.socket;
+  if (!ws || ws.readyState !== 1 || !PRESENCIA.conectado) return;
+  if (PRESENCIA.rol !== 'no-vidente') return;
+  const ahora = Date.now();
+  if (!fuerza && ahora - AYUDA.ultimoEnvio < 3000) return;
+  AYUDA.ultimoEnvio = ahora;
+  const g = PRESENCIA.geo;
+  const cuerpo = {
+    id: PRESENCIA.id,
+    rol: 'no-vidente',
+    activo: AYUDA.activo,
+    lat: g && Number.isFinite(g.latitude) ? Number(g.latitude.toFixed(6)) : null,
+    lng: g && Number.isFinite(g.longitude) ? Number(g.longitude.toFixed(6)) : null,
+    acc: g && Number.isFinite(g.accuracyM) ? Math.round(g.accuracyM) : null,
+    x: Math.round(PRESENCIA.x),
+    y: Math.round(PRESENCIA.y),
+    ts: ahora,
+  };
+  ws.send(mqttPaquete(3, 0, [...mqttTexto(AYUDA_TOPIC), ...bytesTexto(JSON.stringify(cuerpo))]));
+}
+function recibirAyuda(mensaje) {
+  if (!mensaje || !mensaje.id || mensaje.id === PRESENCIA.id) return;
+  if (!Number.isFinite(mensaje.lat) || !Number.isFinite(mensaje.lng)) return;
+  const id = String(mensaje.id).slice(0, 12);
+  if (!mensaje.activo) {
+    if (AYUDA.pidiendo.delete(id)) {
+      announce('La petición de ayuda de ' + id + ' fue cancelada.');
+    }
+  } else if (PRESENCIA.rol === 'vidente') {
+    const punto = geoAPlano(mensaje.lat, mensaje.lng);
+    const eraNueva = !AYUDA.pidiendo.has(id);
+    AYUDA.pidiendo.set(id, {
+      id,
+      x: punto ? punto.x : (Number.isFinite(mensaje.x) ? mensaje.x : dot.x),
+      y: punto ? punto.y : (Number.isFinite(mensaje.y) ? mensaje.y : dot.y),
+      acc: Number.isFinite(mensaje.acc) ? mensaje.acc : 15,
+      ts: Date.now(),
+    });
+    if (eraNueva) announce('Petición de ayuda de ' + id + '. ' + direccionHacia(AYUDA.pidiendo.get(id).x, AYUDA.pidiendo.get(id).y) + '.');
+  }
+  pintarAyudas();
+  actualizarAyudaBanner();
+}
+function pintarAyudas() {
+  const capa = $('ayudaLayer');
+  if (!capa) return;
+  capa.textContent = '';
+  if (PRESENCIA.rol !== 'vidente') return;
+  const NS = 'http://www.w3.org/2000/svg';
+  AYUDA.pidiendo.forEach((a) => {
+    const g = document.createElementNS(NS, 'g');
+    const titulo = document.createElementNS(NS, 'title');
+    titulo.textContent = 'Petición de ayuda de ' + a.id + '. ' + direccionHacia(a.x, a.y);
+    g.appendChild(titulo);
+    const r = document.createElementNS(NS, 'circle');
+    r.setAttribute('cx', a.x); r.setAttribute('cy', a.y);
+    r.setAttribute('r', Math.max(7, 18 / z));
+    r.setAttribute('fill', '#b91c1c'); r.setAttribute('stroke', '#fff');
+    r.setAttribute('stroke-width', Math.max(2, 4 / z));
+    g.appendChild(r);
+    const t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', a.x); t.setAttribute('y', a.y + 7 / z);
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('font-size', Math.max(16, 26 / z));
+    t.setAttribute('font-weight', '900'); t.setAttribute('fill', '#fff');
+    t.textContent = '!';
+    g.appendChild(t);
+    capa.appendChild(g);
+  });
+}
+function actualizarAyudaBanner() {
+  const banner = $('ayudaBanner');
+  if (!banner) return;
+  if (PRESENCIA.rol === 'no-vidente' && AYUDA.activo) {
+    banner.classList.remove('hidden');
+    banner.classList.remove('bg-red-700');
+    banner.classList.add('bg-purple-800');
+    banner.textContent = 'Tu petición de ayuda está activa. Los videntes pueden verte.';
+    return;
+  }
+  if (PRESENCIA.rol !== 'vidente' || AYUDA.pidiendo.size === 0) {
+    banner.classList.add('hidden');
+    return;
+  }
+  banner.classList.remove('hidden');
+  banner.classList.remove('bg-purple-800');
+  banner.classList.add('bg-red-700');
+  const texto = [...AYUDA.pidiendo.values()]
+    .map((a) => a.id + ' ' + direccionHacia(a.x, a.y))
+    .join(' · ');
+  banner.textContent = 'Pedido de ayuda: ' + texto;
+}
+window.setAyuda = (activo) => {
+  const nuevo = !!activo;
+  if (nuevo === AYUDA.activo) return;
+  AYUDA.activo = nuevo;
+  publicarAyuda(true);
+  actualizarAyudaBanner();
+  if (nuevo) announce('Petición de ayuda enviada a las personas videntes.');
+  else announce('Petición de ayuda cancelada.');
+};
+
 function recibirPresencia(mensaje) {
   if (!mensaje || mensaje.id === PRESENCIA.id) return;
   if (!Number.isFinite(mensaje.lat) || !Number.isFinite(mensaje.lng)) return;
@@ -1016,6 +1142,12 @@ function configurarPresencia(rol) {
 }
 /* Expirar pares que dejan de emitir y mantener vivo el canal MQTT. */
 setInterval(() => {
+  publicarAyuda();
+  const antesAyuda = AYUDA.pidiendo.size;
+  for (const [id, a] of AYUDA.pidiendo) {
+    if (Date.now() - a.ts > 12000) AYUDA.pidiendo.delete(id);
+  }
+  if (AYUDA.pidiendo.size !== antesAyuda) { pintarAyudas(); actualizarAyudaBanner(); }
   const antes = PRESENCIA.pares.size;
   for (const [id, p] of PRESENCIA.pares) {
     if (Date.now() - p.ts > 12000) PRESENCIA.pares.delete(id);
@@ -1048,6 +1180,10 @@ setInterval(() => {
 function aplicarModo(modo) {
   /* El mapa recibe el modo en cada muestra GPS; solo reaccionamos al cambio. */
   if (PRESENCIA.rol === modo) return;
+  if (AYUDA.activo && modo !== 'no-vidente') {
+    AYUDA.activo = false;
+    publicarAyuda(true);
+  }
   document.body.dataset.modo = modo;
   if (modo === 'no-vidente') {
     autoVoice = true;
@@ -1085,6 +1221,9 @@ window.setUserPosition = (x, y, geo) => {
   recalcularPares();
   verificarInteriorAuto();
   publicarPresencia();
+  publicarAyuda();
+  pintarAyudas();
+  actualizarAyudaBanner();
   placeDot();
   /* Centramos la vista en el punto sin anunciar ni volver a seleccionar nada. */
   centerOn(x, y);
@@ -1108,6 +1247,9 @@ window.addEventListener('message', (event) => {
         longitude: data.longitude,
         accuracyM: data.accuracyM,
       });
+    }
+    if (data && data.type === 'ayuda' && typeof data.activo === 'boolean') {
+      window.setAyuda(data.activo);
     }
   } catch (e) {}
 });

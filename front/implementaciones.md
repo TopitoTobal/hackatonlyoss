@@ -5,7 +5,8 @@ Este archivo es el handoff para quien construye el mapa con Tailwind: aquí est�
 todo lo que ya puedes consumir desde `front/`. El mapa vive en
 `front/index.html` y se carga desde `App.tsx` a través de `Mapa.tsx`
 (`WebView` en nativo, `Mapa.web.tsx` con `iframe` en web), enviándole la
-ubicación del GPS con `postMessage({ type: 'position', x, y, latitude, longitude, accuracyM })`.
+ubicación del GPS con `postMessage({ type: 'position', x, y, latitude, longitude, accuracyM })`
+y el estado del pedido de ayuda con `postMessage({ type: 'ayuda', activo })`.
 La conversión lat/lng → píxeles del plano está en `App.tsx` (`aPuntoPlano`).
 En el prototipo el primer fix GPS preciso se ancla al centro del plano
 `(690, 500)` y los puntos siguientes son desplazamientos relativos desde ahí
@@ -35,6 +36,30 @@ la izquierda. La presencia usa MQTT sobre WSS
 sin credenciales, sin nombres y sin historial. Los pares expiran a los 12 s sin
 actualización. Si el broker no está disponible, la capa se oculta y el GPS y la
 voz siguen funcionando con normalidad.
+
+### Pedido de ayuda (botón del teléfono)
+
+En modo **no vidente** aparece un botón **Pedir ayuda** en la barra superior.
+Al tocarlo se publica un aviso en el tema MQTT
+`hackatonlyoss/campus/ayuda/v1` (mismo broker WSS que la presencia) con el ID
+efímero, el rol, `lat`/`lng`/`acc` del GPS satelital crudo y un `ts`. Mientras
+está activo se repite cada 3 s; al volver a tocar el botón se publica
+`activo: false` y desaparece. Cambiar de modo o detener el GPS también cancela
+el pedido.
+
+En modo **vidente**, cada pedido activo se dibuja como un marcador rojo con un
+`!` y un anillo, con `<title>` accesible, y aparece un banner rojo arriba con
+el ID y la distancia/dirección (`"NV-XXXX a 12 metros al norte"`). El aviso se
+anuncia por `aria-live="assertive"` al llegar, y se cancela/expira a los 12 s
+sin actualización. En el teléfono de quien pide ayuda, el botón cambia a
+**Cancelar ayuda** y un texto `aria-live="assertive"` confirma el estado.
+
+La posición que se envía es la del GPS del emisor y se convierte con el mismo
+marco de primer fix (`geoAPlano`), por lo que el marcador cae donde corresponde
+aunque cada celular haya empezado en un lugar distinto. No se envían nombres,
+rutas ni historial; solo el ID efímero y la ubicación mientras el pedido está
+activo. Si el broker falla, el botón y el GPS siguen funcionando, pero nadie
+recibe el aviso.
 
 La precisión se fusiona entre pares siguiendo el RFC, con un **árbol de
 confianza** que evita el arrastre entre personas:
@@ -134,7 +159,8 @@ que el GPS funciona igual en los dos casos.
 Ya hay una app Expo mínima en esta misma carpeta con un panel que muestra
 estado del GPS, velocidad en km/h, última posición, estadísticas y alertas.
 Al cargar la pantalla se pide permiso y se inicia el seguimiento solo; los
-botones `Activar GPS` / `Detener` siguen disponibles para reiniciarlo o pausarlo.
+botones `Activar GPS` / `Detener` siguen disponibles para reiniciarlo o pausarlo,
+y en modo no vidente se suma `Pedir ayuda` / `Cancelar ayuda`.
 
 ```sh
 cd front

@@ -152,6 +152,7 @@ export default function App() {
   const [alerta, setAlerta] = useState('Sin alertas')
   const [muestras, setMuestras] = useState(0)
   const [velocidad, setVelocidad] = useState('—')
+  const [pidiendoAyuda, setPidiendoAyuda] = useState(false)
   const arrancandoRef = useRef(false)
   const origenRef = useRef<Origen | null>(null)
 
@@ -255,6 +256,7 @@ export default function App() {
     setVelocidad('—')
     origenRef.current = null
     setPunto({ x: CENTRO.x, y: CENTRO.y })
+    setPidiendoAyuda(false)
   }
 
   function irAModo(nuevo: Modo) {
@@ -262,6 +264,7 @@ export default function App() {
     if (win.history?.pushState) win.history.pushState({}, '', RUTAS[nuevo])
     origenRef.current = null
     setPunto({ x: CENTRO.x, y: CENTRO.y })
+    setPidiendoAyuda(false)
     setModo(nuevo)
   }
 
@@ -277,7 +280,7 @@ export default function App() {
     <View style={styles.contenedor} accessibilityRole="main">
       <StatusBar style="dark" />
 
-      <Mapa posicion={punto} modo={modo} />
+      <Mapa posicion={punto} modo={modo} ayuda={pidiendoAyuda} />
 
       <View style={styles.overlay} pointerEvents="box-none">
         <View style={styles.barra}>
@@ -304,6 +307,20 @@ export default function App() {
           <View style={styles.boton}>
             <Button title="Detener" onPress={detener} color="#991b1b" />
           </View>
+          {modo === 'no-vidente' && (
+            <View style={styles.boton}>
+              <Button
+                title={pidiendoAyuda ? 'Cancelar ayuda' : 'Pedir ayuda'}
+                accessibilityLabel={
+                  pidiendoAyuda
+                    ? 'Cancelar petición de ayuda a las personas videntes'
+                    : 'Pedir ayuda: avisar a las personas videntes de que necesito ayuda'
+                }
+                onPress={() => setPidiendoAyuda((activo) => !activo)}
+                color={pidiendoAyuda ? '#7c3aed' : '#991b1b'}
+              />
+            </View>
+          )}
         </View>
 
         <View style={styles.info}>
@@ -319,6 +336,13 @@ export default function App() {
           <Text style={styles.alerta} accessibilityLiveRegion="polite">
             {alerta}
           </Text>
+          {modo === 'no-vidente' && (
+            <Text style={styles.texto} accessibilityLiveRegion="assertive">
+              {pidiendoAyuda
+                ? 'Petición de ayuda activa: los videntes pueden verte.'
+                : 'Sin petición de ayuda.'}
+            </Text>
+          )}
         </View>
       </View>
     </View>
