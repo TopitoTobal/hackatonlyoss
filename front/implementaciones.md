@@ -64,6 +64,36 @@ rutas ni historial; solo el ID efímero y la ubicación mientras el pedido está
 activo. Si el broker falla, el botón y el GPS siguen funcionando, pero nadie
 recibe el aviso.
 
+#### Ir a ayudar (enganche con el generador de rutas)
+
+Cuando hay pedidos activos, el banner del vidente muestra un botón **Ir a
+ayudar** (o **Ver ruta** si ya está calculada). Al tocarlo se genera una ruta
+desde la posición actual hasta la persona más cercana que pidió ayuda y se
+dibuja como una **línea roja discontinua** en `#rutaLayer`, con un `<title>`
+accesible y un anuncio por voz con la distancia y dirección. La ruta se
+recalcula mientras la persona se mueve y se borra automáticamente si el pedido
+se cancela, expira o se cambia de modo.
+
+El generador de rutas de Danko se puede conectar sin tocar este código
+registrándolo desde el mapa:
+
+```js
+window.registrarGeneradorRutas(function (args) {
+  // args.desde = { x, y } en pixeles del plano; args.hasta = { x, y }
+  // Debe devolver [{ x, y }, ...] o { puntos: [{ x, y }, ...] }.
+  return [{ x: args.desde.x, y: args.desde.y }, { x: args.hasta.x, y: args.hasta.y }]
+})
+```
+
+También se detectan `window.generarRuta`, `window.generarRutaHacia` y
+`window.rutas.generar`, con las mismas dos firmas aceptadas
+(`fn({ desde, hasta })` o `fn(desde, hasta)`). Si ninguno está disponible,
+`rutaPorSenderos()` arma un grafo con los 51 vértices de los senderos del plano
+(`g[stroke="#475569"] path`), hace Dijkstra y une el punto propio y el destino
+con el camino más corto; así la función ya funciona antes de que llegue el
+módulo de Danko. El hook y el fallback viven en `front/index.html`; no hay que
+cambiar el contrato de `postMessage`.
+
 La precisión se fusiona entre pares siguiendo el RFC, con un **árbol de
 confianza** que evita el arrastre entre personas:
 
