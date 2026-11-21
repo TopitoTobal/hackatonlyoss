@@ -4,7 +4,6 @@ import { StatusBar } from 'expo-status-bar'
 import * as Location from 'expo-location'
 import { useEffect, useRef, useState } from 'react'
 import { Button, StyleSheet, Text, View } from 'react-native'
-import { WebView } from 'react-native-webview'
 
 import {
   createSafetyMonitor,
@@ -19,7 +18,7 @@ import {
   type WallSegment,
 } from '../backend/src'
 
-import { MAPA_HTML } from './mapa-html'
+import Mapa, { type PuntoPlano } from './Mapa'
 
 const PAREDES: WallSegment[] = []
 const CAMINO: RoutePath = { id: 'demo', points: [] }
@@ -31,8 +30,6 @@ const PLANO = { centroX: 690, centroY: 500 }
 const REFERENCIA = { latitude: 20.67, longitude: -103.35 }
 const METROS_POR_PIXEL = 0.75
 
-type PuntoPlano = { x: number; y: number }
-
 function aPuntoPlano(latitude: number, longitude: number): PuntoPlano {
   const metrosPorGradoLat = 111_320
   const metrosPorGradoLng =
@@ -43,21 +40,17 @@ function aPuntoPlano(latitude: number, longitude: number): PuntoPlano {
 }
 
 export default function App() {
-  const webViewRef = useRef<WebView<object> | null>(null)
   const trackerRef = useRef<ForegroundTracker | null>(null)
   const monitorRef = useRef<SafetyMonitor | null>(null)
-  const puntoRef = useRef<PuntoPlano>({ x: PLANO.centroX, y: PLANO.centroY })
 
+  const [punto, setPunto] = useState<PuntoPlano>({
+    x: PLANO.centroX,
+    y: PLANO.centroY,
+  })
   const [estado, setEstado] = useState('Detenido')
   const [ultimaPosicion, setUltimaPosicion] = useState('—')
   const [estadisticas, setEstadisticas] = useState('—')
   const [alerta, setAlerta] = useState('Sin alertas')
-
-  function enviarPosicion(punto: PuntoPlano) {
-    webViewRef.current?.postMessage(
-      JSON.stringify({ type: 'position', x: punto.x, y: punto.y }),
-    )
-  }
 
   useEffect(() => {
     monitorRef.current = createSafetyMonitor({
@@ -90,10 +83,7 @@ export default function App() {
       trackerRef.current = tracker
 
       tracker.subscribe((muestra) => {
-        const punto = aPuntoPlano(muestra.latitude, muestra.longitude)
-        puntoRef.current = punto
-        enviarPosicion(punto)
-
+        setPunto(aPuntoPlano(muestra.latitude, muestra.longitude))
         setUltimaPosicion(
           `${muestra.latitude.toFixed(5)}, ${muestra.longitude.toFixed(5)} · ${formatSpeed(muestra.computedSpeedMps)}`,
         )
@@ -118,14 +108,7 @@ export default function App() {
     <View style={styles.contenedor}>
       <StatusBar style="dark" />
 
-      <WebView<object>
-        ref={webViewRef}
-        source={{ html: MAPA_HTML }}
-        style={styles.mapa}
-        originWhitelist={['*']}
-        javaScriptEnabled
-        onLoadEnd={() => enviarPosicion(puntoRef.current)}
-      />
+      <Mapa posicion={punto} />
 
       <View style={styles.overlay} pointerEvents="box-none">
         <View style={styles.barra}>
@@ -158,10 +141,6 @@ export default function App() {
 
 const styles = StyleSheet.create({
   contenedor: {
-    flex: 1,
-    backgroundColor: '#e2e8f0',
-  },
-  mapa: {
     flex: 1,
     backgroundColor: '#e2e8f0',
   },
