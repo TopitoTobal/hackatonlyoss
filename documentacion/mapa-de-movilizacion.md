@@ -138,4 +138,6 @@ El diseño no puede depender solo del color ni de la vista. Se contemplan las si
 
 ---
 
+**Ideas relacionadas:** [Sistema Descentralizado de Localización Relativa en Campus Universitario](ideas/localizacion-relativa-campus.md) — propuesta para complementar el GPS con posiciones relativas entre nodos, altura/pisos y detección robusta de entrada.
+
 Este documento es una propuesta inicial y debe evolucionar con el feedback del equipo y de las personas usuarias.
