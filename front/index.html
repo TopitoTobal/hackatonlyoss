@@ -505,8 +505,15 @@ voiceLabel();
    Solo movemos el punto y la guía: no llamamos a select() para que la voz
    automática no se repita en cada muestra del GPS. */
 window.setUserPosition = (x, y) => {
+  /* El GPS puede venir fuera del plano (coordenadas lejanas o poca precisión).
+     Lo fijamos dentro de los límites para que el punto nunca desaparezca. */
+  const MARGEN = 16;
+  x = Math.min(1312 - MARGEN, Math.max(MARGEN, x));
+  y = Math.min(985 - MARGEN, Math.max(MARGEN, y));
   dot = { x, y };
   placeDot();
+  /* Centramos la vista en el punto sin anunciar ni volver a seleccionar nada. */
+  centerOn(x, y);
   if (!selected) return;
   const i = info(selected);
   $('sheetDir').textContent = i.dir;
