@@ -30,10 +30,27 @@ El interior de los edificios es esquemático hasta que haya planos oficiales.
 - El plano base se redibujó como mapa continuo: un patrón de manzanas cubre todo
   el lienzo y el campus, la Avenida Placeres y las calles llegan hasta los cuatro
   bordes. No quedan franjas lisas ("bordes blancos") alrededor del dibujo.
-  Las coordenadas de los edificios se conservan salvo C, que pasó de
-  `centroY = 340` a `390` para no tapar Avenida Placeres (y=278–312): ahora
-  empieza en y=328.5, con 16.5 px de separación. El GPS y las guías siguen
-  siendo válidos.
+- El catastro se ajustó a 18 recintos. Cambios principales respecto a la versión
+  anterior: **C** quedó en `(750, 372, 460×110)` (borde norte y=317, 5 px al sur
+  de Avenida Placeres) y su lado este se alinea con **B** `(835, 510, 290×130)`;
+  **A** pasó a `(840, 720, 170×210)` y **U** a `(710, 690, 60×170)`, dejando un
+  pasillo estrecho de 15 px entre ambos; **E** se corrió a `(1050, 780)` para no
+  chocar con **F2**; **F2** y **L** usan ahora 48 px de ancho mínimo (mismo
+  mínimo táctil que el render) y no se solapan con A/E ni con la cancha. Se
+  agregaron los recintos pequeños **R2**, **J** y **O**.
+- La cancha principal `8007` ahora es `x=450, y=450, w=170, h=260`, con la
+  ladera (curvas de nivel) al sur cerca de **H**. Los 18 senderos/calles están
+  duplicados con exactamente el mismo `d` en la capa de contorno
+  (`#475569`, 24 px) y en la de relleno blanco (16 px). Conectan Placeres→C→B,
+  B→U→A, el circuito de la cancha→H, Pasaje Valdés→M/M2, B/K/O→Subida San Luis
+  y D/E/F2/F→T.
+- El interior (`buildPlan(w, h)`) sigue siendo esquemático, pero ya deriva la
+  orientación del pasillo y el tamaño de las salas de las nuevas proporciones
+  (`w/h`) de cada edificio: C/B/F horizontales, U/A/F2 verticales.
+- Queda pendiente una medición exacta en píxeles sobre el catastro original para
+  los recintos pequeños y los giros de los senderos; las coordenadas actuales
+  son una aproximación visual consistente con el lienzo de 1312×985. El puente
+  `setUserPosition(x, y)`, el teclado y la voz no se modificaron.
 - En el diálogo interior el foco queda atrapado, `Escape` sale y el fondo se
   marca `inert`. Lighthouse: accesibilidad y buenas prácticas 1.00.
 

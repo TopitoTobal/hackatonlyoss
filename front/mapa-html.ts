@@ -153,46 +153,73 @@ export const MAPA_HTML = `<!doctype html>
       <rect x="284" y="0" width="16" height="278" fill="#475569"/>
       <rect x="284" y="312" width="16" height="673" fill="#475569"/>
 
-      <!-- 5. Canchas y zonas deportivas -->
-      <rect x="462" y="485" width="146" height="220" rx="4" fill="#166534"/>
-      <rect x="472" y="495" width="126" height="200" rx="2" fill="none" stroke="#ffffff" stroke-width="2" opacity=".55"/>
-      <line x1="535" y1="495" x2="535" y2="695" stroke="#ffffff" stroke-width="2" opacity=".55"/>
-      <rect x="1062" y="672" width="64" height="128" rx="3" fill="#9a3412"/>
-      <line x1="1062" y1="736" x2="1126" y2="736" stroke="#ffffff" stroke-width="2" opacity=".55"/>
+      <!-- 5. Cancha principal 8007 y tenis (zona inferior derecha) -->
+      <rect x="450" y="450" width="170" height="260" rx="4" fill="#166534"/>
+      <rect x="460" y="460" width="150" height="240" rx="2" fill="none" stroke="#ffffff" stroke-width="2" opacity=".55"/>
+      <line x1="535" y1="460" x2="535" y2="700" stroke="#ffffff" stroke-width="2" opacity=".55"/>
+      <rect x="1130" y="690" width="70" height="120" rx="3" fill="#9a3412"/>
+      <line x1="1130" y1="750" x2="1200" y2="750" stroke="#ffffff" stroke-width="2" opacity=".55"/>
 
-      <!-- 6. Calles internas: llegan hasta los bordes del campus -->
+      <!-- Ladera / talud al sur de la cancha: curvas de nivel cerca de H -->
+      <g fill="none" stroke="#a8a29e" stroke-width="2" opacity=".7">
+        <path d="M470 790 Q590 730 710 790"/>
+        <path d="M460 830 Q590 770 720 830"/>
+        <path d="M450 870 Q590 810 730 870"/>
+      </g>
+
+      <!-- 6. Senderos y calles internas: contorno oscuro y centro blanco
+             usan EXACTAMENTE los mismos trazos (mismo d en los dos grupos). -->
       <g fill="none" stroke-linecap="round" stroke-linejoin="round">
         <g stroke="#475569" stroke-width="24">
-          <path d="M655 461 C655 490 662 500 690 502 L722 505"/>
-          <path d="M690 502 C670 510 665 540 668 580 L690 700 L705 770 L890 800"/>
-          <path d="M600 462 L940 462 L950 560 L985 600"/>
-          <path d="M600 462 L470 440 L385 430 L300 430"/>
-          <path d="M880 600 L880 730 L945 800"/>
-          <path d="M890 800 L945 880 L1130 885 L1312 900"/>
-          <path d="M1020 700 L1060 740 L1190 800 L1312 830"/>
-          <path d="M705 770 L705 985"/>
-          <path d="M365 312 L365 430"/>
+          <path d="M740 312 L740 317"/>
+          <path d="M740 427 L740 445"/>
+          <path d="M700 575 L710 605"/>
+          <path d="M740 690 L755 690"/>
+          <path d="M520 380 L430 380 L355 405 L270 355"/>
+          <path d="M300 415 L415 440 L450 450"/>
+          <path d="M450 450 L415 580 L450 710 L535 740"/>
+          <path d="M620 450 L650 580 L668 640 L600 740"/>
+          <path d="M535 740 L590 780 L590 820 L590 985"/>
+          <path d="M980 510 L1030 510 L1060 455 L1090 455"/>
+          <path d="M980 372 L1040 372 L1102 340"/>
+          <path d="M1100 455 L1100 540"/>
+          <path d="M1100 580 L1140 620 L1140 860"/>
+          <path d="M1020 745 L1020 757"/>
+          <path d="M925 785 L941 785"/>
+          <path d="M955 785 L955 860 L1050 860"/>
+          <path d="M1050 802 L1050 860"/>
+          <path d="M1140 860 L1175 860 L1175 810"/>
         </g>
         <g stroke="#ffffff" stroke-width="16">
-          <path d="M655 461 C655 490 662 500 690 502 L722 505"/>
-          <path d="M690 502 C670 510 665 540 668 580 L690 700 L705 770 L890 800"/>
-          <path d="M600 462 L940 462 L950 560 L985 600"/>
-          <path d="M600 462 L470 440 L385 430 L300 430"/>
-          <path d="M880 600 L880 730 L945 800"/>
-          <path d="M890 800 L945 880 L1130 885 L1312 900"/>
-          <path d="M1020 700 L1060 740 L1190 800 L1312 830"/>
-          <path d="M705 770 L705 985"/>
-          <path d="M365 312 L365 430"/>
+          <path d="M740 312 L740 317"/>
+          <path d="M740 427 L740 445"/>
+          <path d="M700 575 L710 605"/>
+          <path d="M740 690 L755 690"/>
+          <path d="M520 380 L430 380 L355 405 L270 355"/>
+          <path d="M300 415 L415 440 L450 450"/>
+          <path d="M450 450 L415 580 L450 710 L535 740"/>
+          <path d="M620 450 L650 580 L668 640 L600 740"/>
+          <path d="M535 740 L590 780 L590 820 L590 985"/>
+          <path d="M980 510 L1030 510 L1060 455 L1090 455"/>
+          <path d="M980 372 L1040 372 L1102 340"/>
+          <path d="M1100 455 L1100 540"/>
+          <path d="M1100 580 L1140 620 L1140 860"/>
+          <path d="M1020 745 L1020 757"/>
+          <path d="M925 785 L941 785"/>
+          <path d="M955 785 L955 860 L1050 860"/>
+          <path d="M1050 802 L1050 860"/>
+          <path d="M1140 860 L1175 860 L1175 810"/>
         </g>
       </g>
 
       <!-- 7. Etiquetas -->
       <g font-family="system-ui, sans-serif" font-weight="700" text-anchor="middle">
-        <text x="535" y="600" font-size="20" fill="#ffffff">CANCHA</text>
-        <text x="1094" y="740" font-size="16" fill="#ffffff">TENIS</text>
+        <text x="535" y="585" font-size="20" fill="#ffffff">8007</text>
+        <text x="1165" y="755" font-size="16" fill="#ffffff">TENIS</text>
         <text x="660" y="301" font-size="20" fill="#ffffff">AVENIDA PLACERES</text>
         <text x="142" y="160" font-size="17" fill="#475569">BARRIO NORTE</text>
-        <text x="1170" y="950" font-size="17" fill="#365314">CAMPUS SUR</text>
+        <text x="590" y="830" font-size="16" fill="#78716c">LADERA</text>
+        <text x="1170" y="950" font-size="17" fill="#365314">SUBIDA SAN LUIS</text>
       </g>
     </svg>
 
@@ -204,6 +231,19 @@ export const MAPA_HTML = `<!doctype html>
 
     <!-- Botones de edificios (los crea el script) -->
     <div id="buildings"></div>
+
+    <!-- Detalles de forma (patios y salientes). Van encima de los botones pero
+         no capturan eventos: el control accesible sigue siendo cada botón. -->
+    <svg width="1312" height="985" viewBox="0 0 1312 985" aria-hidden="true" class="pointer-events-none absolute left-0 top-0">
+      <g fill="none" stroke="#0f172a" stroke-width="3" stroke-dasharray="7 5" opacity=".75">
+        <rect x="810" y="485" width="90" height="50" rx="4"/>
+        <path d="M775 625 L825 625 L825 615"/>
+        <path d="M875 825 L925 825 L925 800"/>
+        <path d="M975 780 L1025 770 L1125 770 L1125 802 L975 802 Z"/>
+        <path d="M950 900 L950 860 L1170 860"/>
+        <path d="M336 530 L384 410"/>
+      </g>
+    </svg>
 
     <!-- Punto azul: ubicación de la persona -->
     <div id="dotHalo" aria-hidden="true" class="pointer-events-none absolute h-10 w-10 rounded-full bg-sky-500/30"></div>
@@ -265,21 +305,24 @@ export const MAPA_HTML = `<!doctype html>
    Coordenadas en píxeles del plano oficial (1312 x 985).
    [id, centroX, centroY, ancho, alto, descripción] */
 const BUILDINGS = [
-  ['C', 756, 390, 338, 123, 'Norte. Es el edificio más grande, junto a Avenida Placeres.'],
-  ['R', 437, 340, 60, 40, 'Noroeste, junto a Avenida Placeres y Pasaje Valdés.'],
-  ['M', 365, 490, 55, 115, 'Noroeste, junto a Pasaje Valdés, al oeste de la cancha.'],
-  ['M2', 420, 530, 45, 42, 'Noroeste, al este del Edificio M.'],
-  ['B', 836, 528, 228, 125, 'Centro-norte. Tiene un patio interior y está al sur del Edificio C.'],
-  ['K', 975, 440, 50, 60, 'Noreste, junto a la Subida San Luis.'],
-  ['L', 622, 596, 26, 64, 'Oeste, pegado al borde este de la cancha.'],
-  ['U', 746, 660, 54, 120, 'Centro-oeste, al oeste del Edificio A y al sur del Edificio B.'],
-  ['A', 845, 715, 110, 150, 'Centro-sur, al sur del patio central. Está al este del Edificio U.'],
-  ['D', 968, 661, 103, 98, 'Centro-este, al este del patio central y al norte del Edificio E.'],
-  ['E', 1002, 735, 115, 32, 'Centro-este, justo al sur del Edificio D.'],
-  ['H', 602, 752, 60, 36, 'Suroeste, bajo la cancha, sobre la ladera.'],
-  ['F2', 948, 800, 22, 70, 'Sur, entre el Edificio D y el Edificio F.'],
-  ['F', 1032, 860, 215, 32, 'Sur, a lo largo de Avenida España.'],
-  ['T', 1226, 830, 65, 70, 'Extremo sureste del campus.']
+  ['C', 750, 372, 460, 110, 'Norte. Bloque horizontal largo al sur de Avenida Placeres y al norte de B; su extremo este se alinea con B y llega al acceso de Subida San Luis.'],
+  ['R', 235, 345, 70, 45, 'Noroeste, junto a Avenida Placeres y Pasaje Valdés.'],
+  ['R2', 330, 375, 48, 40, 'Noroeste, recinto pequeño al este-sur de R, junto a Pasaje Valdés.'],
+  ['M', 360, 470, 48, 120, 'Oeste. Bloque alargado con ligera inclinación, pegado a Pasaje Valdés y al oeste de la cancha 8007.'],
+  ['M2', 415, 440, 48, 40, 'Oeste, adyacente al este-sur de M, en el borde superior izquierdo de la cancha 8007.'],
+  ['B', 835, 510, 290, 130, 'Centro-norte. Bloque en U con patio interior, al sur de C y al norte de A; brazo este hacia Subida San Luis.'],
+  ['K', 1090, 420, 60, 70, 'Borde noreste, junto a la Subida San Luis.'],
+  ['J', 1120, 340, 48, 40, 'Acceso pequeño al norte de K, junto a la Subida San Luis.'],
+  ['O', 1110, 560, 48, 40, 'Recinto pequeño al sur de K, en la Subida San Luis.'],
+  ['L', 644, 600, 48, 80, 'Oeste, en el desnivel entre la cancha 8007 y el sector de B y U.'],
+  ['U', 710, 690, 60, 170, 'Centro-oeste. Bloque vertical alargado, al oeste de A y separado por un pasillo estrecho.'],
+  ['A', 840, 720, 170, 210, 'Centro-sur. Bloque grande al sur de B y al este de U, con salientes norte y sur sobre el patio central.'],
+  ['H', 590, 780, 60, 40, 'Suroeste, en la ladera con curvas de nivel, al sur de la cancha 8007.'],
+  ['D', 1020, 690, 120, 110, 'Centro-este, al este de A y al norte de E y los jardines geométricos.'],
+  ['E', 1050, 780, 150, 45, 'Centro-este. Bloque horizontal escalonado al sur de D, bordeando el patio interior.'],
+  ['F2', 950, 820, 48, 70, 'Sur. Conexión estrecha entre el sector de A y los jardines con F.'],
+  ['F', 1060, 880, 220, 40, 'Sur. Tramo horizontal con retorno norte en su extremo oeste, cerca de F2.'],
+  ['T', 1210, 850, 70, 80, 'Extremo sureste, siguiendo la curva de Subida San Luis y el borde sur del campus.']
 ];
 const DIRS = ['norte','noreste','este','sureste','sur','suroeste','oeste','noroeste'];
 const METROS_POR_PIXEL = 0.75; /* el mismo valor que usa App.tsx para el GPS */
