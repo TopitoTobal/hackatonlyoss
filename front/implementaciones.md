@@ -12,6 +12,14 @@ En el prototipo el primer fix GPS preciso se ancla al centro del plano
 (0,75 m por píxel).
 `setUserPosition()` solo actualiza el punto y la guía, sin volver a
 seleccionar el edificio, para no repetir la voz automática en cada muestra.
+En iOS Safari, `expo-location` intenta usar `navigator.permissions.query` (no
+soportado por Safari) y falla antes de mostrar el diálogo. Por eso `backend/src/
+permissions.ts` usa en web un camino directo con `navigator.geolocation.
+getCurrentPosition()`, disparado desde el toque del usuario en los botones de la
+portada. Si se abre una URL con `?modo=` directo, el botón **Activar GPS** de la
+barra permite pedir el permiso manualmente. La web debe servirse por HTTPS
+(Netlify lo hace); por HTTP en una IP local Safari no pedirá la ubicación.
+
 El interior de los edificios es esquemático hasta que haya planos oficiales.
 
 En modo **vidente** el mapa muestra a las personas **no videntes conectadas**

@@ -14,6 +14,7 @@ import {
 
 import {
   createSafetyMonitor,
+  ensureForegroundPermissions,
   formatSpeed,
   movementStatsToText,
   safetyAlerts,
@@ -81,7 +82,13 @@ function hablar(texto: string) {
 
 /* Portada equivalente a index (4).html: elige vidente / no vidente antes
    de pedir permisos de GPS o cargar el mapa. */
-function Selector({ onElegir }: { onElegir: (modo: Modo) => void }) {
+function Selector({
+  onElegir,
+  onPedirGPS,
+}: {
+  onElegir: (modo: Modo) => void
+  onPedirGPS: () => void
+}) {
   const opciones =
     '¿Eres una persona vidente o no vidente? Primera opción: Soy vidente. Segunda opción: Soy no vidente.'
 
@@ -96,7 +103,7 @@ function Selector({ onElegir }: { onElegir: (modo: Modo) => void }) {
       <Pressable
         accessibilityRole="link"
         accessibilityLabel="Soy vidente. Abrir mapa visual."
-        onPress={() => onElegir('vidente')}
+        onPress={() => { onPedirGPS(); onElegir('vidente') }}
         style={({ pressed }) => [
           styles.opcion,
           styles.opcionVidente,
@@ -109,7 +116,7 @@ function Selector({ onElegir }: { onElegir: (modo: Modo) => void }) {
       <Pressable
         accessibilityRole="link"
         accessibilityLabel="Soy no vidente. Abrir mapa con voz automática."
-        onPress={() => onElegir('no-vidente')}
+        onPress={() => { onPedirGPS(); onElegir('no-vidente') }}
         style={({ pressed }) => [
           styles.opcion,
           styles.opcionNoVidente,
@@ -235,6 +242,11 @@ export default function App() {
     }
   }
 
+  async function pedirGPS() {
+    const permiso = await ensureForegroundPermissions()
+    if (!permiso.ok) setEstado(`Error GPS: ${permiso.message}`)
+  }
+
   function detener() {
     trackerRef.current?.stop()
     trackerRef.current = null
@@ -259,7 +271,7 @@ export default function App() {
     setModo(null)
   }
 
-  if (!modo) return <Selector onElegir={irAModo} />
+  if (!modo) return <Selector onElegir={irAModo} onPedirGPS={() => void pedirGPS()} />
 
   return (
     <View style={styles.contenedor} accessibilityRole="main">
@@ -282,7 +294,12 @@ export default function App() {
             {muestras}
           </Text>
           <View style={styles.boton}>
-            <Button title="GPS" onPress={() => void iniciar()} color="#065f46" />
+            <Button
+              title="Activar GPS"
+              accessibilityLabel="Activar permiso de ubicación y comenzar a seguir el GPS"
+              onPress={() => void iniciar()}
+              color="#065f46"
+            />
           </View>
           <View style={styles.boton}>
             <Button title="Detener" onPress={detener} color="#991b1b" />
