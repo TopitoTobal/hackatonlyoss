@@ -32,6 +32,19 @@ El botón **Generar ruta** traza el recorrido más corto por los senderos hasta 
 entrada del edificio elegido. El interior de los edificios es esquemático hasta
 que haya planos oficiales.
 
+### Selección guiada en modo no vidente
+
+Solo al entrar como **no vidente** aparecen dos flechas grandes abajo
+(`#ciegoPrev` / `#ciegoNext`) y se oculta el panel de información. El edificio
+inicial es el más cercano al punto azul; cada flecha recorre la lista de oeste a
+este y el TTS anuncia *"Edificio seleccionado: X…"*. Tocar cualquier otro punto
+de la pantalla (o pulsar Enter/Espacio fuera de las flechas) confirma la
+elección, oculta las flechas y llama a `generarRuta(selected)`. A partir de ahí
+la navegación existente guía por voz los giros y la distancia restante; al
+llegar, las flechas vuelven a aparecer para elegir otro destino. Mientras se
+está eligiendo se suspende la entrada automática al interior, para que el
+plano esquemático no interrumpa la selección.
+
 En modo **vidente** el mapa muestra a las personas **no videntes conectadas**
 como puntos morados con un ID corto y efímero, y un contador accesible arriba a
 la izquierda. La presencia usa MQTT sobre WSS

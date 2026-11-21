@@ -71,6 +71,9 @@
     flex: 0 0 auto; max-height: 45vh; max-height: 45dvh;
     overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
   }
+  /* Solo las flechas capturan el toque; el resto confirma la ruta. */
+  #ciego { pointer-events: none; padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+  #ciego button { pointer-events: auto; touch-action: manipulation; }
   #sheetName { font-size: clamp(20px, 6.4vw, 26px); }
 
   /* Foco muy visible, incluidos los botones del plano (el borde se dibuja hacia adentro) */
@@ -141,6 +144,8 @@
     El panel indica la distancia restante y el próximo giro. Pulsa el botón otra vez para detener la ruta.
     Cierra el panel con la X de la esquina superior derecha, tocando fuera de él o con Escape.
     Acerca y aleja el mapa con la rueda del ratón o pellizcando la pantalla.
+    En modo no vidente aparecen dos flechas abajo: cambian el edificio con la voz y
+    al tocar cualquier otro punto se genera la ruta y se guía el camino por voz.
   </p>
   <div id="world" class="absolute left-0 top-0 origin-top-left" style="width:1312px;height:985px">
 
@@ -355,6 +360,20 @@
   </div>
 </section>
 
+<!-- Solo en modo no vidente: flechas grandes abajo para elegir edificio.
+     El resto de la pantalla confirma la elección y genera la ruta. -->
+<section id="ciego" role="group" aria-label="Elegir edificio con las flechas"
+         class="absolute inset-x-0 bottom-0 z-30 hidden justify-center gap-4 p-4">
+  <button id="ciegoPrev" type="button" aria-label="Edificio anterior"
+          class="flex h-20 w-24 items-center justify-center rounded-2xl border-4 border-black bg-yellow-300 text-black shadow-lg">
+    <span class="material-icons" aria-hidden="true" style="font-size:52px">chevron_left</span>
+  </button>
+  <button id="ciegoNext" type="button" aria-label="Edificio siguiente"
+          class="flex h-20 w-24 items-center justify-center rounded-2xl border-4 border-black bg-yellow-300 text-black shadow-lg">
+    <span class="material-icons" aria-hidden="true" style="font-size:52px">chevron_right</span>
+  </button>
+</section>
+
 <script>
 /* ---------- Datos ----------
    Coordenadas en píxeles del plano oficial (1312 x 985).
@@ -431,6 +450,10 @@ let dot = { x: CENTRO.x, y: CENTRO.y };
 const $ = (id) => document.getElementById(id);
 const vp = $('viewport'), world = $('world');
 let ox = 0, oy = 0, z = 1, selected = null, baseZ = 1;
+/* En modo no vidente la selección se hace con flechas y se confirma tocando
+   cualquier otro punto: mientras tanto no queremos que entre el plano interior. */
+let elegirCiego = false;
+function esCiego() { return PRESENCIA.rol === 'no-vidente'; }
 let autoVoice = true;   /* voz automática activada por defecto */
 try { if (localStorage.getItem('autoVoice') === 'off') autoVoice = false; } catch (e) {}
 const buttons = {};
@@ -470,7 +493,11 @@ BUILDINGS.forEach(([id, cx, cy, w, h]) => {
   b.textContent = id;
   b.setAttribute('aria-label', 'Edificio ' + id);
   b.setAttribute('aria-pressed', 'false');
-  b.addEventListener('click', (e) => { if (!justDragged) select(id, { focus: e.detail === 0 }); });
+  b.addEventListener('click', (e) => {
+    if (justDragged) return;
+    select(id, { focus: e.detail === 0, ciego: esCiego() });
+    if (esCiego()) mostrarFlechasCiego(false);
+  });
   $('buildings').appendChild(b);
   buttons[id] = b;
 });
@@ -754,6 +781,7 @@ function llegar(nav) {
   actualizarBotonRuta();
   $('sheetRoute').textContent = 'Llegaste a la entrada del edificio ' + nav.id + '.';
   hablarAccion('Llegaste a la entrada del edificio ' + nav.id + '.');
+  if (esCiego()) setTimeout(() => mostrarFlechasCiego(false), 1800);
 }
 function iniciarNavegacion(id, r, silent) {
   navegacion = {
@@ -849,15 +877,21 @@ function select(id, opts) {
   $('sheetWhere').textContent = i.where;
   $('sheetRoute').textContent = '';
   detenerRuta(true);
-  $('sheet').classList.remove('hidden'); $('sheet').classList.add('flex');
+  if (esCiego()) {
+    /* En modo no vidente no mostramos el panel: manda la voz y las flechas. */
+    $('sheet').classList.add('hidden'); $('sheet').classList.remove('flex');
+  } else {
+    $('sheet').classList.remove('hidden'); $('sheet').classList.add('flex');
+  }
   $('hint').classList.add('hidden');
   restyle();
   centerOn((dot.x + i.cx)/2, (dot.y + i.cy)/2);
 
   const texto = i.label + '. ' + i.dir + ' ' + i.where;
-  if (opts.focus) $('sheetName').focus({ preventScroll: true });
+  if (opts.focus && !esCiego()) $('sheetName').focus({ preventScroll: true });
   if (opts.silent) return;
-  if (opts.focus) announce(i.dir + ' ' + i.where);
+  if (opts.ciego || esCiego()) hablarAccion('Edificio seleccionado: ' + id + '. ' + i.dir + ' ' + i.where);
+  else if (opts.focus) announce(i.dir + ' ' + i.where);
   else speakOrAnnounce(texto);
 }
 /* Flechas: recorren los edificios de oeste a este (izquierda / derecha) */
@@ -872,7 +906,51 @@ function updateArrows() {
   $('btnPrev').setAttribute('aria-label', 'Edificio anterior, a la izquierda: ' + p);
   $('btnNext').setAttribute('aria-label', 'Edificio siguiente, a la derecha: ' + n);
 }
-function step(d) { if (selected) select(neighbor(d), { focus: true }); }
+/* ---------- Modo no vidente: elegir con flechas, confirmar en cualquier punto ---------- */
+function edificioMasCercano() {
+  return ORDER.reduce((mejor, id) => info(id).metros < info(mejor).metros ? id : mejor, ORDER[0]);
+}
+function actualizarFlechasCiego() {
+  if (!selected) return;
+  $('ciegoPrev').setAttribute('aria-label',
+    'Edificio anterior: ' + neighbor(-1) + '. Seleccionado: ' + selected);
+  $('ciegoNext').setAttribute('aria-label',
+    'Edificio siguiente: ' + neighbor(1) + '. Seleccionado: ' + selected);
+}
+function mostrarFlechasCiego(hablar) {
+  if (!esCiego()) return;
+  if (inside) {
+    AUTO_INTERIOR.activo = false;
+    AUTO_INTERIOR.bloqueo = Date.now() + 15000;
+    exitBuilding();
+  }
+  if (!selected) selected = edificioMasCercano();
+  elegirCiego = true;
+  $('sheet').classList.add('hidden'); $('sheet').classList.remove('flex');
+  $('hint').classList.add('hidden');
+  $('ciego').classList.remove('hidden'); $('ciego').classList.add('flex');
+  actualizarFlechasCiego();
+  if (hablar) {
+    const i = info(selected);
+    hablarAccion('Modo no vidente. Edificio seleccionado: ' + selected + '. ' +
+      i.dir + ' ' + i.where + ' Usa las flechas para cambiar de edificio y toca ' +
+      'en cualquier otro lugar para generar la ruta.');
+  }
+}
+function ocultarFlechasCiego() {
+  elegirCiego = false;
+  $('ciego').classList.add('hidden'); $('ciego').classList.remove('flex');
+}
+function confirmarRutaCiego() {
+  if (!elegirCiego || !selected || inside) return;
+  ocultarFlechasCiego();
+  generarRuta(selected);
+}
+function step(d) {
+  if (!selected) return;
+  select(neighbor(d), { focus: true, ciego: esCiego() });
+  if (esCiego()) mostrarFlechasCiego(false);
+}
 function closeSheet() {
   if (selected) {
     buttons[selected].classList.remove(...ON); buttons[selected].classList.add(...OFF);
@@ -1209,7 +1287,7 @@ function recalcularPares() {
   });
 }
 function verificarInteriorAuto() {
-  if (PRESENCIA.rol !== 'no-vidente' || Date.now() < AUTO_INTERIOR.bloqueo) return;
+  if (PRESENCIA.rol !== 'no-vidente' || elegirCiego || Date.now() < AUTO_INTERIOR.bloqueo) return;
   const yo = PRESENCIA.filtro.get(PRESENCIA.id);
   const punto = yo ? geoAPlano(yo.lat, yo.lng) : null;
   const id = punto ? edificioEn(punto.x, punto.y) : null;
@@ -1698,14 +1776,22 @@ function aplicarModo(modo) {
     autoVoice = true;
     try { localStorage.setItem('autoVoice', 'on'); } catch (e) {}
     voiceLabel();
-    speakOrAnnounce('Modo no vidente. Voz automática activada. Toca un edificio o usa las flechas para recorrerlos.');
   } else {
     autoVoice = false;
     try { localStorage.setItem('autoVoice', 'off'); } catch (e) {}
     voiceLabel();
+    ocultarFlechasCiego();
     announce('Modo vidente. Toca un edificio para ver la ruta.');
   }
   configurarPresencia(modo);
+  if (modo === 'no-vidente') {
+    if (inside) exitBuilding();
+    /* Arrancamos con el edificio más cercano al punto azul. Las flechas cambian
+       la selección y cualquier otro toque confirma y genera la ruta. */
+    selected = edificioMasCercano();
+    select(selected, { silent: true, ciego: true });
+    mostrarFlechasCiego(true);
+  }
 }
 window.setModo = aplicarModo;
 
@@ -1816,11 +1902,22 @@ $('btnClose').onclick = closeSheet;
    acción y nunca se interpreta como "fuera del panel". Tocar un edificio cambia
    la selección en lugar de cerrar. */
 document.addEventListener('click', (e) => {
-  if (!selected || $('sheet').classList.contains('hidden') || justDragged || inside) return;
+  if (elegirCiego || !selected || $('sheet').classList.contains('hidden') || justDragged || inside) return;
   const t = e.target;
   if (!t || typeof t.closest !== 'function') return;
   if (!t.closest('#viewport') || t.closest('#buildings')) return;
   closeSheet();
+});
+/* Modo no vidente: las flechas cambian el edificio; tocar cualquier otro punto
+   confirma ese edificio y arranca la navegación guiada por voz. */
+$('ciegoPrev').onclick = () => step(-1);
+$('ciegoNext').onclick = () => step(1);
+document.addEventListener('click', (e) => {
+  if (!esCiego() || !elegirCiego || justDragged || inside) return;
+  const t = e.target;
+  if (t && typeof t.closest === 'function' &&
+      (t.closest('#ciego') || t.closest('#ayudaBanner'))) return;
+  confirmarRutaCiego();
 });
 $('btnRoute').onclick = () => {
   if (navegacion) detenerRuta();
@@ -1935,10 +2032,17 @@ $('inSpeak').onclick = () => {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (inside) exitBuilding();
-    else if (selected) closeSheet();
+    else if (selected && !esCiego()) closeSheet();
     return;
   }
   if (!inside) {
+    /* En modo no vidente, Enter o Espacio fuera de las flechas confirman. */
+    if (esCiego() && elegirCiego && (e.key === 'Enter' || e.key === ' ')) {
+      const t = e.target;
+      if (!(t && typeof t.closest === 'function' && t.closest('#ciego'))) {
+        e.preventDefault(); confirmarRutaCiego(); return;
+      }
+    }
     if (e.key === 'ArrowLeft')  { e.preventDefault(); step(-1); }
     if (e.key === 'ArrowRight') { e.preventDefault(); step(1); }
     return;
