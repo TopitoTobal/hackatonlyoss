@@ -178,6 +178,17 @@ que el build nunca falle. Para usar la foto real: copiarla a esa ruta, correr
 el generador y `npm --prefix front run build:web`. `front/app.json` apunta el
 splash nativo a `public/splash-1080x1920.png` con fondo blanco.
 
+Además del splash del sistema, `front/App.tsx` muestra un **splash interno**
+durante 1,8 s al abrir la app (en web y en nativo) con el mismo PNG
+`/splash-1080x1920.png`. Se puede tocar para saltarlo. Esto evita el problema
+de que una PWA **ya instalada** conserva el `apple-touch-startup-image` con el
+que se instaló: el overlay siempre muestra la versión nueva. El service worker
+subió a `campus-accesible-v2` y ahora cachea también el splash y la foto.
+
+Si el splash del sistema no cambia después de un deploy, hay que **borrar la
+app de la pantalla de inicio y volver a agregarla** (iOS guarda ese archivo al
+instalar). El splash interno, en cambio, aparece con solo recargar.
+
 En la portada aparece el botón **Instalar app web**:
 
 - En Chrome/Android dispara el prompt nativo `beforeinstallprompt`.

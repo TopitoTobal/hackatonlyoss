@@ -7,6 +7,7 @@ import * as Location from 'expo-location'
 import { useEffect, useRef, useState } from 'react'
 import {
   AccessibilityInfo,
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -206,6 +207,32 @@ function InstalarWeb() {
   )
 }
 
+/* Splash dentro de la app: el splash nativo del SO queda guardado al instalar
+   la PWA, así que una versión ya instalada no verá los cambios. Este overlay
+   usa el mismo PNG y se muestra siempre al abrir, en web y en nativo. */
+function Splash() {
+  const [visible, setVisible] = useState(true)
+  useEffect(() => {
+    const temporizador = setTimeout(() => setVisible(false), 1800)
+    return () => clearTimeout(temporizador)
+  }, [])
+  if (!visible || typeof document === 'undefined') return null
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Continuar a la app"
+      onPress={() => setVisible(false)}
+      style={styles.splash}
+    >
+      <Image
+        source={{ uri: '/splash-1080x1920.png' }}
+        style={styles.splashImagen}
+        resizeMode="contain"
+      />
+    </Pressable>
+  )
+}
+
 export default function App() {
   /* Iconos de Material Icons (Google Fonts) listos antes de mostrar la UI. */
   const [fuentesListas] = useFonts({ MaterialIcons: MaterialIcons_400Regular })
@@ -358,6 +385,7 @@ export default function App() {
 
   return (
     <View style={styles.contenedor} accessibilityRole="main">
+      <Splash />
       <StatusBar style="dark" />
 
       <Mapa posicion={punto} modo={modo} ayuda={pidiendoAyuda} />
@@ -461,6 +489,21 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  splash: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 100,
+  },
+  splashImagen: {
+    width: '100%',
+    height: '100%',
+  },
   instalar: {
     marginTop: 10,
     alignItems: 'center',
