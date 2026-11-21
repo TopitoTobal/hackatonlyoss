@@ -8,6 +8,12 @@ ubicación del GPS con `postMessage({ type: 'position', x, y })`.
 La conversión lat/lng → píxeles del plano está en `App.tsx` (`aPuntoPlano`)
 y usa una referencia aproximada pendiente de georreferenciar.
 
+El componente `Mapa` tiene dos implementaciones: `Mapa.tsx` usa `WebView` en
+iOS/Android y `Mapa.web.tsx` usa un `<iframe>` en navegador, porque
+`react-native-webview` no está soportado en web. Ambas reciben la posición por
+props y le envían al mapa el mismo mensaje (`{ type: 'position', x, y }`), así
+que el GPS funciona igual en los dos casos.
+
 ## Ver avances en local
 
 Ya hay una app Expo mínima en esta misma carpeta con un panel que muestra
