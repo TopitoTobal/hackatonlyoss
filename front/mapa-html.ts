@@ -23,10 +23,11 @@ export const MAPA_HTML = `<!doctype html>
   #hint {
     position: fixed; left: 50%; transform: translateX(-50%); top: max(16px, env(safe-area-inset-top));
     width: calc(100% - 32px); width: calc(100% - max(32px, env(safe-area-inset-left) + env(safe-area-inset-right)));
-    max-width: 24rem; box-sizing: border-box;
+    max-width: 24rem; box-sizing: border-box; box-shadow: 0 6px 20px rgba(0,0,0,.3);
   }
   #sheet {
     position: fixed; left: 10px; right: 10px; bottom: max(10px, env(safe-area-inset-bottom));
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
     display: none; flex-direction: column; max-width: 28rem; margin: 0 auto; box-sizing: border-box; z-index: 10;
     max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px);
     overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
@@ -286,10 +287,15 @@ BUILDINGS.forEach(([id, cx, cy, w, h]) => {
 
 /* El zoom base depende del tamaño de la pantalla; los elementos táctiles
    mantienen un tamaño constante en pantalla sin importar el zoom. */
-const ZMIN = 0.6, ZMAX = 3;
-const clampZ = (v) => Math.min(ZMAX, Math.max(ZMIN, v));
+const ZMAX = 3;
+/* Zoom mínimo "cover", como en Google Maps: el plano siempre cubre el viewport.
+   Así nunca aparece fondo vacío alrededor del mapa al alejar al máximo. */
+function minZoom() {
+  return Math.max(vp.clientWidth / 1312, vp.clientHeight / 985);
+}
+const clampZ = (v) => Math.min(ZMAX, Math.max(minZoom(), v));
 function computeBase() {
-  return Math.min(1.6, Math.max(ZMIN, Math.min(vp.clientWidth / 520, vp.clientHeight / 760)));
+  return clampZ(minZoom() * 1.05);
 }
 function placeDot() {
   const d = 28 / z, hh = 40 / z;
@@ -313,17 +319,15 @@ function restyle() {
 }
 
 /* ---------- Mapa: posición y zoom ---------- */
-/* Si el plano cabe en la pantalla se centra; si no, se permite un margen
-   pequeño pero nunca se deja un vacío del tamaño de la mitad del celular. */
+/* El borde del plano nunca entra en pantalla: no se puede panear más allá
+   del mapa, igual que en Google Maps. Con el zoom "cover" siempre hay
+   recorrido disponible o, como mucho, el mapa encaja exactamente. */
 function clamp(x, y, s) {
   const vw = vp.clientWidth, vh = vp.clientHeight;
   const w = 1312 * s, h = 985 * s;
-  const mx = w <= vw ? (vw - w) / 2 : Math.min(96, vw * 0.12);
-  const my = h <= vh ? (vh - h) / 2 : Math.min(96, vh * 0.12);
-  const minX = vw - w - mx, maxX = mx, minY = vh - h - my, maxY = my;
   return [
-    minX <= maxX ? Math.min(maxX, Math.max(minX, x)) : (vw - w) / 2,
-    minY <= maxY ? Math.min(maxY, Math.max(minY, y)) : (vh - h) / 2
+    Math.min(0, Math.max(vw - w, x)),
+    Math.min(0, Math.max(vh - h, y))
   ];
 }
 function apply() { world.style.transform = 'translate(' + ox + 'px,' + oy + 'px) scale(' + z + ')'; }
@@ -343,11 +347,18 @@ function centerOn(px, py) {
   apply();
 }
 function zoomBy(k) {
+  const anterior = z;
   const nz = clampZ(z * k), r = nz / z;
   const cx = focusX(), cy = focusY();
   [ox, oy] = clamp(cx - (cx - ox)*r, cy - (cy - oy)*r, nz);
   z = nz; restyle(); apply();
-  speakOrAnnounce('Zoom ' + Math.round((z / baseZ) * 100) + ' por ciento.');
+  if (nz === anterior) {
+    speakOrAnnounce(k < 1
+      ? 'Zoom mínimo. El mapa ya ocupa toda la pantalla.'
+      : 'Zoom máximo.');
+  } else {
+    speakOrAnnounce('Zoom ' + Math.round((z / baseZ) * 100) + ' por ciento.');
+  }
 }
 
 /* ---------- Selección ---------- */

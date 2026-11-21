@@ -24,6 +24,9 @@ El interior de los edificios es esquemático hasta que haya planos oficiales.
 - El panel se desplaza internamente si no cabe y el interior pasa a un
   diseño lateral en horizontal; nunca se sale del viewport. Se respetan zonas
   seguras (`env(safe-area-inset-*)`) y `100dvh`.
+- Zoom estilo Google Maps: `minZoom()` es dinámico (`max(ancho/1312, alto/985)`)
+  y el plano siempre cubre la pantalla; `clamp()` impide panear más allá de sus
+  bordes, así que al alejar al máximo no aparece fondo vacío ni se corta la UI.
 - En el diálogo interior el foco queda atrapado, `Escape` sale y el fondo se
   marca `inert`. Lighthouse: accesibilidad y buenas prácticas 1.00.
 
