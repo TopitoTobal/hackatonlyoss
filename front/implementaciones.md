@@ -30,8 +30,10 @@ El interior de los edificios es esquemático hasta que haya planos oficiales.
 - El plano base se redibujó como mapa continuo: un patrón de manzanas cubre todo
   el lienzo y el campus, la Avenida Placeres y las calles llegan hasta los cuatro
   bordes. No quedan franjas lisas ("bordes blancos") alrededor del dibujo.
-  Las coordenadas de los 15 edificios no cambiaron, así que el GPS y las guías
-  siguen siendo válidas.
+  Las coordenadas de los edificios se conservan salvo C, que pasó de
+  `centroY = 340` a `390` para no tapar Avenida Placeres (y=278–312): ahora
+  empieza en y=328.5, con 16.5 px de separación. El GPS y las guías siguen
+  siendo válidos.
 - En el diálogo interior el foco queda atrapado, `Escape` sale y el fondo se
   marca `inert`. Lighthouse: accesibilidad y buenas prácticas 1.00.
 
