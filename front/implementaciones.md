@@ -12,6 +12,12 @@ En el prototipo el primer fix GPS preciso se ancla al centro del plano
 (0,75 m por píxel).
 `setUserPosition()` solo actualiza el punto y la guía, sin volver a
 seleccionar el edificio, para no repetir la voz automática en cada muestra.
+Además, en web el seguimiento usa `navigator.geolocation.watchPosition()` directo
+en `backend/src/tracker.ts` (con una primera muestra vía `getCurrentPosition()`),
+porque el `watchPositionAsync` de `expo-location` no entregaba muestras en Safari
+iOS. Las muestras siguen siendo `MovementSample` normales: speed, stats, alertas
+y filtro por `isAccurate` quedan igual.
+
 En iOS Safari, `expo-location` intenta usar `navigator.permissions.query` (no
 soportado por Safari) y falla antes de mostrar el diálogo. Por eso `backend/src/
 permissions.ts` usa en web un camino directo con `navigator.geolocation.
