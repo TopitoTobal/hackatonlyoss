@@ -407,6 +407,7 @@ export default function App() {
 
       <View style={styles.overlay} pointerEvents="box-none">
         <View style={styles.barra}>
+          <View style={styles.barraBotones}>
           <Pressable
             accessibilityRole="link"
             accessibilityLabel="Volver a elegir modo"
@@ -415,11 +416,11 @@ export default function App() {
           >
             <View style={styles.filaBoton}>
               <Icono name="arrow_back" size={18} color="#f8fafc" />
-              <Text style={styles.textoBoton}>Modo</Text>
+              <Text style={styles.textoBoton}>Volver</Text>
             </View>
           </Pressable>
           <Text style={styles.estado} accessibilityLiveRegion="polite">
-            {modo === 'vidente' ? 'Vidente' : 'No vidente'} · {estado} · muestras:{' '}
+            {modo === 'vidente' ? 'Vidente' : 'No vidente'} · {estado} · {velocidad} · muestras:{' '}
             {muestras}
           </Text>
           <Pressable
@@ -475,35 +476,29 @@ export default function App() {
               </View>
             </Pressable>
           )}
-        </View>
-
-        <View style={styles.info}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={
               infoAbierta
                 ? 'Ocultar información detallada de GPS'
-                : 'Mostrar información detallada de GPS: muestra, posición y estadísticas'
+                : 'Mostrar información detallada de GPS: velocidad, muestras y estadísticas'
             }
             accessibilityState={{ expanded: infoAbierta }}
             onPress={() => setInfoAbierta((abierta) => !abierta)}
             style={({ pressed }) => [
-              styles.infoBoton,
+              styles.botonAccion,
+              styles.botonInfo,
               pressed && styles.opcionPresionada,
             ]}
           >
-            <View style={styles.iconoInfo}>
-              <Icono name="info" size={20} color="#1d4ed8" />
+            <View style={styles.filaBoton}>
+              <Icono name="info" size={18} color="#1d4ed8" />
             </View>
-            <Text style={styles.infoTitulo}>Información</Text>
-            <Text style={styles.infoValor}>{velocidad}</Text>
-            <Icono
-              name={infoAbierta ? 'expand_less' : 'expand_more'}
-              size={20}
-              color="#64748b"
-            />
           </Pressable>
+        </View>
 
+        {(alerta || infoAbierta || (modo === 'no-vidente' && pidiendoAyuda)) && (
+        <View style={styles.info}>
           {alerta ? (
             <Text style={styles.alerta} accessibilityLiveRegion="polite">
               {alerta}
@@ -539,6 +534,8 @@ export default function App() {
             </View>
           )}
           </View>
+        )}
+        </View>
         </View>
         </View>
       )}
@@ -717,10 +714,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   barra: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: 8,
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 6,
     backgroundColor: 'rgba(255, 255, 255, 0.96)',
     borderColor: '#cbd2d9',
     borderWidth: 1,
@@ -732,6 +728,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 2,
+  },
+  barraBotones: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
   },
   estado: {
     color: '#1c1c1c',
@@ -780,57 +782,21 @@ const styles = StyleSheet.create({
   botonDetener: { backgroundColor: '#991b1b', borderColor: '#991b1b' },
   botonAyuda: { backgroundColor: '#6d28d9', borderColor: '#6d28d9' },
   botonAyudaActivo: { backgroundColor: '#4c1d95', borderColor: '#4c1d95' },
+  botonInfo: {
+    minWidth: 44,
+    backgroundColor: '#e8f1fb',
+    borderColor: '#cbd2d9',
+  },
   textoBotonAccion: {
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '700',
   },
   info: {
-    backgroundColor: 'rgba(255, 255, 255, 0.96)',
-    borderColor: '#cbd2d9',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 10,
-    gap: 4,
-    alignSelf: 'flex-start',
-    maxWidth: '92%',
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  infoBoton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    minHeight: 40,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#cbd2d9',
-    backgroundColor: '#f8fafc',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-  },
-  iconoInfo: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    backgroundColor: '#e8f1fb',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  infoTitulo: {
-    color: '#1c1c1c',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  infoValor: {
-    color: '#1d4ed8',
-    fontSize: 13,
-    fontWeight: '700',
-    flex: 1,
-    textAlign: 'right',
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    paddingTop: 6,
+    gap: 6,
   },
   infoDetalle: {
     gap: 4,
