@@ -1750,7 +1750,10 @@ function recibirPresencia(mensaje) {
       accFus: Number.isFinite(mensaje.acc) ? mensaje.acc : 15,
       n: 1,
       edificio: null,
-      ts: mensaje.ts || Date.now(),
+      /* Hora de recepción, no del otro celular: un reloj desfasado no debe
+         hacer que el par aparezca como “sin señal” apenas entra. */
+      ts: Date.now(),
+      estale: false,
       etiqueta: String(observador).slice(0, 6),
     });
   }
@@ -1770,6 +1773,11 @@ function pintarPares() {
   capa.textContent = '';
   const NS = 'http://www.w3.org/2000/svg';
   paresVisibles().forEach((p) => {
+    /* Si el celular del par se queda sin señal, lo dejamos en el mapa como
+       “última señal” en vez de borrarlo: vale más una posición vieja y
+       claramente marcada que hacer desaparecer a la persona. */
+    const ageS = Math.max(0, Math.round((Date.now() - (p.ts || Date.now())) / 1000));
+    const estale = ageS > 12;
     if (p.edificio) {
       const b = BUILDINGS.find((x) => x[0] === p.edificio);
       if (b) {
@@ -1791,34 +1799,37 @@ function pintarPares() {
       halo.setAttribute('cy', p.y);
       halo.setAttribute('r', Math.max(2, p.accFus / METROS_POR_PIXEL));
       halo.setAttribute('fill', 'none');
-      halo.setAttribute('stroke', '#7c3aed');
+      halo.setAttribute('stroke', estale ? '#64748b' : '#7c3aed');
       halo.setAttribute('stroke-width', 2 / z);
       halo.setAttribute('stroke-dasharray', (5 / z) + ' ' + (4 / z));
-      halo.setAttribute('opacity', '.6');
+      halo.setAttribute('opacity', estale ? '.25' : '.6');
       capa.appendChild(halo);
     }
     const circulo = document.createElementNS(NS, 'circle');
     circulo.setAttribute('cx', p.x);
     circulo.setAttribute('cy', p.y);
     circulo.setAttribute('r', 12 / z);
-    circulo.setAttribute('fill', '#7c3aed');
+    circulo.setAttribute('fill', estale ? '#94a3b8' : '#7c3aed');
     circulo.setAttribute('stroke', '#ffffff');
     circulo.setAttribute('stroke-width', 4 / z);
+    circulo.setAttribute('opacity', estale ? '.7' : '1');
     const texto = document.createElementNS(NS, 'text');
     texto.setAttribute('x', p.x);
     texto.setAttribute('y', p.y - 20 / z);
     texto.setAttribute('text-anchor', 'middle');
     texto.setAttribute('font-size', 14 / z);
     texto.setAttribute('font-weight', '800');
-    texto.setAttribute('fill', '#4c1d95');
+    texto.setAttribute('fill', estale ? '#475569' : '#4c1d95');
     const yoFus = PRESENCIA.filtro.get(PRESENCIA.id);
     /* Haversine sobre lat/lng: así el error del ancla de cada dispositivo
        no se suma a la distancia que se le muestra al vidente. */
     const dist = yoFus && Number.isFinite(p.lat) && Number.isFinite(p.lng)
       ? Math.round(distM(yoFus, p))
       : Math.round(Math.hypot(p.x - dot.x, p.y - dot.y) * METROS_POR_PIXEL);
-    texto.textContent = p.etiqueta + (z >= 2 ? ' · ' + dist + ' m' : '') +
-      (p.n > 1 ? ' · ' + p.n + ' señales' : '');
+    texto.textContent = p.etiqueta + (estale
+      ? ' · última señal hace ' + ageS + ' s'
+      : (z >= 2 ? ' · ' + dist + ' m' : '') +
+        (p.n > 1 ? ' · ' + p.n + ' señales' : ''));
     capa.appendChild(circulo);
     capa.appendChild(texto);
   });
@@ -1826,16 +1837,21 @@ function pintarPares() {
 function actualizarPresencia() {
   const badge = $('presenceBadge');
   if (!badge) return;
-  const n = paresVisibles().length;
+  const visibles = paresVisibles();
+  const n = visibles.filter((p) => !p.estale).length;
+  const e = visibles.length - n;
   badge.style.display = PRESENCIA.rol === 'vidente' ? 'block' : 'none';
   badge.classList.toggle('sin-conexion', !PRESENCIA.conectado);
+  let texto = n + ' no vidente' + (n === 1 ? '' : 's') + ' conectada' + (n === 1 ? '' : 's');
+  if (e) texto += ' · ' + e + ' con última señal';
   badge.textContent = PRESENCIA.conectado
-    ? n + ' no vidente' + (n === 1 ? '' : 's') + ' conectada' + (n === 1 ? '' : 's')
-    : 'Presencia sin conexión';
+    ? texto
+    : 'Presencia sin conexión' + (visibles.length ? ' · ' + visibles.length + ' en el mapa' : '');
   if (PRESENCIA.rol === 'vidente' && n !== PRESENCIA.ultimoAnuncio) {
     PRESENCIA.ultimoAnuncio = n;
     announce(n + ' persona' + (n === 1 ? '' : 's') + ' no vidente' + (n === 1 ? '' : 's') +
-      ' conectada' + (n === 1 ? '' : 's') + ' en el mapa.');
+      ' conectada' + (n === 1 ? '' : 's') + ' en el mapa.' +
+      (e ? ' ' + e + ' con última señal.' : ''));
   }
 }
 function configurarPresencia(rol) {
@@ -1859,10 +1875,18 @@ setInterval(() => {
   }
   if (AYUDA.pidiendo.size !== antesAyuda) { pintarAyudas(); actualizarAyudaBanner(); }
   const antes = PRESENCIA.pares.size;
+  const antesEstale = [...PRESENCIA.pares.values()].filter((p) => p.estale).length;
   for (const [id, p] of PRESENCIA.pares) {
-    if (Date.now() - p.ts > 12000) PRESENCIA.pares.delete(id);
+    const age = Date.now() - (p.ts || Date.now());
+    /* 12 s sin señal deja de contar como “conectado”, pero el marcador sigue
+       visible hasta 2 min como última posición conocida. */
+    if (age > 120000) PRESENCIA.pares.delete(id);
+    else p.estale = age > 12000;
   }
-  if (PRESENCIA.pares.size !== antes) actualizarPresencia();
+  const despuesEstale = [...PRESENCIA.pares.values()].filter((p) => p.estale).length;
+  if (PRESENCIA.pares.size !== antes || despuesEstale !== antesEstale) {
+    actualizarPresencia();
+  }
   pintarPares();
   for (const [observador, mapa] of PRESENCIA.observaciones) {
     for (const [id, o] of mapa) {

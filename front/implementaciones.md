@@ -49,8 +49,10 @@ En modo **vidente** el mapa muestra a las personas **no videntes conectadas**
 como puntos morados con un ID corto y efímero, y un contador accesible arriba a
 la izquierda. La presencia usa MQTT sobre WSS
 (`wss://broker.emqx.io:8084/mqtt`, tema `hackatonlyoss/campus/presencia/v1`):
-sin credenciales, sin nombres y sin historial. Los pares expiran a los 12 s sin
-actualización. Cada muestra GPS se publica (con un mínimo de 400 ms entre
+sin credenciales, sin nombres y sin historial. A los 12 s sin actualización el
+par deja de contar como “conectado”, pero su marcador permanece hasta 2 min en
+gris como “última señal hace X s”: un bache de red ya no lo hace desaparecer.
+Cada muestra GPS se publica (con un mínimo de 400 ms entre
 envíos) y un latido cada 2 s mantiene el `ts` fresco aunque el navegador
 espacie las muestras; en web además se sondea `getCurrentPosition` cada 2 s
 junto a `watchPosition`. Si el broker no está disponible, la capa se oculta y el
