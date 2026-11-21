@@ -139,8 +139,9 @@ rectángulos de `BUILDINGS` con ~6 m de tolerancia. Si la persona en modo
 **no vidente** queda dentro de un edificio durante 3 muestras seguidas, el mapa
 selecciona esa **letra** y abre automáticamente su vista interior; si sale,
 vuelve al mapa. La salida manual bloquea la reentrada automática por 15 s. En
-el mapa del vidente, el edificio donde está cada par se resalta con un marco
-morado discontinuo.
+el interior, el punto azul del plano esquemático sigue el GPS real (anclado al
+entrar) y se anuncia cada 10 m recorridos. En el mapa del vidente, el edificio
+donde está cada par se resalta con un marco morado discontinuo.
 
 Cada dispositivo publica también su `latitude`/`longitude`/`accuracyM` crudos.
 El receptor convierte la posición ajena con **su propio primer fix como origen**

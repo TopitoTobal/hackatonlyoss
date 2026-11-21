@@ -1930,6 +1930,7 @@ window.setUserPosition = (x, y, geo) => {
   recalcularRutaAyuda();
   actualizarAyudaBanner();
   placeDot();
+  actualizarInteriorDot();
   /* Centramos la vista en el punto sin anunciar ni volver a seleccionar nada. */
   centerOn(x, y);
   if (!selected) return;
@@ -2045,6 +2046,8 @@ window.addEventListener('resize', () => {
    Plano ESQUEMÁTICO generado: un pasillo central y salas a ambos lados.
    Cuando existan planos oficiales por edificio, reemplazar buildPlan(). */
 let inside = false, room = null;
+let interiorDot = null, interiorAnchor = null, interiorBase = null;
+let interiorEscala = null, interiorBounds = null, interiorUltimoAnuncio = 0;
 const ROOM_ON  = ['bg-white','text-[#1d4ed8]','border-[#1d4ed8]'];
 const ROOM_OFF = ['bg-[#e8f1fb]','text-[#334155]','border-[#cbd2d9]'];
 
@@ -2100,10 +2103,28 @@ function buildPlan(w, h) {
   const d = document.createElement('div');
   d.setAttribute('role', 'img'); d.setAttribute('aria-label', 'Tu ubicación');
   d.className = 'pointer-events-none absolute box-border h-7 w-7 rounded-full border-[3px] border-white bg-[#1d4ed8] shadow-[0_2px_8px_rgba(15,23,42,.25)]';
-  d.style.cssText = 'left:' + (dx - 14) + 'px;top:' + (dy - 14) + 'px';
+  d.style.cssText = 'left:' + (dx - 14) + 'px;top:' + (dy - 14) + 'px;transition:left .45s linear,top .45s linear';
   card.appendChild(d);
+  interiorDot = d;
+  interiorAnchor = { x: dot.x, y: dot.y };
+  interiorBase = { left: dx - 14, top: dy - 14 };
+  interiorEscala = { x: cw / Math.max(1, w), y: ch / Math.max(1, h) };
+  interiorBounds = { w: cw, h: ch };
+  interiorUltimoAnuncio = 0;
   st.appendChild(card);
   roomInfo();
+}
+function actualizarInteriorDot() {
+  if (!inside || !interiorDot || !interiorAnchor || !interiorBase || !interiorEscala || !interiorBounds) return;
+  const x = interiorBase.left + (dot.x - interiorAnchor.x) * interiorEscala.x;
+  const y = interiorBase.top + (dot.y - interiorAnchor.y) * interiorEscala.y;
+  interiorDot.style.left = Math.min(interiorBounds.w - 28, Math.max(0, x)) + 'px';
+  interiorDot.style.top = Math.min(interiorBounds.h - 28, Math.max(0, y)) + 'px';
+  const dist = Math.hypot(dot.x - interiorAnchor.x, dot.y - interiorAnchor.y) * METROS_POR_PIXEL;
+  if (dist >= interiorUltimoAnuncio + 10) {
+    interiorUltimoAnuncio = dist;
+    announce('Dentro del edificio ' + selected + ': a ' + Math.round(dist) + ' metros del punto de entrada.');
+  }
 }
 function enterBuilding() {
   if (!selected) return;
@@ -2121,6 +2142,8 @@ function enterBuilding() {
 function exitBuilding() {
   if (!inside) return;
   inside = false; vp.inert = false;
+  interiorDot = null; interiorAnchor = null; interiorBase = null;
+  interiorEscala = null; interiorBounds = null; interiorUltimoAnuncio = 0;
   const el = $('interior'); el.classList.add('hidden'); el.classList.remove('flex');
   select(selected, { silent: true });
   $('btnRoute').focus();
