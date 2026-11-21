@@ -12,6 +12,11 @@ Orienta es una aplicación móvil de mapa virtual con opciones orientadas a pers
 
 La idea original se planteó como un "mapa de movilización" por capas. Durante la jornada el equipo eligió el nombre "Orienta".
 
+Presentación del pitch
+----------------------
+
+[▶ Ver la presentación del pitch de Orienta](https://usmcl-my.sharepoint.com/:p:/g/personal/eparras_usm_cl/IQDyBnf7-LQLRa0vrGzWQiKOAUjkIImovEyPQWbRSn_SAkI?e=rB46zu)
+
 Propósito
 ---------
 
