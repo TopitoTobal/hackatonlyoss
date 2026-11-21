@@ -36,13 +36,21 @@ sin credenciales, sin nombres y sin historial. Los pares expiran a los 12 s sin
 actualización. Si el broker no está disponible, la capa se oculta y el GPS y la
 voz siguen funcionando con normalidad.
 
-La precisión se fusiona entre pares: cada mensaje lleva un campo `obs` con las
-posiciones que ese nodo oyó directamente. Para cada persona se juntan todas las
-observaciones (la propia más las de quienes la ven) y se promedian con pesos
-`1/(accuracy² + 25)` y decaimiento temporal. El anillo morado usa esa precisión
-fusionada: con 1 señal de ±12 m da ~13 m, con 3 da ~7,5 m y con 5 da ~5,8 m.
-En pantalla se indica el número de señales cuando es mayor que 1. **No se usa
-altura ni piso**: el RFC sigue vigente para BLE/UWB y grafo completo.
+La precisión se fusiona entre pares siguiendo el RFC: cada mensaje lleva un
+campo `obs` con las posiciones que ese nodo oyó directamente y el `rol` de cada
+observador. El **GPS satelital propio es el ancla**; sobre él se arma un grafo
+de observaciones y se estima cada nodo con peso
+`confianza × exp(-antigüedad/12s) / (accuracy² + 25)`, donde `confianza = 1`
+para el ancla y pares no videntes y `1.6` para observadores videntes. Luego se
+aplica un **filtro temporal tipo Kalman** sobre lat/lng: la incertidumbre crece
+lento con el tiempo sin datos, la ganancia favorece la muestra más precisa y
+un salto aislado mayor que `max(15 m, 3σ)` se descarta en vez de mover el punto.
+El resultado es la posición que se publica y la que usa la detección de
+interior. El anillo morado usa la σ fusionada: con 1 señal de ±12 m da ~13 m,
+con 3 da ~7,5 m y con 5 da ~5,8 m (la ganancia temporal la reduce cuando las
+muestras son consistentes). En pantalla se indica el número de señales cuando
+es mayor que 1. **No se usa altura ni piso**: el RFC sigue vigente para BLE/UWB
+y el grafo completo.
 
 El mismo marco compartido permite detectar edificio: `edificioEn()` prueba los
 rectángulos de `BUILDINGS` con ~6 m de tolerancia. Si la persona en modo
@@ -114,7 +122,7 @@ que el GPS funciona igual en los dos casos.
 Ya hay una app Expo mínima en esta misma carpeta con un panel que muestra
 estado del GPS, velocidad en km/h, última posición, estadísticas y alertas.
 Al cargar la pantalla se pide permiso y se inicia el seguimiento solo; los
-botones `GPS` / `Detener` siguen disponibles para reiniciarlo o pausarlo.
+botones `Activar GPS` / `Detener` siguen disponibles para reiniciarlo o pausarlo.
 
 ```sh
 cd front

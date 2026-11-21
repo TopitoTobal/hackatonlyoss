@@ -1,9 +1,11 @@
 # Sistema Descentralizado de Localización Relativa en Campus Universitario
 
-> **Estado:** propuesta / RFC. Implementada en forma simplificada en `front/index.html`
-> (presencia MQTT, fusión por promedio ponderado de observaciones, sin altura y
-> entrada automática al interior del edificio). Quedan pendientes BLE/UWB,
-> barómetro y el grafo completo descrito más abajo.
+> **Estado:** propuesta / RFC. Implementada en forma satelital-asistida en
+> `front/index.html`: presencia MQTT, ancla GPS satelital propia, grafo de
+> observaciones con peso por rol y decaimiento, filtro temporal tipo Kalman,
+> rechazo de outliers y detección de interior por confirmación de 3 muestras.
+> Sin altura y sin `RelativeFix` real (BLE/UWB, barómetro y grafo completo
+> siguen pendientes).
 > **Fecha:** 2026-11-21.
 > **Relación con el repo:** extiende el módulo de GPS de `backend/src` y el mapa de `front/` sin cambiar sus contratos públicos.
 
@@ -202,6 +204,33 @@ export type RelativeSource = {
 - El consumidor de la API (`front/App.tsx`) no necesita cambiar su contrato de `postMessage`.
 
 ---
+
+## 6. Implementación satelital asistida (estado actual)
+
+Esta sección registra cómo se aplicó el RFC sobre el GPS satelital disponible,
+sin hardware nuevo. `front/index.html` mantiene `PRESENCIA.geo` con el fix
+satelital propio como **ancla** y construye el grafo con tres clases de señal:
+
+1. `estimar(id)` junta el ancla propio, el mensaje que cada nodo publica sobre
+   sí mismo y las observaciones que los demás publican en `obs`.
+2. Cada observación entra con peso
+   `confianza × exp(-antigüedad/12s) / (accuracy² + 25)`. La confianza es `1`
+   para el ancla y pares no videntes, y `1.6` para observadores videntes
+   (hipótesis del RFC: mejor visibilidad del entorno).
+3. `suavizar(id, …)` aplica un filtro tipo Kalman en 2D (lat/lng):
+   `K = σpred² / (σpred² + σmed² + 25)`, con `σpred` creciendo
+   `0.8 m × √Δt` cuando no llegan muestras. Rechaza saltos mayores que
+   `max(15 m, 3σpred)` para que un fix aislado no mueva el punto ni dispare
+   una alerta.
+4. La posición filtrada se publica de vuelta (`lat`, `lng`, `acc`) para que
+   otros nodos se beneficien, y alimenta `edificioEn()` y la confirmación de
+   3 muestras para entrar/salir del interior.
+
+**Límites:** las observaciones pueden estar correlacionadas (mismo sistema
+GNSS, mismo multipath), por lo que bajar la σ de 12 m a ~6 m no equivale a
+precisión real de 6 m sin medir con cinta. Para 1–3 m reales siguen siendo
+necesarios BLE/UWB, mediana robusta sobre ventanas deslizantes y el módulo
+`backend/src/relative.ts` descrito arriba. La altura se ignora a propósito.
 
 ## 6. Preguntas abiertas
 

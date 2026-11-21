@@ -598,6 +598,8 @@ const PRESENCIA = {
   y: dot.y,
   pares: new Map(),
   observaciones: new Map(),
+  roles: new Map(),
+  filtro: new Map(),
   conectado: false,
   ultimoEnvio: 0,
   ultimoAnuncio: -1,
@@ -676,19 +678,29 @@ function publicarPresencia(fuerza = false) {
   const ahora = Date.now();
   if (!fuerza && ahora - PRESENCIA.ultimoEnvio < 900) return;
   PRESENCIA.ultimoEnvio = ahora;
-  const g = PRESENCIA.geo;
+  const yo = PRESENCIA.filtro.get(PRESENCIA.id);
+  const lat = yo ? yo.lat : (PRESENCIA.geo && PRESENCIA.geo.latitude);
+  const lng = yo ? yo.lng : (PRESENCIA.geo && PRESENCIA.geo.longitude);
+  const acc = yo ? yo.acc : (PRESENCIA.geo && PRESENCIA.geo.accuracyM);
   const cuerpo = {
     id: PRESENCIA.id,
     rol: PRESENCIA.rol,
     x: Math.round(PRESENCIA.x),
     y: Math.round(PRESENCIA.y),
-    lat: g && Number.isFinite(g.latitude) ? Number(g.latitude.toFixed(6)) : null,
-    lng: g && Number.isFinite(g.longitude) ? Number(g.longitude.toFixed(6)) : null,
-    acc: g && Number.isFinite(g.accuracyM) ? Math.round(g.accuracyM) : null,
+    lat: Number.isFinite(lat) ? Number(lat.toFixed(6)) : null,
+    lng: Number.isFinite(lng) ? Number(lng.toFixed(6)) : null,
+    acc: Number.isFinite(acc) ? Math.round(acc) : null,
     ts: ahora,
     obs: [...PRESENCIA.pares.values()]
       .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))
-      .map((p) => ({ id: p.id, lat: p.lat, lng: p.lng, acc: p.acc, ts: p.ts })),
+      .map((p) => ({
+        id: p.id,
+        lat: p.lat,
+        lng: p.lng,
+        acc: p.acc,
+        rol: p.rol,
+        ts: p.ts,
+      })),
   };
   ws.send(mqttPaquete(3, 0, [...mqttTexto(PRESENCIA_TOPIC), ...bytesTexto(JSON.stringify(cuerpo))]));
 }
@@ -711,7 +723,23 @@ function edificioEn(x, y) {
   }
   return null;
 }
-function fusionar(id) {
+function distM(a, b) {
+  const dLat = (b.lat - a.lat) * 111320;
+  const dLng = (b.lng - a.lng) * 111320 * Math.cos((a.lat * Math.PI) / 180);
+  return Math.hypot(dLat, dLng);
+}
+function accValida(acc) {
+  return Math.min(40, Math.max(3, Number.isFinite(acc) ? acc : 15));
+}
+function confianzaDe(observador, rol) {
+  if (observador === '@yo') return 1;
+  return (rol === 'vidente' || PRESENCIA.roles.get(observador) === 'vidente')
+    ? 1.6
+    : 1;
+}
+/* Estimador del grafo: GPS satelital propio como ancla + observaciones de pares.
+   Peso = confianza por rol × decaimiento temporal / varianza. */
+function estimar(id) {
   const ahora = Date.now();
   const lista = [];
   if (id === PRESENCIA.id && PRESENCIA.geo) {
@@ -720,17 +748,26 @@ function fusionar(id) {
       lng: PRESENCIA.geo.longitude,
       acc: PRESENCIA.geo.accuracyM,
       ts: ahora,
+      observador: '@yo',
+      rol: PRESENCIA.rol,
     });
   }
-  for (const mapa of PRESENCIA.observaciones.values()) {
+  for (const [observador, mapa] of PRESENCIA.observaciones) {
     const o = mapa.get(id);
-    if (o) lista.push(o);
+    if (o) {
+      lista.push({
+        ...o,
+        observador,
+        rol: o.rol || PRESENCIA.roles.get(observador),
+      });
+    }
   }
   if (!lista.length) return null;
   let suma = 0, lat = 0, lng = 0;
   for (const o of lista) {
-    const acc = Math.min(40, Math.max(3, Number.isFinite(o.acc) ? o.acc : 15));
-    const peso = Math.exp(-Math.max(0, ahora - o.ts) / 12000) / (acc * acc + 25);
+    const acc = accValida(o.acc);
+    const conf = confianzaDe(o.observador, o.rol);
+    const peso = conf * Math.exp(-Math.max(0, ahora - o.ts) / 12000) / (acc * acc + 25);
     suma += peso; lat += o.lat * peso; lng += o.lng * peso;
   }
   if (!suma) return null;
@@ -739,12 +776,45 @@ function fusionar(id) {
     lng: lng / suma,
     acc: Math.max(1, Math.min(30, Math.sqrt(1 / suma))),
     n: lista.length,
+    ts: ahora,
   };
 }
+/* Filtro temporal tipo Kalman 1D sobre lat/lng: quita jitter del GPS satelital
+   y descarta saltos aislados. La incertidumbre crece con el tiempo sin datos. */
+function suavizar(id, crudo) {
+  const anterior = PRESENCIA.filtro.get(id);
+  if (!anterior) {
+    const salida = { ...crudo };
+    PRESENCIA.filtro.set(id, salida);
+    return salida;
+  }
+  const dt = Math.max(0, crudo.ts - anterior.ts);
+  const accPred = Math.min(40, accValida(anterior.acc) + Math.sqrt(dt / 1000) * 0.8);
+  if (distM(anterior, crudo) > Math.max(15, 3 * accPred)) {
+    const salida = { ...anterior, ts: crudo.ts, n: crudo.n, acc: accPred, rechazado: true };
+    PRESENCIA.filtro.set(id, salida);
+    return salida;
+  }
+  const accMed = accValida(crudo.acc);
+  const K = (accPred * accPred) / (accPred * accPred + accMed * accMed + 25);
+  const salida = {
+    lat: anterior.lat + K * (crudo.lat - anterior.lat),
+    lng: anterior.lng + K * (crudo.lng - anterior.lng),
+    acc: Math.max(1, Math.sqrt((1 - K) * accPred * accPred)),
+    n: crudo.n,
+    ts: crudo.ts,
+    rechazado: false,
+  };
+  PRESENCIA.filtro.set(id, salida);
+  return salida;
+}
 function recalcularPares() {
+  const yoCrudo = estimar(PRESENCIA.id);
+  if (yoCrudo) suavizar(PRESENCIA.id, yoCrudo);
   PRESENCIA.pares.forEach((p, id) => {
-    const f = fusionar(id);
-    if (!f) return;
+    const crudo = estimar(id);
+    if (!crudo) return;
+    const f = suavizar(id, crudo);
     const punto = geoAPlano(f.lat, f.lng);
     if (!punto) return;
     p.x = punto.x;
@@ -756,7 +826,7 @@ function recalcularPares() {
 }
 function verificarInteriorAuto() {
   if (PRESENCIA.rol !== 'no-vidente' || Date.now() < AUTO_INTERIOR.bloqueo) return;
-  const yo = fusionar(PRESENCIA.id);
+  const yo = PRESENCIA.filtro.get(PRESENCIA.id);
   const punto = yo ? geoAPlano(yo.lat, yo.lng) : null;
   const id = punto ? edificioEn(punto.x, punto.y) : null;
   if (id) {
@@ -781,6 +851,7 @@ function recibirPresencia(mensaje) {
   if (!mensaje || mensaje.id === PRESENCIA.id) return;
   if (!Number.isFinite(mensaje.lat) || !Number.isFinite(mensaje.lng)) return;
   const observador = mensaje.id;
+  PRESENCIA.roles.set(observador, mensaje.rol);
   const mapa = PRESENCIA.observaciones.get(observador) || new Map();
   mapa.set(observador, {
     lat: mensaje.lat,
@@ -795,6 +866,7 @@ function recibirPresencia(mensaje) {
       lat: o.lat,
       lng: o.lng,
       acc: Number.isFinite(o.acc) ? o.acc : 15,
+      rol: o.rol,
       ts: o.ts || Date.now(),
     });
   }
@@ -806,6 +878,7 @@ function recibirPresencia(mensaje) {
       lat: mensaje.lat,
       lng: mensaje.lng,
       acc: Number.isFinite(mensaje.acc) ? mensaje.acc : 15,
+      rol: mensaje.rol,
       x: 0,
       y: 0,
       accFus: Number.isFinite(mensaje.acc) ? mensaje.acc : 15,
@@ -817,6 +890,7 @@ function recibirPresencia(mensaje) {
   }
   recalcularPares();
   verificarInteriorAuto();
+  publicarPresencia();
   pintarPares();
   actualizarPresencia();
 }
@@ -913,7 +987,13 @@ setInterval(() => {
     for (const [id, o] of mapa) {
       if (Date.now() - o.ts > 20000) mapa.delete(id);
     }
-    if (!mapa.size) PRESENCIA.observaciones.delete(observador);
+    if (!mapa.size) {
+      PRESENCIA.observaciones.delete(observador);
+      PRESENCIA.roles.delete(observador);
+    }
+  }
+  for (const id of PRESENCIA.filtro.keys()) {
+    if (id !== PRESENCIA.id && !PRESENCIA.pares.has(id)) PRESENCIA.filtro.delete(id);
   }
 }, 3000);
 setInterval(() => {
@@ -963,9 +1043,9 @@ window.setUserPosition = (x, y, geo) => {
   }
   PRESENCIA.x = dot.x;
   PRESENCIA.y = dot.y;
-  publicarPresencia();
   recalcularPares();
   verificarInteriorAuto();
+  publicarPresencia();
   placeDot();
   /* Centramos la vista en el punto sin anunciar ni volver a seleccionar nada. */
   centerOn(x, y);
