@@ -3,10 +3,14 @@
 **Estado:** el módulo de GPS y movimiento ya está en `backend/` (commit `2fe9c61`).  
 Este archivo es el handoff para quien construye el mapa con Tailwind: aquí está
 todo lo que ya puedes consumir desde `front/`. El mapa vive en
-`front/index.html` y `App.tsx` lo carga en un `WebView`, enviándole la
+`front/index.html` y se carga desde `App.tsx` a través de `Mapa.tsx`
+(`WebView` en nativo, `Mapa.web.tsx` con `iframe` en web), enviándole la
 ubicación del GPS con `postMessage({ type: 'position', x, y })`.
 La conversión lat/lng → píxeles del plano está en `App.tsx` (`aPuntoPlano`)
 y usa una referencia aproximada pendiente de georreferenciar.
+`setUserPosition()` solo actualiza el punto y la guía, sin volver a
+seleccionar el edificio, para no repetir la voz automática en cada muestra.
+El interior de los edificios es esquemático hasta que haya planos oficiales.
 
 El componente `Mapa` tiene dos implementaciones: `Mapa.tsx` usa `WebView` en
 iOS/Android y `Mapa.web.tsx` usa un `<iframe>` en navegador, porque

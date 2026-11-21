@@ -5,11 +5,38 @@ export const MAPA_HTML = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e2e8f0">
-<title>Mapa accesible · Campus Casa Central UTFSM</title>
+<title>Mapa accesible Â· Campus Casa Central UTFSM</title>
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <style>
   html, body { margin: 0; height: 100%; }
   button:focus-visible { outline: 4px solid #f97316; outline-offset: 2px; }
+  html, body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
+  body { -webkit-user-select: none; user-select: none; }
+
+  /* Celulares: respetar zonas seguras (notch / barra inferior) */
+  #hint { top: max(16px, env(safe-area-inset-top)); }
+  #sheet { bottom: max(10px, env(safe-area-inset-bottom)); max-height: calc(100dvh - 24px); overflow-y: auto; }
+  #interior { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+  #sheetName { font-size: clamp(20px, 6.4vw, 26px); }
+
+  /* Pantallas bajas: botones y textos mÃ¡s compactos */
+  @media (max-height: 700px) {
+    #sheet { padding: 10px; gap: 6px; }
+    #sheet button, #interior button { min-height: 48px; }
+    #sheetDir { font-size: 17px; }
+    #sheetWhere { font-size: 15px; }
+  }
+  /* Celular en horizontal: el panel pasa a un lado */
+  @media (max-height: 500px) and (orientation: landscape) {
+    #sheet { left: auto; right: max(10px, env(safe-area-inset-right)); top: 10px; bottom: 10px;
+             width: min(380px, 50vw); max-width: none; margin: 0; }
+    #hint { max-width: 22rem; }
+    #inNote { display: none; }
+    #interior > div:first-child { padding: 6px 12px; }
+  }
+  @media (max-width: 340px) {
+    #sheet button { font-size: 15px; }
+  }
 </style>
 </head>
 <body class="h-full overflow-hidden bg-slate-200 font-sans text-black antialiased">
@@ -53,7 +80,7 @@ export const MAPA_HTML = `<!doctype html>
       </g>
     </svg>
 
-    <!-- Línea de dirección hacia el edificio elegido -->
+    <!-- LÃ­nea de direcciÃ³n hacia el edificio elegido -->
     <svg width="1312" height="985" viewBox="0 0 1312 985" aria-hidden="true" class="pointer-events-none absolute left-0 top-0">
       <line id="guide" x1="690" y1="500" x2="690" y2="500" stroke="#0369a1" stroke-width="7"
             stroke-dasharray="16 12" stroke-linecap="round" stroke-opacity="0"/>
@@ -62,57 +89,84 @@ export const MAPA_HTML = `<!doctype html>
     <!-- Botones de edificios (los crea el script) -->
     <div id="buildings"></div>
 
-    <!-- Punto azul: ubicación de la persona -->
+    <!-- Punto azul: ubicaciÃ³n de la persona -->
     <div id="dotHalo" aria-hidden="true" class="pointer-events-none absolute h-10 w-10 rounded-full bg-sky-500/30"></div>
-    <div id="dot" role="img" aria-label="Tu ubicación"
+    <div id="dot" role="img" aria-label="Tu ubicaciÃ³n"
          class="pointer-events-none absolute box-border h-7 w-7 rounded-full border-[5px] border-white bg-sky-600 shadow-[0_0_0_3px_#0c4a6e]"></div>
   </div>
 </main>
 
 <!-- Pista inicial -->
 <div id="hint" class="pointer-events-none absolute left-1/2 top-4 w-[calc(100%-32px)] max-w-sm -translate-x-1/2 rounded-full bg-black px-4 py-3 text-center text-[17px] font-bold text-white">
-  Arrastra el mapa · Toca un edificio
+  Arrastra el mapa Â· Toca un edificio
 </div>
 
 <!-- Panel que aparece al elegir un edificio -->
 <section id="sheet" aria-live="polite"
          class="absolute inset-x-2.5 bottom-2.5 mx-auto hidden max-w-md flex-col gap-2 rounded-2xl border-4 border-black bg-yellow-200 p-3.5">
-  <p id="sheetName" class="m-0 text-[26px] font-extrabold"></p>
+  <div class="flex items-center justify-between gap-2">
+    <button id="btnPrev" class="flex min-h-14 min-w-16 flex-col items-center justify-center gap-0.5 rounded-[10px] border-[3px] border-black bg-black px-2 text-white">
+      <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+      <span id="prevId" class="text-sm font-extrabold leading-none"></span>
+    </button>
+    <p id="sheetName" class="m-0 flex-1 text-center text-[26px] font-extrabold"></p>
+    <button id="btnNext" class="flex min-h-14 min-w-16 flex-col items-center justify-center gap-0.5 rounded-[10px] border-[3px] border-black bg-black px-2 text-white">
+      <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+      <span id="nextId" class="text-sm font-extrabold leading-none"></span>
+    </button>
+  </div>
   <p id="sheetDir" class="m-0 text-[19px] font-extrabold leading-tight text-sky-900"></p>
   <p id="sheetWhere" class="m-0 text-base font-medium leading-snug"></p>
   <div class="mt-1 grid grid-cols-4 gap-2">
+    <button id="btnEnter" class="col-span-4 min-h-14 rounded-[10px] border-[3px] border-black bg-blue-900 text-lg font-extrabold text-white">Entrar al edificio</button>
     <button id="btnSpeak"  class="col-span-2 min-h-14 rounded-[10px] border-[3px] border-black bg-black text-lg font-extrabold text-white">Escuchar</button>
     <button id="btnClose"  class="col-span-2 min-h-14 rounded-[10px] border-[3px] border-black bg-white text-lg font-extrabold text-black">Cerrar</button>
-    <button id="btnCenter" class="col-span-2 min-h-14 rounded-[10px] border-[3px] border-black bg-sky-900 text-[17px] font-extrabold text-white">Mi ubicación</button>
+    <button id="btnCenter" class="col-span-2 min-h-14 rounded-[10px] border-[3px] border-black bg-sky-900 text-[17px] font-extrabold text-white">Mi ubicaciÃ³n</button>
     <button id="btnIn"  aria-label="Acercar" class="min-h-14 rounded-[10px] border-[3px] border-black bg-black text-3xl font-extrabold text-white">+</button>
-    <button id="btnOut" aria-label="Alejar"  class="min-h-14 rounded-[10px] border-[3px] border-black bg-black text-3xl font-extrabold text-white">−</button>
+    <button id="btnOut" aria-label="Alejar"  class="min-h-14 rounded-[10px] border-[3px] border-black bg-black text-3xl font-extrabold text-white">âˆ’</button>
+    <button id="btnVoice" aria-pressed="true" class="col-span-4 min-h-12 rounded-[10px] border-[3px] border-black bg-white text-base font-extrabold text-black"></button>
+  </div>
+</section>
+
+<!-- Vista interior: el resto del mapa queda desenfocado detrÃ¡s -->
+<section id="interior" role="dialog" aria-modal="true" aria-labelledby="inTitle"
+         class="absolute inset-0 z-20 hidden flex-col bg-white/40 backdrop-blur-md">
+  <div class="flex items-center gap-3 p-3">
+    <button id="inExit" class="min-h-14 rounded-[10px] border-[3px] border-black bg-white px-5 text-lg font-extrabold text-black">Salir</button>
+    <h2 id="inTitle" class="m-0 text-2xl font-extrabold"></h2>
+  </div>
+  <div id="inStage" class="relative min-h-0 flex-1"></div>
+  <div aria-live="polite" class="m-3 flex flex-col gap-2 rounded-2xl border-4 border-black bg-yellow-200 p-3.5">
+    <p id="inRoom" class="m-0 text-[22px] font-extrabold"></p>
+    <p id="inNote" class="m-0 text-base font-medium leading-snug"></p>
+    <button id="inSpeak" class="min-h-14 rounded-[10px] border-[3px] border-black bg-black text-lg font-extrabold text-white">Escuchar</button>
   </div>
 </section>
 
 <script>
 /* ---------- Datos ----------
-   Coordenadas en píxeles del plano oficial (1312 x 985).
-   [id, centroX, centroY, ancho, alto, descripción] */
+   Coordenadas en pÃ­xeles del plano oficial (1312 x 985).
+   [id, centroX, centroY, ancho, alto, descripciÃ³n] */
 const BUILDINGS = [
-  ['C', 756, 340, 338, 123, 'Norte. Es el edificio más grande, junto a Avenida Placeres.'],
-  ['R', 437, 340, 60, 40, 'Noroeste, junto a Avenida Placeres y Pasaje Valdés.'],
-  ['M', 365, 490, 55, 115, 'Noroeste, junto a Pasaje Valdés, al oeste de la cancha.'],
+  ['C', 756, 340, 338, 123, 'Norte. Es el edificio mÃ¡s grande, junto a Avenida Placeres.'],
+  ['R', 437, 340, 60, 40, 'Noroeste, junto a Avenida Placeres y Pasaje ValdÃ©s.'],
+  ['M', 365, 490, 55, 115, 'Noroeste, junto a Pasaje ValdÃ©s, al oeste de la cancha.'],
   ['M2', 420, 530, 45, 42, 'Noroeste, al este del Edificio M.'],
-  ['B', 836, 528, 228, 125, 'Centro-norte. Tiene un patio interior y está al sur del Edificio C.'],
+  ['B', 836, 528, 228, 125, 'Centro-norte. Tiene un patio interior y estÃ¡ al sur del Edificio C.'],
   ['K', 975, 440, 50, 60, 'Noreste, junto a la Subida San Luis.'],
   ['L', 622, 596, 26, 64, 'Oeste, pegado al borde este de la cancha.'],
   ['U', 746, 660, 54, 120, 'Centro-oeste, al oeste del Edificio A y al sur del Edificio B.'],
-  ['A', 845, 715, 110, 150, 'Centro-sur, al sur del patio central. Está al este del Edificio U.'],
+  ['A', 845, 715, 110, 150, 'Centro-sur, al sur del patio central. EstÃ¡ al este del Edificio U.'],
   ['D', 968, 661, 103, 98, 'Centro-este, al este del patio central y al norte del Edificio E.'],
   ['E', 1002, 735, 115, 32, 'Centro-este, justo al sur del Edificio D.'],
   ['H', 602, 752, 60, 36, 'Suroeste, bajo la cancha, sobre la ladera.'],
   ['F2', 948, 800, 22, 70, 'Sur, entre el Edificio D y el Edificio F.'],
-  ['F', 1032, 860, 215, 32, 'Sur, a lo largo de Avenida España.'],
+  ['F', 1032, 860, 215, 32, 'Sur, a lo largo de Avenida EspaÃ±a.'],
   ['T', 1226, 830, 65, 70, 'Extremo sureste del campus.']
 ];
 const DIRS = ['norte','noreste','este','sureste','sur','suroeste','oeste','noroeste'];
 
-/* Ubicación de la persona (simulada). Para conectar un GPS real, llama a
+/* UbicaciÃ³n de la persona (simulada). Para conectar un GPS real, llama a
    setUserPosition(x, y) con coordenadas ya convertidas al plano. */
 let dot = { x: 690, y: 500 };
 
@@ -120,11 +174,13 @@ let dot = { x: 690, y: 500 };
 const $ = (id) => document.getElementById(id);
 const vp = $('viewport'), world = $('world');
 let ox = 0, oy = 0, z = 1, selected = null;
+let autoVoice = true;   /* voz automÃ¡tica activada por defecto */
+try { if (localStorage.getItem('autoVoice') === 'off') autoVoice = false; } catch (e) {}
 const buttons = {};
 const ON  = ['bg-yellow-400','text-black','border-black','border-[5px]'];
 const OFF = ['bg-blue-900','text-white','border-slate-900','border-[3px]'];
 
-/* ---------- Construcción ---------- */
+/* ---------- ConstrucciÃ³n ---------- */
 BUILDINGS.forEach(([id, cx, cy, w, h]) => {
   const W = Math.max(48, w), H = Math.max(48, h);
   const b = document.createElement('button');
@@ -143,31 +199,41 @@ function placeDot() {
   $('dotHalo').style.cssText = \`left:\${dot.x - 20}px;top:\${dot.y - 20}px\`;
 }
 
-/* ---------- Mapa: posición y zoom ---------- */
+/* ---------- Mapa: posiciÃ³n y zoom ---------- */
 function clamp(x, y, s) {
   const m = 120, vw = vp.clientWidth, vh = vp.clientHeight;
   return [Math.min(m, Math.max(vw - 1312*s - m, x)), Math.min(m, Math.max(vh - 985*s - m, y))];
 }
 function apply() { world.style.transform = \`translate(\${ox}px,\${oy}px) scale(\${z})\`; }
-function focusY() { return selected ? Math.max(140, (vp.clientHeight - 280) / 2) : vp.clientHeight / 2; }
+const isLandscapeShort = () => matchMedia('(max-height:500px) and (orientation:landscape)').matches;
+function panelOpen() { return selected && !$('sheet').classList.contains('hidden'); }
+/* Centro visible del mapa: descuenta el panel (abajo en vertical, a un lado en horizontal) */
+function focusY() {
+  if (!panelOpen() || isLandscapeShort()) return vp.clientHeight / 2;
+  return Math.max(100, (vp.clientHeight - $('sheet').offsetHeight - 10) / 2);
+}
+function focusX() {
+  if (!panelOpen() || !isLandscapeShort()) return vp.clientWidth / 2;
+  return Math.max(100, (vp.clientWidth - $('sheet').offsetWidth - 10) / 2);
+}
 function centerOn(px, py) {
-  [ox, oy] = clamp(vp.clientWidth/2 - px*z, focusY() - py*z, z);
+  [ox, oy] = clamp(focusX() - px*z, focusY() - py*z, z);
   apply();
 }
 function zoomBy(k) {
   const nz = Math.min(2, Math.max(0.7, z * k)), r = nz / z;
-  const cx = vp.clientWidth / 2, cy = focusY();
+  const cx = focusX(), cy = focusY();
   [ox, oy] = clamp(cx - (cx - ox)*r, cy - (cy - oy)*r, nz);
   z = nz; apply();
 }
 
-/* ---------- Selección ---------- */
+/* ---------- SelecciÃ³n ---------- */
 function info(id) {
   const [, cx, cy, , , where] = BUILDINGS.find(b => b[0] === id);
   const dx = cx - dot.x, dy = cy - dot.y, dist = Math.hypot(dx, dy);
   const ang = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
-  const dir = dist < 70 ? 'Ya estás junto a este edificio.'
-    : 'Desde tu ubicación, dirígete hacia el ' + DIRS[Math.round(ang/45) % 8] + '.';
+  const dir = dist < 70 ? 'Ya estÃ¡s junto a este edificio.'
+    : 'Desde tu ubicaciÃ³n, dirÃ­gete hacia el ' + DIRS[Math.round(ang/45) % 8] + '.';
   return { cx, cy, where, dir, label: 'Edificio ' + id };
 }
 function select(id) {
@@ -180,6 +246,7 @@ function select(id) {
   buttons[id].classList.remove(...OFF); buttons[id].classList.add(...ON);
   buttons[id].setAttribute('aria-pressed', 'true');
   $('sheetName').textContent = i.label;
+  updateArrows();
   $('sheetDir').textContent = i.dir;
   $('sheetWhere').textContent = i.where;
   $('sheet').classList.remove('hidden'); $('sheet').classList.add('flex');
@@ -189,7 +256,21 @@ function select(id) {
   g.setAttribute('x2', i.cx);  g.setAttribute('y2', i.cy);
   g.setAttribute('stroke-opacity', '0.9');
   centerOn((dot.x + i.cx)/2, (dot.y + i.cy)/2);
+  if (autoVoice) say(i.label);
 }
+/* Flechas: recorren los edificios de oeste a este (izquierda / derecha) */
+const ORDER = BUILDINGS.slice().sort((a, b) => a[1] - b[1]).map(b => b[0]);
+function neighbor(d) {
+  const n = ORDER.length, i = ORDER.indexOf(selected);
+  return ORDER[(i + d + n) % n];
+}
+function updateArrows() {
+  const p = neighbor(-1), n = neighbor(1);
+  $('prevId').textContent = p; $('nextId').textContent = n;
+  $('btnPrev').setAttribute('aria-label', 'Edificio anterior, a la izquierda: ' + p);
+  $('btnNext').setAttribute('aria-label', 'Edificio siguiente, a la derecha: ' + n);
+}
+function step(d) { if (selected && !inside) select(neighbor(d)); }
 function closeSheet() {
   if (selected) {
     buttons[selected].classList.remove(...ON); buttons[selected].classList.add(...OFF);
@@ -200,15 +281,43 @@ function closeSheet() {
   $('hint').classList.remove('hidden');
   $('guide').setAttribute('stroke-opacity', '0');
 }
-function speak() {
-  if (!selected) return;
-  const i = info(selected);
+function say(text) {
   try {
-    const u = new SpeechSynthesisUtterance(i.label + '. ' + i.dir + ' ' + i.where);
+    const u = new SpeechSynthesisUtterance(text);
     u.lang = 'es-CL'; speechSynthesis.cancel(); speechSynthesis.speak(u);
   } catch (e) {}
 }
-window.setUserPosition = (x, y) => { dot = { x, y }; placeDot(); if (selected) select(selected); };
+function speak() {
+  if (!selected) return;
+  const i = info(selected);
+  say(i.label + '. ' + i.dir + ' ' + i.where);
+}
+function voiceLabel() {
+  const b = $('btnVoice');
+  b.textContent = 'Voz automÃ¡tica: ' + (autoVoice ? 'activada' : 'desactivada');
+  b.setAttribute('aria-pressed', autoVoice ? 'true' : 'false');
+}
+$('btnVoice').onclick = () => {
+  autoVoice = !autoVoice;
+  try { localStorage.setItem('autoVoice', autoVoice ? 'on' : 'off'); } catch (e) {}
+  voiceLabel();
+  if (autoVoice && selected) say('Voz activada. Edificio ' + selected);
+  else speechSynthesis.cancel();
+};
+voiceLabel();
+/* La app Expo envÃ­a la posiciÃ³n ya convertida a pÃ­xeles del plano.
+   Solo se actualizan el punto y la guÃ­a: no volvemos a llamar a select()
+   para que la voz automÃ¡tica no se repita en cada muestra del GPS. */
+window.setUserPosition = (x, y) => {
+  dot = { x, y };
+  placeDot();
+  if (!selected) return;
+  const i = info(selected);
+  $('sheetDir').textContent = i.dir;
+  const g = $('guide');
+  g.setAttribute('x1', x); g.setAttribute('y1', y);
+  g.setAttribute('x2', i.cx); g.setAttribute('y2', i.cy);
+};
 
 /* Puente con la app Expo: recibe { type: 'position', x, y } desde App.tsx */
 window.addEventListener('message', (event) => {
@@ -246,7 +355,111 @@ $('btnClose').onclick = closeSheet;
 $('btnCenter').onclick = () => centerOn(dot.x, dot.y);
 $('btnIn').onclick = () => zoomBy(1.25);
 $('btnOut').onclick = () => zoomBy(0.8);
-window.addEventListener('resize', () => { [ox, oy] = clamp(ox, oy, z); apply(); });
+window.addEventListener('resize', () => {
+  if (inside) { const b = BUILDINGS.find(x => x[0] === selected); buildPlan(b[3], b[4]); return; }
+  if (selected) { const i = info(selected); centerOn((dot.x + i.cx)/2, (dot.y + i.cy)/2); return; }
+  [ox, oy] = clamp(ox, oy, z); apply();
+});
+
+/* ---------- Interior del edificio ----------
+   Plano ESQUEMÃTICO generado: un pasillo central y salas a ambos lados.
+   Cuando existan planos oficiales por edificio, reemplazar buildPlan(). */
+let inside = false, room = null;
+const ROOM_ON  = ['bg-yellow-400','text-black','border-black'];
+const ROOM_OFF = ['bg-blue-900','text-white','border-slate-900'];
+
+function roomInfo() {
+  $('inRoom').textContent = room ? 'Sala ' + room + ' Â· Edificio ' + selected : 'Edificio ' + selected;
+  $('inNote').textContent = room
+    ? 'Plano esquemÃ¡tico: todavÃ­a no hay datos oficiales de este espacio.'
+    : 'Toca una sala para ver su informaciÃ³n.';
+}
+function buildPlan(w, h) {
+  const st = $('inStage'); st.innerHTML = ''; room = null;
+  const AW = st.clientWidth - 24, AH = st.clientHeight - 8;
+  const asp = Math.min(2.2, Math.max(0.5, w / h));
+  let cw = AW, ch = cw / asp; if (ch > AH) { ch = AH; cw = ch * asp; }
+  const card = document.createElement('div');
+  card.className = 'absolute box-border rounded-xl border-4 border-black bg-slate-100';
+  card.style.cssText = \`width:\${cw}px;height:\${ch}px;left:\${(st.clientWidth - cw)/2}px;top:\${(st.clientHeight - ch)/2}px\`;
+  const iw = cw - 8, ih = ch - 8, C = 40, g = 6, horiz = asp >= 1, rects = [];
+  const corr = document.createElement('div');
+  corr.className = 'absolute flex items-center justify-center bg-slate-300 text-[13px] font-bold tracking-wide text-slate-700';
+  corr.textContent = 'PASILLO';
+  let dx, dy;
+  if (horiz) {
+    const n = Math.max(2, Math.round(iw / 92)), rw = (iw - g*(n + 1)) / n, rh = (ih - C - g*3) / 2;
+    corr.style.cssText = \`left:0;top:\${g + rh + g}px;width:\${iw}px;height:\${C}px\`;
+    for (let r = 0; r < 2; r++) for (let i = 0; i < n; i++)
+      rects.push([g + i*(rw + g), r ? g + rh + g + C + g : g, rw, rh]);
+    dx = 20; dy = g + rh + g + C/2;
+  } else {
+    const n = Math.max(2, Math.round(ih / 92)), rh = (ih - g*(n + 1)) / n, rw = (iw - C - g*3) / 2;
+    corr.style.cssText = \`left:\${g + rw + g}px;top:0;width:\${C}px;height:\${ih}px;writing-mode:vertical-rl\`;
+    for (let c = 0; c < 2; c++) for (let i = 0; i < n; i++)
+      rects.push([c ? g + rw + g + C + g : g, g + i*(rh + g), rw, rh]);
+    dx = g + rw + g + C/2; dy = ih - 20;
+  }
+  card.appendChild(corr);
+  rects.forEach(([x, y, rw, rh], i) => {
+    const b = document.createElement('button'), k = i + 1;
+    b.className = 'absolute box-border rounded-lg border-[3px] p-0 text-base font-extrabold ' + ROOM_OFF.join(' ');
+    b.style.cssText = \`left:\${x}px;top:\${y}px;width:\${rw}px;height:\${rh}px\`;
+    b.textContent = 'Sala ' + k;
+    b.setAttribute('aria-label', 'Sala ' + k + ', Edificio ' + selected);
+    b.setAttribute('aria-pressed', 'false');
+    b.addEventListener('click', () => {
+      card.querySelectorAll('button').forEach(o => { o.classList.remove(...ROOM_ON); o.classList.add(...ROOM_OFF); o.setAttribute('aria-pressed', 'false'); });
+      b.classList.remove(...ROOM_OFF); b.classList.add(...ROOM_ON); b.setAttribute('aria-pressed', 'true');
+      room = k; roomInfo();
+      if (autoVoice) say('Sala ' + k);
+    });
+    card.appendChild(b);
+  });
+  const d = document.createElement('div');
+  d.setAttribute('role', 'img'); d.setAttribute('aria-label', 'Tu ubicaciÃ³n');
+  d.className = 'pointer-events-none absolute box-border h-7 w-7 rounded-full border-[5px] border-white bg-sky-600 shadow-[0_0_0_3px_#0c4a6e]';
+  d.style.cssText = \`left:\${dx - 14}px;top:\${dy - 14}px\`;
+  card.appendChild(d);
+  st.appendChild(card);
+  roomInfo();
+}
+function enterBuilding() {
+  if (!selected) return;
+  const [id, cx, cy, w, h] = BUILDINGS.find(b => b[0] === id0());
+  inside = true;
+  [ox, oy] = clamp(vp.clientWidth/2 - cx*z, vp.clientHeight/2 - cy*z, z); apply();
+  $('sheet').classList.add('hidden'); $('sheet').classList.remove('flex');
+  vp.inert = true;
+  const el = $('interior'); el.classList.remove('hidden'); el.classList.add('flex');
+  $('inTitle').textContent = 'Edificio ' + id + ' Â· interior';
+  buildPlan(w, h);
+  $('inExit').focus();
+  if (autoVoice) say('Dentro del Edificio ' + id);
+}
+function id0() { return selected; }
+function exitBuilding() {
+  if (!inside) return;
+  inside = false; vp.inert = false;
+  const el = $('interior'); el.classList.add('hidden'); el.classList.remove('flex');
+  select(selected);
+  $('btnEnter').focus();
+}
+$('btnEnter').onclick = enterBuilding;
+$('btnPrev').onclick = () => step(-1);
+$('btnNext').onclick = () => step(1);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft') step(-1);
+  if (e.key === 'ArrowRight') step(1);
+});
+$('inExit').onclick = exitBuilding;
+$('inSpeak').onclick = () => {
+  try {
+    const u = new SpeechSynthesisUtterance($('inRoom').textContent + '. ' + $('inNote').textContent);
+    u.lang = 'es-CL'; speechSynthesis.cancel(); speechSynthesis.speak(u);
+  } catch (e) {}
+};
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') exitBuilding(); });
 
 /* ---------- Inicio ---------- */
 placeDot();
