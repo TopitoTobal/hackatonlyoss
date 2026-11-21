@@ -179,8 +179,10 @@ el generador y `npm --prefix front run build:web`. `front/app.json` apunta el
 splash nativo a `public/splash-1080x1920.png` con fondo blanco.
 
 Además del splash del sistema, `front/App.tsx` muestra un **splash interno**
-durante 1,8 s al abrir la app (en web y en nativo) con el mismo PNG
-`/splash-1080x1920.png`. Se puede tocar para saltarlo. Esto evita el problema
+durante 1,8 s apenas se abre la app, **antes de elegir vidente o no vidente**
+(en web y en nativo), con el mismo PNG `/splash-1080x1920.png`. Se puede tocar
+para saltarlo. El `<Splash />` está en el `View` raíz, por fuera del condicional
+de modo, para que cubra también la pantalla de selección. Esto evita el problema
 de que una PWA **ya instalada** conserva el `apple-touch-startup-image` con el
 que se instaló: el overlay siempre muestra la versión nueva. El service worker
 subió a `campus-accesible-v3` y ahora cachea también el splash y la foto con

@@ -381,12 +381,14 @@ export default function App() {
     )
   }
 
-  if (!modo) return <Selector onElegir={irAModo} onPedirGPS={() => void pedirGPS()} />
-
   return (
-    <View style={styles.contenedor} accessibilityRole="main">
+    <View style={styles.raiz}>
       <Splash />
-      <StatusBar style="dark" />
+      {!modo ? (
+        <Selector onElegir={irAModo} onPedirGPS={() => void pedirGPS()} />
+      ) : (
+        <View style={styles.contenedor} accessibilityRole="main">
+          <StatusBar style="dark" />
 
       <Mapa posicion={punto} modo={modo} ayuda={pidiendoAyuda} />
 
@@ -482,13 +484,18 @@ export default function App() {
                 : 'Sin petición de ayuda.'}
             </Text>
           )}
+          </View>
         </View>
-      </View>
+        </View>
+      )}
     </View>
   )
 }
 
 const styles = StyleSheet.create({
+  raiz: {
+    flex: 1,
+  },
   splash: {
     position: 'absolute',
     top: 0,
