@@ -68,6 +68,29 @@ npm run build:mapa
 
 Eso actualiza `front/mapa-html.ts` conservando UTF-8 (evita el mojibake).
 
+## Deploy en Netlify
+
+Hay un `netlify.toml` en la raíz. Netlify ejecuta `npm --prefix front run
+build:web` (que es `expo export --platform web`) y publica `front/dist` con
+Node 22. Para probarlo:
+
+1. Sube el repo a GitHub (ya está en `main`).
+2. En Netlify → **Add new site → Import an existing project** → GitHub →
+   selecciona `hackatonlyoss`.
+3. Deja los valores que vienen en `netlify.toml` (Build command, Publish
+   directory y `NODE_VERSION=22`) y pulsa **Deploy site**.
+4. Abre la URL `https://<tu-sitio>.netlify.app` desde el celular.
+
+El GPS necesita HTTPS (Netlify lo da por defecto) y permiso de ubicación del
+navegador. En iOS Safari puede hacer falta tocar el botón `GPS` una vez si el
+permiso automático no salta; en Android Chrome salta solo.
+
+Para generar el `dist` en local sin Netlify:
+
+```sh
+npm --prefix front run build:web
+```
+
 ---
 
 ## 1. Qué ya existe

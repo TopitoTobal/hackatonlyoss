@@ -1,0 +1,12 @@
+[build]
+  command = "npm --prefix front run build:web"
+  publish = "front/dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Expo web es una SPA: cualquier ruta sirve el index.html.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
