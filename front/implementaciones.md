@@ -150,8 +150,12 @@ Para no depender de compilar el APK, el export web queda listo para
   `display: standalone`, orientación vertical, colores del mapa e íconos
   192/512 px con `purpose: any maskable`.
 - `front/public/icon-192.png`, `icon-180.png` e `icon-512.png`: generados con
-  `python3 front/scripts/generate-icons.py` (pin morado + insignia roja de
-  ayuda). El ícono de 180 px es el `apple-touch-icon`.
+  `python3 front/scripts/generate-icons.py` usando la misma foto y el logo
+  **Orienta** del splash (fondo blanco, letras amarillo/rojo/azul). El ícono de
+  180 px es el `apple-touch-icon`. Los URLs llevan `?v=4` y el service worker
+  subió a `campus-accesible-v4` para no reutilizar el ícono viejo. Como Android
+  guarda el ícono al instalar, hay que borrar el acceso directo y volver a
+  agregar la PWA para verlo.
 - `front/public/sw.js`: service worker con caché del cascarón
   (`/`, `/index.html`, manifest e íconos). La navegación usa red primero y el
   `index.html` cacheado como respaldo; los assets usan caché primero. MQTT/WSS
