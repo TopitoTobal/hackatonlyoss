@@ -1152,31 +1152,38 @@ function programarReintento() {
   }, 5000);
 }
 function mqttLeer(datos) {
+  /* Un frame WebSocket puede traer varios paquetes MQTT pegados. Procesar
+     solo el primero hacía que se perdieran pedidos de ayuda cuando llegaban
+     junto a un reporte de presencia. */
   let i = 0;
-  const tipo = datos[i++] >> 4;
-  let multiplicador = 1, longitud = 0, octeto;
-  do { octeto = datos[i++]; longitud += (octeto & 127) * multiplicador; multiplicador *= 128; } while (octeto & 128);
-  const fin = i + longitud;
-  if (tipo === 2) {
-    PRESENCIA.conectado = (datos[i + 1] & 1) === 0;
-    if (PRESENCIA.conectado && PRESENCIA.socket) {
-      PRESENCIA.socket.send(mqttPaquete(8, 2, [
-        0, 1,
-        ...mqttTexto(PRESENCIA_TOPIC), 0,
-        ...mqttTexto(AYUDA_TOPIC), 0,
-      ]));
-      publicarPresencia(true);
-      publicarAyuda(true);
+  while (i < datos.length) {
+    const tipo = datos[i++] >> 4;
+    let multiplicador = 1, longitud = 0, octeto;
+    do { octeto = datos[i++]; longitud += (octeto & 127) * multiplicador; multiplicador *= 128; } while (octeto & 128);
+    const fin = i + longitud;
+    if (fin > datos.length) break;
+    if (tipo === 2) {
+      PRESENCIA.conectado = (datos[i + 1] & 1) === 0;
+      if (PRESENCIA.conectado && PRESENCIA.socket) {
+        PRESENCIA.socket.send(mqttPaquete(8, 2, [
+          0, 1,
+          ...mqttTexto(PRESENCIA_TOPIC), 0,
+          ...mqttTexto(AYUDA_TOPIC), 0,
+        ]));
+        publicarPresencia(true);
+        publicarAyuda(true);
+      }
+      actualizarPresencia();
+    } else if (tipo === 3) {
+      const tam = (datos[i] << 8) | datos[i + 1];
+      i += 2;
+      const tema = new TextDecoder().decode(datos.slice(i, i + tam));
+      i += tam;
+      const mensaje = JSON.parse(new TextDecoder().decode(datos.slice(i, fin)));
+      if (tema === PRESENCIA_TOPIC) recibirPresencia(mensaje);
+      else if (tema === AYUDA_TOPIC) recibirAyuda(mensaje);
     }
-    actualizarPresencia();
-  } else if (tipo === 3) {
-    const tam = (datos[i] << 8) | datos[i + 1];
-    i += 2;
-    const tema = new TextDecoder().decode(datos.slice(i, i + tam));
-    i += tam;
-    const mensaje = JSON.parse(new TextDecoder().decode(datos.slice(i, fin)));
-    if (tema === PRESENCIA_TOPIC) recibirPresencia(mensaje);
-    else if (tema === AYUDA_TOPIC) recibirAyuda(mensaje);
+    i = fin;
   }
 }
 function publicarPresencia(fuerza = false) {
@@ -1580,7 +1587,6 @@ function publicarAyuda(fuerza = false) {
 }
 function recibirAyuda(mensaje) {
   if (!mensaje || !mensaje.id || mensaje.id === PRESENCIA.id) return;
-  if (!Number.isFinite(mensaje.lat) || !Number.isFinite(mensaje.lng)) return;
   const id = String(mensaje.id).slice(0, 12);
   if (!mensaje.activo) {
     if (AYUDA.pidiendo.delete(id)) {
@@ -1673,17 +1679,19 @@ window.setAyuda = (activo) => {
 
 function recibirPresencia(mensaje) {
   if (!mensaje || mensaje.id === PRESENCIA.id) return;
-  if (!Number.isFinite(mensaje.lat) || !Number.isFinite(mensaje.lng)) return;
   const observador = mensaje.id;
+  const conGeo = Number.isFinite(mensaje.lat) && Number.isFinite(mensaje.lng);
   PRESENCIA.roles.set(observador, mensaje.rol);
   const mapa = PRESENCIA.observaciones.get(observador) || new Map();
-  mapa.set(observador, {
-    lat: mensaje.lat,
-    lng: mensaje.lng,
-    acc: Number.isFinite(mensaje.acc) ? mensaje.acc : 15,
-    propio: true,
-    ts: mensaje.ts || Date.now(),
-  });
+  if (conGeo) {
+    mapa.set(observador, {
+      lat: mensaje.lat,
+      lng: mensaje.lng,
+      acc: Number.isFinite(mensaje.acc) ? mensaje.acc : 15,
+      propio: true,
+      ts: mensaje.ts || Date.now(),
+    });
+  }
   for (const o of (Array.isArray(mensaje.obs) ? mensaje.obs : [])) {
     if (!o || o.id === observador || o.id === PRESENCIA.id) continue;
     if (!Number.isFinite(o.lat) || !Number.isFinite(o.lng)) continue;
@@ -1705,8 +1713,11 @@ function recibirPresencia(mensaje) {
       lng: mensaje.lng,
       acc: Number.isFinite(mensaje.acc) ? mensaje.acc : 15,
       rol: mensaje.rol,
-      x: 0,
-      y: 0,
+      x: Number.isFinite(mensaje.x) ? mensaje.x : dot.x,
+      y: Number.isFinite(mensaje.y) ? mensaje.y : dot.y,
+      lat: conGeo ? mensaje.lat : null,
+      lng: conGeo ? mensaje.lng : null,
+      acc: Number.isFinite(mensaje.acc) ? mensaje.acc : 15,
       accFus: Number.isFinite(mensaje.acc) ? mensaje.acc : 15,
       n: 1,
       edificio: null,
@@ -1817,7 +1828,8 @@ setInterval(() => {
   for (const [id, p] of PRESENCIA.pares) {
     if (Date.now() - p.ts > 12000) PRESENCIA.pares.delete(id);
   }
-  if (PRESENCIA.pares.size !== antes) { pintarPares(); actualizarPresencia(); }
+  if (PRESENCIA.pares.size !== antes) actualizarPresencia();
+  pintarPares();
   for (const [observador, mapa] of PRESENCIA.observaciones) {
     for (const [id, o] of mapa) {
       if (Date.now() - o.ts > 20000) mapa.delete(id);
@@ -1893,6 +1905,7 @@ window.setUserPosition = (x, y, geo) => {
   PRESENCIA.x = dot.x;
   PRESENCIA.y = dot.y;
   recalcularPares();
+  pintarPares();
   verificarInteriorAuto();
   publicarPresencia();
   publicarAyuda();
