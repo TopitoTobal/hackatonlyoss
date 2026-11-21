@@ -95,27 +95,31 @@ Estructura del proyecto
 
 Estado actual de los archivos versionados en el repositorio:
 
-  backend/.gitkeep
-  documentacion/.gitkeep
-  documentacion/mapa-de-movilizacion.md
-  front/.gitkeep
+```text
+backend/.gitkeep
+documentacion/.gitkeep
+documentacion/mapa-de-movilizacion.md
+front/.gitkeep
+```
 
 Estructura planificada del backend (según las notas de la hackatón):
 
-  backend/
-  ├── README.md          # instalación, app.json, integración con Metro y ejemplos
-  ├── package.json       # peerDeps: expo-location, expo-task-manager, react-native
-  └── src/
-      ├── index.ts       # exports públicos
-      ├── types.ts       # GpsPoint, MovementSample, MovementStats, GeofenceRegion, etc.
-      ├── constants.ts   # nombres de tareas, límites y defaults
-      ├── permissions.ts # foreground/background + openLocationSettings()
-      ├── movement.ts    # Haversine, rumbo, MovementTracker, filtro por precisión
-      ├── tracker.ts     # startForegroundTracking()
-      ├── tasks.ts       # defineTask de background y geofencing (scope raíz)
-      ├── background.ts  # startBackgroundTracking(), startGeofencing(), stop...
-      ├── events.ts      # backgroundLocations / geofenceEvents
-      └── geojson.ts     # GeoJSON + textos accesibles en español
+```text
+backend/
+├── README.md          # instalación, app.json, integración con Metro y ejemplos
+├── package.json       # peerDeps: expo-location, expo-task-manager, react-native
+└── src/
+    ├── index.ts       # exports públicos
+    ├── types.ts       # GpsPoint, MovementSample, MovementStats, GeofenceRegion, etc.
+    ├── constants.ts   # nombres de tareas, límites y defaults
+    ├── permissions.ts # foreground/background + openLocationSettings()
+    ├── movement.ts    # Haversine, rumbo, MovementTracker, filtro por precisión
+    ├── tracker.ts     # startForegroundTracking()
+    ├── tasks.ts       # defineTask de background y geofencing (scope raíz)
+    ├── background.ts  # startBackgroundTracking(), startGeofencing(), stop...
+    ├── events.ts      # backgroundLocations / geofenceEvents
+    └── geojson.ts     # GeoJSON + textos accesibles en español
+```
 
 Funciones expuestas por el módulo de seguimiento:
 
