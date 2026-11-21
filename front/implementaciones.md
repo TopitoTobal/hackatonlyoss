@@ -36,21 +36,27 @@ sin credenciales, sin nombres y sin historial. Los pares expiran a los 12 s sin
 actualización. Si el broker no está disponible, la capa se oculta y el GPS y la
 voz siguen funcionando con normalidad.
 
-La precisión se fusiona entre pares siguiendo el RFC: cada mensaje lleva un
-campo `obs` con las posiciones que ese nodo oyó directamente y el `rol` de cada
-observador. El **GPS satelital propio es el ancla**; sobre él se arma un grafo
-de observaciones y se estima cada nodo con peso
-`confianza × exp(-antigüedad/12s) / (accuracy² + 25)`, donde `confianza = 1`
-para el ancla y pares no videntes y `1.6` para observadores videntes. Luego se
-aplica un **filtro temporal tipo Kalman** sobre lat/lng: la incertidumbre crece
-lento con el tiempo sin datos, la ganancia favorece la muestra más precisa y
-un salto aislado mayor que `max(15 m, 3σ)` se descarta en vez de mover el punto.
-El resultado es la posición que se publica y la que usa la detección de
-interior. El anillo morado usa la σ fusionada: con 1 señal de ±12 m da ~13 m,
-con 3 da ~7,5 m y con 5 da ~5,8 m (la ganancia temporal la reduce cuando las
-muestras son consistentes). En pantalla se indica el número de señales cuando
-es mayor que 1. **No se usa altura ni piso**: el RFC sigue vigente para BLE/UWB
-y el grafo completo.
+La precisión se fusiona entre pares siguiendo el RFC, con un **árbol de
+confianza** que evita el arrastre entre personas:
+
+- Cada mensaje publica su **GPS satelital crudo** (`lat`, `lng`, `acc`) y un
+  campo `obs` con lo que oyó de otros nodos. Nunca se publica la posición ya
+  fusionada: hacerlo creaba un bucle de realimentación y, cuando alguien se
+  alejaba, su estimado arrastraba al del otro.
+- El reporte que un nodo hace **de sí mismo** es la referencia (`propio: true`).
+  Las observaciones de terceros entran solo como corrección secundaria, con
+  peso `0.35` (o `0.56` si el observador es vidente), decaimiento de 5 s y un
+  filtro de coherencia: si difieren de la referencia más de `max(25 m, 3σpropia + 3σajena)`
+  se descartan.
+- Sobre esa referencia se aplica un **filtro temporal tipo Kalman** en lat/lng.
+  La incertidumbre crece `0.8 m × √Δt` sin datos. Un salto grande se sigue
+  (ganancia ≥ 0.85) solo si el nodo propio lo confirma con una muestra fresca
+  y es compatible con 8 m/s; si no, se descarta como outlier.
+- El resultado alimenta la detección de interior, pero **no se publica**.
+  El anillo morado usa la σ fusionada: con 1 señal de ±12 m da ~13 m, con 3
+  señales consistentes baja a ~7,5 m y con 5 a ~5,8 m. En pantalla se indica
+  el número de señales cuando es mayor que 1. **No se usa altura ni piso**:
+  el RFC sigue vigente para BLE/UWB y el grafo completo.
 
 El mismo marco compartido permite detectar edificio: `edificioEn()` prueba los
 rectángulos de `BUILDINGS` con ~6 m de tolerancia. Si la persona en modo

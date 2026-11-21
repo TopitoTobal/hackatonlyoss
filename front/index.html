@@ -679,10 +679,13 @@ function publicarPresencia(fuerza = false) {
   const ahora = Date.now();
   if (!fuerza && ahora - PRESENCIA.ultimoEnvio < 900) return;
   PRESENCIA.ultimoEnvio = ahora;
-  const yo = PRESENCIA.filtro.get(PRESENCIA.id);
-  const lat = yo ? yo.lat : (PRESENCIA.geo && PRESENCIA.geo.latitude);
-  const lng = yo ? yo.lng : (PRESENCIA.geo && PRESENCIA.geo.longitude);
-  const acc = yo ? yo.acc : (PRESENCIA.geo && PRESENCIA.geo.accuracyM);
+  /* Publicamos el GPS satelital CRUDO, nunca la posición ya fusionada.
+     Si publicáramos el estimado, otros nodos lo re-fusionarían y el
+     movimiento de uno arrastraría la posición del otro (bucle de realimentación). */
+  const g = PRESENCIA.geo;
+  const lat = g && Number.isFinite(g.latitude) ? g.latitude : null;
+  const lng = g && Number.isFinite(g.longitude) ? g.longitude : null;
+  const acc = g && Number.isFinite(g.accuracyM) ? g.accuracyM : null;
   const cuerpo = {
     id: PRESENCIA.id,
     rol: PRESENCIA.rol,
@@ -735,14 +738,34 @@ function distM(a, b) {
 function accValida(acc) {
   return Math.min(40, Math.max(3, Number.isFinite(acc) ? acc : 15));
 }
-function confianzaDe(observador, rol) {
-  if (observador === '@yo') return 1;
-  return (rol === 'vidente' || PRESENCIA.roles.get(observador) === 'vidente')
-    ? 1.6
-    : 1;
+/* Peso de una señal. El reporte que un nodo hace de SÍ MISMO manda;
+   lo que otro dice sobre él es solo una corrección secundaria y caduca antes. */
+function pesoDe(o, ahora) {
+  const acc = accValida(o.acc);
+  const conf = o.propio
+    ? 1
+    : 0.35 * ((o.rol === 'vidente' || PRESENCIA.roles.get(o.observador) === 'vidente') ? 1.6 : 1);
+  const decaimiento = o.propio ? 12000 : 5000;
+  return conf * Math.exp(-Math.max(0, ahora - o.ts) / decaimiento) / (acc * acc + 25);
 }
-/* Estimador del grafo: GPS satelital propio como ancla + observaciones de pares.
-   Peso = confianza por rol × decaimiento temporal / varianza. */
+function promediar(lista, ahora) {
+  let suma = 0, lat = 0, lng = 0;
+  for (const o of lista) {
+    const peso = pesoDe(o, ahora);
+    suma += peso; lat += o.lat * peso; lng += o.lng * peso;
+  }
+  if (!suma) return null;
+  return {
+    lat: lat / suma,
+    lng: lng / suma,
+    acc: Math.max(1, Math.min(30, Math.sqrt(1 / suma))),
+    ts: ahora,
+  };
+}
+/* Estimador del grafo, árbol de confianza:
+   1) referencia = reportes propios del nodo (su GPS satelital);
+   2) una observación de tercero que contradiga esa referencia se descarta;
+   3) las restantes solo afinan la posición, nunca la arrastran. */
 function estimar(id) {
   const ahora = Date.now();
   const lista = [];
@@ -754,6 +777,7 @@ function estimar(id) {
       ts: ahora,
       observador: '@yo',
       rol: PRESENCIA.rol,
+      propio: true,
     });
   }
   for (const [observador, mapa] of PRESENCIA.observaciones) {
@@ -763,25 +787,26 @@ function estimar(id) {
         ...o,
         observador,
         rol: o.rol || PRESENCIA.roles.get(observador),
+        propio: o.propio === true,
       });
     }
   }
   if (!lista.length) return null;
-  let suma = 0, lat = 0, lng = 0;
+  const propias = lista.filter((o) => o.propio);
+  const referencia = promediar(propias.length ? propias : lista, ahora);
+  if (!referencia) return null;
+  const aceptadas = propias.length ? propias.slice() : [];
   for (const o of lista) {
-    const acc = accValida(o.acc);
-    const conf = confianzaDe(o.observador, o.rol);
-    const peso = conf * Math.exp(-Math.max(0, ahora - o.ts) / 12000) / (acc * acc + 25);
-    suma += peso; lat += o.lat * peso; lng += o.lng * peso;
+    if (o.propio) continue;
+    const limite = Math.max(25, 3 * accValida(o.acc) + 3 * accValida(referencia.acc));
+    if (distM(referencia, o) <= limite) aceptadas.push(o);
   }
-  if (!suma) return null;
-  return {
-    lat: lat / suma,
-    lng: lng / suma,
-    acc: Math.max(1, Math.min(30, Math.sqrt(1 / suma))),
-    n: lista.length,
-    ts: ahora,
-  };
+  const resultado = promediar(aceptadas, ahora);
+  if (!resultado) return null;
+  resultado.n = aceptadas.length;
+  resultado.propias = propias.length;
+  resultado.confirmado = propias.some((o) => ahora - o.ts < 3000);
+  return resultado;
 }
 /* Filtro temporal tipo Kalman 1D sobre lat/lng: quita jitter del GPS satelital
    y descarta saltos aislados. La incertidumbre crece con el tiempo sin datos. */
@@ -794,13 +819,19 @@ function suavizar(id, crudo) {
   }
   const dt = Math.max(0, crudo.ts - anterior.ts);
   const accPred = Math.min(40, accValida(anterior.acc) + Math.sqrt(dt / 1000) * 0.8);
-  if (distM(anterior, crudo) > Math.max(15, 3 * accPred)) {
+  const salto = distM(anterior, crudo);
+  /* Un salto grande se acepta solo si el propio nodo lo confirma con una
+     muestra fresca y es compatible con una velocidad de 8 m/s. Así el
+     movimiento real no se pierde, pero un tercero desactualizado no arrastra. */
+  const movimientoReal = crudo.confirmado && salto <= Math.max(30, 8 * (dt / 1000) + 3 * accPred);
+  if (salto > Math.max(25, 3 * accPred) && !movimientoReal) {
     const salida = { ...anterior, ts: crudo.ts, n: crudo.n, acc: accPred, rechazado: true };
     PRESENCIA.filtro.set(id, salida);
     return salida;
   }
   const accMed = accValida(crudo.acc);
-  const K = (accPred * accPred) / (accPred * accPred + accMed * accMed + 25);
+  let K = (accPred * accPred) / (accPred * accPred + accMed * accMed + 25);
+  if (crudo.confirmado) K = Math.max(K, 0.85);
   const salida = {
     lat: anterior.lat + K * (crudo.lat - anterior.lat),
     lng: anterior.lng + K * (crudo.lng - anterior.lng),
@@ -861,6 +892,7 @@ function recibirPresencia(mensaje) {
     lat: mensaje.lat,
     lng: mensaje.lng,
     acc: Number.isFinite(mensaje.acc) ? mensaje.acc : 15,
+    propio: true,
     ts: mensaje.ts || Date.now(),
   });
   for (const o of (Array.isArray(mensaje.obs) ? mensaje.obs : [])) {
@@ -871,6 +903,7 @@ function recibirPresencia(mensaje) {
       lng: o.lng,
       acc: Number.isFinite(o.acc) ? o.acc : 15,
       rol: o.rol,
+      propio: false,
       ts: o.ts || Date.now(),
     });
   }
