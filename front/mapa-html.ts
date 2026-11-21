@@ -1,0 +1,257 @@
+// Generado desde front/index.html. Edita ese archivo y vuelve a generar.
+export const MAPA_HTML = `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e2e8f0">
+<title>Mapa accesible Â· Campus Casa Central UTFSM</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<style>
+  html, body { margin: 0; height: 100%; }
+  button:focus-visible { outline: 4px solid #f97316; outline-offset: 2px; }
+</style>
+</head>
+<body class="h-full overflow-hidden bg-slate-200 font-sans text-black antialiased">
+
+<main id="viewport" aria-label="Mapa del campus. Arrastra para mover y toca un edificio."
+      class="relative h-full w-full cursor-grab touch-none overflow-hidden bg-slate-200">
+  <div id="world" class="absolute left-0 top-0 origin-top-left" style="width:1312px;height:985px">
+
+    <!-- Plano base: terreno, cancha, calles y pasillos -->
+    <svg width="1312" height="985" viewBox="0 0 1312 985" aria-hidden="true" class="pointer-events-none absolute left-0 top-0">
+      <rect width="1312" height="985" fill="#e2e8f0"/>
+      <path d="M345 300 H960 V470 L1010 520 V600 L1130 650 L1200 740 L1290 790 L1270 830 L1180 960 H600 L410 900 V700 L345 600 Z" fill="#d6d3d1"/>
+      <path d="M415 735 L700 775 L880 835 L960 880 L1100 890 L1230 800 L1180 960 H610 L415 905 Z" fill="#a7c4a0"/>
+      <rect x="462" y="485" width="146" height="220" rx="4" fill="#166534"/>
+      <rect x="1062" y="672" width="64" height="128" rx="3" fill="#9a3412"/>
+      <rect x="0" y="278" width="1312" height="34" fill="#475569"/>
+      <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <g stroke="#475569" stroke-width="24">
+          <path d="M655 461 C655 490 662 500 690 502 L722 505"/>
+          <path d="M690 502 C670 510 665 540 668 580 L690 700 L705 770 L890 800"/>
+          <path d="M600 462 L940 462 L950 560 L985 600"/>
+          <path d="M600 462 L470 440 L385 430"/>
+          <path d="M880 600 L880 730 L945 800"/>
+          <path d="M890 800 L945 880 L1130 885"/>
+          <path d="M1020 700 L1060 740 L1190 800"/>
+        </g>
+        <g stroke="#ffffff" stroke-width="16">
+          <path d="M655 461 C655 490 662 500 690 502 L722 505"/>
+          <path d="M690 502 C670 510 665 540 668 580 L690 700 L705 770 L890 800"/>
+          <path d="M600 462 L940 462 L950 560 L985 600"/>
+          <path d="M600 462 L470 440 L385 430"/>
+          <path d="M880 600 L880 730 L945 800"/>
+          <path d="M890 800 L945 880 L1130 885"/>
+          <path d="M1020 700 L1060 740 L1190 800"/>
+        </g>
+      </g>
+      <g font-family="system-ui, sans-serif" font-size="20" font-weight="700" fill="#ffffff" text-anchor="middle">
+        <text x="535" y="600">CANCHA</text>
+        <text x="1094" y="740" font-size="16">TENIS</text>
+        <text x="660" y="301">AVENIDA PLACERES</text>
+      </g>
+    </svg>
+
+    <!-- LÃ­nea de direcciÃ³n hacia el edificio elegido -->
+    <svg width="1312" height="985" viewBox="0 0 1312 985" aria-hidden="true" class="pointer-events-none absolute left-0 top-0">
+      <line id="guide" x1="690" y1="500" x2="690" y2="500" stroke="#0369a1" stroke-width="7"
+            stroke-dasharray="16 12" stroke-linecap="round" stroke-opacity="0"/>
+    </svg>
+
+    <!-- Botones de edificios (los crea el script) -->
+    <div id="buildings"></div>
+
+    <!-- Punto azul: ubicaciÃ³n de la persona -->
+    <div id="dotHalo" aria-hidden="true" class="pointer-events-none absolute h-10 w-10 rounded-full bg-sky-500/30"></div>
+    <div id="dot" role="img" aria-label="Tu ubicaciÃ³n"
+         class="pointer-events-none absolute box-border h-7 w-7 rounded-full border-[5px] border-white bg-sky-600 shadow-[0_0_0_3px_#0c4a6e]"></div>
+  </div>
+</main>
+
+<!-- Pista inicial -->
+<div id="hint" class="pointer-events-none absolute left-1/2 top-4 w-[calc(100%-32px)] max-w-sm -translate-x-1/2 rounded-full bg-black px-4 py-3 text-center text-[17px] font-bold text-white">
+  Arrastra el mapa Â· Toca un edificio
+</div>
+
+<!-- Panel que aparece al elegir un edificio -->
+<section id="sheet" aria-live="polite"
+         class="absolute inset-x-2.5 bottom-2.5 mx-auto hidden max-w-md flex-col gap-2 rounded-2xl border-4 border-black bg-yellow-200 p-3.5">
+  <p id="sheetName" class="m-0 text-[26px] font-extrabold"></p>
+  <p id="sheetDir" class="m-0 text-[19px] font-extrabold leading-tight text-sky-900"></p>
+  <p id="sheetWhere" class="m-0 text-base font-medium leading-snug"></p>
+  <div class="mt-1 grid grid-cols-4 gap-2">
+    <button id="btnSpeak"  class="col-span-2 min-h-14 rounded-[10px] border-[3px] border-black bg-black text-lg font-extrabold text-white">Escuchar</button>
+    <button id="btnClose"  class="col-span-2 min-h-14 rounded-[10px] border-[3px] border-black bg-white text-lg font-extrabold text-black">Cerrar</button>
+    <button id="btnCenter" class="col-span-2 min-h-14 rounded-[10px] border-[3px] border-black bg-sky-900 text-[17px] font-extrabold text-white">Mi ubicaciÃ³n</button>
+    <button id="btnIn"  aria-label="Acercar" class="min-h-14 rounded-[10px] border-[3px] border-black bg-black text-3xl font-extrabold text-white">+</button>
+    <button id="btnOut" aria-label="Alejar"  class="min-h-14 rounded-[10px] border-[3px] border-black bg-black text-3xl font-extrabold text-white">âˆ’</button>
+  </div>
+</section>
+
+<script>
+/* ---------- Datos ----------
+   Coordenadas en pÃ­xeles del plano oficial (1312 x 985).
+   [id, centroX, centroY, ancho, alto, descripciÃ³n] */
+const BUILDINGS = [
+  ['C', 756, 340, 338, 123, 'Norte. Es el edificio mÃ¡s grande, junto a Avenida Placeres.'],
+  ['R', 437, 340, 60, 40, 'Noroeste, junto a Avenida Placeres y Pasaje ValdÃ©s.'],
+  ['M', 365, 490, 55, 115, 'Noroeste, junto a Pasaje ValdÃ©s, al oeste de la cancha.'],
+  ['M2', 420, 530, 45, 42, 'Noroeste, al este del Edificio M.'],
+  ['B', 836, 528, 228, 125, 'Centro-norte. Tiene un patio interior y estÃ¡ al sur del Edificio C.'],
+  ['K', 975, 440, 50, 60, 'Noreste, junto a la Subida San Luis.'],
+  ['L', 622, 596, 26, 64, 'Oeste, pegado al borde este de la cancha.'],
+  ['U', 746, 660, 54, 120, 'Centro-oeste, al oeste del Edificio A y al sur del Edificio B.'],
+  ['A', 845, 715, 110, 150, 'Centro-sur, al sur del patio central. EstÃ¡ al este del Edificio U.'],
+  ['D', 968, 661, 103, 98, 'Centro-este, al este del patio central y al norte del Edificio E.'],
+  ['E', 1002, 735, 115, 32, 'Centro-este, justo al sur del Edificio D.'],
+  ['H', 602, 752, 60, 36, 'Suroeste, bajo la cancha, sobre la ladera.'],
+  ['F2', 948, 800, 22, 70, 'Sur, entre el Edificio D y el Edificio F.'],
+  ['F', 1032, 860, 215, 32, 'Sur, a lo largo de Avenida EspaÃ±a.'],
+  ['T', 1226, 830, 65, 70, 'Extremo sureste del campus.']
+];
+const DIRS = ['norte','noreste','este','sureste','sur','suroeste','oeste','noroeste'];
+
+/* UbicaciÃ³n de la persona (simulada). Para conectar un GPS real, llama a
+   setUserPosition(x, y) con coordenadas ya convertidas al plano. */
+let dot = { x: 690, y: 500 };
+
+/* ---------- Estado ---------- */
+const $ = (id) => document.getElementById(id);
+const vp = $('viewport'), world = $('world');
+let ox = 0, oy = 0, z = 1, selected = null;
+const buttons = {};
+const ON  = ['bg-yellow-400','text-black','border-black','border-[5px]'];
+const OFF = ['bg-blue-900','text-white','border-slate-900','border-[3px]'];
+
+/* ---------- ConstrucciÃ³n ---------- */
+BUILDINGS.forEach(([id, cx, cy, w, h]) => {
+  const W = Math.max(48, w), H = Math.max(48, h);
+  const b = document.createElement('button');
+  b.className = 'absolute box-border rounded-lg p-0 text-2xl font-extrabold ' + OFF.join(' ');
+  b.style.cssText = \`left:\${Math.round(cx - W/2)}px;top:\${Math.round(cy - H/2)}px;width:\${W}px;height:\${H}px\`;
+  b.textContent = id;
+  b.setAttribute('aria-label', 'Edificio ' + id);
+  b.setAttribute('aria-pressed', 'false');
+  b.addEventListener('click', () => { if (!justDragged) select(id); });
+  $('buildings').appendChild(b);
+  buttons[id] = b;
+});
+
+function placeDot() {
+  $('dot').style.cssText = \`left:\${dot.x - 14}px;top:\${dot.y - 14}px\`;
+  $('dotHalo').style.cssText = \`left:\${dot.x - 20}px;top:\${dot.y - 20}px\`;
+}
+
+/* ---------- Mapa: posiciÃ³n y zoom ---------- */
+function clamp(x, y, s) {
+  const m = 120, vw = vp.clientWidth, vh = vp.clientHeight;
+  return [Math.min(m, Math.max(vw - 1312*s - m, x)), Math.min(m, Math.max(vh - 985*s - m, y))];
+}
+function apply() { world.style.transform = \`translate(\${ox}px,\${oy}px) scale(\${z})\`; }
+function focusY() { return selected ? Math.max(140, (vp.clientHeight - 280) / 2) : vp.clientHeight / 2; }
+function centerOn(px, py) {
+  [ox, oy] = clamp(vp.clientWidth/2 - px*z, focusY() - py*z, z);
+  apply();
+}
+function zoomBy(k) {
+  const nz = Math.min(2, Math.max(0.7, z * k)), r = nz / z;
+  const cx = vp.clientWidth / 2, cy = focusY();
+  [ox, oy] = clamp(cx - (cx - ox)*r, cy - (cy - oy)*r, nz);
+  z = nz; apply();
+}
+
+/* ---------- SelecciÃ³n ---------- */
+function info(id) {
+  const [, cx, cy, , , where] = BUILDINGS.find(b => b[0] === id);
+  const dx = cx - dot.x, dy = cy - dot.y, dist = Math.hypot(dx, dy);
+  const ang = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
+  const dir = dist < 70 ? 'Ya estÃ¡s junto a este edificio.'
+    : 'Desde tu ubicaciÃ³n, dirÃ­gete hacia el ' + DIRS[Math.round(ang/45) % 8] + '.';
+  return { cx, cy, where, dir, label: 'Edificio ' + id };
+}
+function select(id) {
+  if (selected) {
+    buttons[selected].classList.remove(...ON); buttons[selected].classList.add(...OFF);
+    buttons[selected].setAttribute('aria-pressed', 'false');
+  }
+  selected = id;
+  const i = info(id);
+  buttons[id].classList.remove(...OFF); buttons[id].classList.add(...ON);
+  buttons[id].setAttribute('aria-pressed', 'true');
+  $('sheetName').textContent = i.label;
+  $('sheetDir').textContent = i.dir;
+  $('sheetWhere').textContent = i.where;
+  $('sheet').classList.remove('hidden'); $('sheet').classList.add('flex');
+  $('hint').classList.add('hidden');
+  const g = $('guide');
+  g.setAttribute('x1', dot.x); g.setAttribute('y1', dot.y);
+  g.setAttribute('x2', i.cx);  g.setAttribute('y2', i.cy);
+  g.setAttribute('stroke-opacity', '0.9');
+  centerOn((dot.x + i.cx)/2, (dot.y + i.cy)/2);
+}
+function closeSheet() {
+  if (selected) {
+    buttons[selected].classList.remove(...ON); buttons[selected].classList.add(...OFF);
+    buttons[selected].setAttribute('aria-pressed', 'false');
+  }
+  selected = null;
+  $('sheet').classList.add('hidden'); $('sheet').classList.remove('flex');
+  $('hint').classList.remove('hidden');
+  $('guide').setAttribute('stroke-opacity', '0');
+}
+function speak() {
+  if (!selected) return;
+  const i = info(selected);
+  try {
+    const u = new SpeechSynthesisUtterance(i.label + '. ' + i.dir + ' ' + i.where);
+    u.lang = 'es-CL'; speechSynthesis.cancel(); speechSynthesis.speak(u);
+  } catch (e) {}
+}
+window.setUserPosition = (x, y) => { dot = { x, y }; placeDot(); if (selected) select(selected); };
+
+/* Puente con la app Expo: recibe { type: 'position', x, y } desde App.tsx */
+window.addEventListener('message', (event) => {
+  try {
+    const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+    if (data && data.type === 'position' &&
+        Number.isFinite(data.x) && Number.isFinite(data.y)) {
+      window.setUserPosition(data.x, data.y);
+    }
+  } catch (e) {}
+});
+
+/* ---------- Arrastre y rueda ---------- */
+let drag = null, justDragged = false;
+vp.addEventListener('pointerdown', (e) => { drag = { sx: e.clientX, sy: e.clientY, ox, oy, active: false }; });
+vp.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+  if (!drag.active && Math.abs(dx) + Math.abs(dy) > 8) {
+    drag.active = true; try { vp.setPointerCapture(e.pointerId); } catch (x) {}
+  }
+  if (drag.active) { [ox, oy] = clamp(drag.ox + dx, drag.oy + dy, z); apply(); }
+});
+function endDrag() {
+  if (drag && drag.active) { justDragged = true; setTimeout(() => { justDragged = false; }, 60); }
+  drag = null;
+}
+vp.addEventListener('pointerup', endDrag);
+vp.addEventListener('pointercancel', endDrag);
+vp.addEventListener('wheel', (e) => { e.preventDefault(); zoomBy(e.deltaY < 0 ? 1.1 : 0.9); }, { passive: false });
+
+/* ---------- Botones del panel ---------- */
+$('btnSpeak').onclick = speak;
+$('btnClose').onclick = closeSheet;
+$('btnCenter').onclick = () => centerOn(dot.x, dot.y);
+$('btnIn').onclick = () => zoomBy(1.25);
+$('btnOut').onclick = () => zoomBy(0.8);
+window.addEventListener('resize', () => { [ox, oy] = clamp(ox, oy, z); apply(); });
+
+/* ---------- Inicio ---------- */
+placeDot();
+centerOn(dot.x, dot.y);
+</script>
+</body>
+</html>
+`

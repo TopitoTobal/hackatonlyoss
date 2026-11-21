@@ -209,6 +209,17 @@ function speak() {
 }
 window.setUserPosition = (x, y) => { dot = { x, y }; placeDot(); if (selected) select(selected); };
 
+/* Puente con la app Expo: recibe { type: 'position', x, y } desde App.tsx */
+window.addEventListener('message', (event) => {
+  try {
+    const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+    if (data && data.type === 'position' &&
+        Number.isFinite(data.x) && Number.isFinite(data.y)) {
+      window.setUserPosition(data.x, data.y);
+    }
+  } catch (e) {}
+});
+
 /* ---------- Arrastre y rueda ---------- */
 let drag = null, justDragged = false;
 vp.addEventListener('pointerdown', (e) => { drag = { sx: e.clientX, sy: e.clientY, ox, oy, active: false }; });

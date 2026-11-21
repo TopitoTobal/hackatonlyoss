@@ -2,8 +2,11 @@
 
 **Estado:** el módulo de GPS y movimiento ya está en `backend/` (commit `2fe9c61`).  
 Este archivo es el handoff para quien construye el mapa con Tailwind: aquí está
-todo lo que ya puedes consumir desde `front/`. Todavía no hay código de mapa;
-este módulo solo produce datos.
+todo lo que ya puedes consumir desde `front/`. El mapa vive en
+`front/index.html` y `App.tsx` lo carga en un `WebView`, enviándole la
+ubicación del GPS con `postMessage({ type: 'position', x, y })`.
+La conversión lat/lng → píxeles del plano está en `App.tsx` (`aPuntoPlano`)
+y usa una referencia aproximada pendiente de georreferenciar.
 
 ## Ver avances en local
 

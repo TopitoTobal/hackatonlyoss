@@ -3,7 +3,8 @@ import '../backend/src/tasks'
 import { StatusBar } from 'expo-status-bar'
 import * as Location from 'expo-location'
 import { useEffect, useRef, useState } from 'react'
-import { Button, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Button, StyleSheet, Text, View } from 'react-native'
+import { WebView } from 'react-native-webview'
 
 import {
   createSafetyMonitor,
@@ -18,17 +19,45 @@ import {
   type WallSegment,
 } from '../backend/src'
 
+import { MAPA_HTML } from './mapa-html'
+
 const PAREDES: WallSegment[] = []
 const CAMINO: RoutePath = { id: 'demo', points: [] }
 
+/* El plano del mapa mide 1312x985 px y su centro es (690, 500).
+   La referencia geográfica del centro es el campus (20.67, -103.35).
+   TODO: sustituir por una georreferenciación real del plano. */
+const PLANO = { centroX: 690, centroY: 500 }
+const REFERENCIA = { latitude: 20.67, longitude: -103.35 }
+const METROS_POR_PIXEL = 0.75
+
+type PuntoPlano = { x: number; y: number }
+
+function aPuntoPlano(latitude: number, longitude: number): PuntoPlano {
+  const metrosPorGradoLat = 111_320
+  const metrosPorGradoLng =
+    111_320 * Math.cos((REFERENCIA.latitude * Math.PI) / 180)
+  const dx = ((longitude - REFERENCIA.longitude) * metrosPorGradoLng) / METROS_POR_PIXEL
+  const dy = (-(latitude - REFERENCIA.latitude) * metrosPorGradoLat) / METROS_POR_PIXEL
+  return { x: PLANO.centroX + dx, y: PLANO.centroY + dy }
+}
+
 export default function App() {
+  const webViewRef = useRef<WebView | null>(null)
   const trackerRef = useRef<ForegroundTracker | null>(null)
   const monitorRef = useRef<SafetyMonitor | null>(null)
+  const puntoRef = useRef<PuntoPlano>({ x: PLANO.centroX, y: PLANO.centroY })
 
   const [estado, setEstado] = useState('Detenido')
   const [ultimaPosicion, setUltimaPosicion] = useState('—')
   const [estadisticas, setEstadisticas] = useState('—')
   const [alerta, setAlerta] = useState('Sin alertas')
+
+  function enviarPosicion(punto: PuntoPlano) {
+    webViewRef.current?.postMessage(
+      JSON.stringify({ type: 'position', x: punto.x, y: punto.y }),
+    )
+  }
 
   useEffect(() => {
     monitorRef.current = createSafetyMonitor({
@@ -61,6 +90,10 @@ export default function App() {
       trackerRef.current = tracker
 
       tracker.subscribe((muestra) => {
+        const punto = aPuntoPlano(muestra.latitude, muestra.longitude)
+        puntoRef.current = punto
+        enviarPosicion(punto)
+
         setUltimaPosicion(
           `${muestra.latitude.toFixed(5)}, ${muestra.longitude.toFixed(5)} · ${formatSpeed(muestra.computedSpeedMps)}`,
         )
@@ -83,46 +116,42 @@ export default function App() {
 
   return (
     <View style={styles.contenedor}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
 
-      <ScrollView contentContainerStyle={styles.contenido}>
-        <Text style={styles.titulo}>hackatonlyoss</Text>
-        <Text style={styles.subtitulo}>Panel de avances · GPS / movimiento</Text>
+      <WebView
+        ref={webViewRef}
+        source={{ html: MAPA_HTML }}
+        style={styles.mapa}
+        originWhitelist={['*']}
+        javaScriptEnabled
+        onLoadEnd={() => enviarPosicion(puntoRef.current)}
+      />
 
-        <View style={styles.tarjeta}>
-          <Text style={styles.etiqueta}>Estado</Text>
-          <Text style={styles.valor}>{estado}</Text>
-        </View>
-
-        <View style={styles.tarjeta}>
-          <Text style={styles.etiqueta}>Última posición</Text>
-          <Text style={styles.valor}>{ultimaPosicion}</Text>
-        </View>
-
-        <View style={styles.tarjeta}>
-          <Text style={styles.etiqueta}>Movimiento</Text>
-          <Text style={styles.valor}>{estadisticas}</Text>
-        </View>
-
-        <View style={styles.tarjetaAlerta}>
-          <Text style={styles.etiqueta}>Alertas de seguridad</Text>
-          <Text style={styles.valorAlerta}>{alerta}</Text>
-        </View>
-
-        <View style={styles.botones}>
+      <View style={styles.overlay} pointerEvents="box-none">
+        <View style={styles.barra}>
+          <Text style={styles.estado} accessibilityLiveRegion="polite">
+            {estado}
+          </Text>
           <View style={styles.boton}>
-            <Button title="Iniciar GPS" onPress={iniciar} color="#34d399" />
+            <Button title="GPS" onPress={iniciar} color="#34d399" />
           </View>
           <View style={styles.boton}>
             <Button title="Detener" onPress={detener} color="#f87171" />
           </View>
         </View>
 
-        <Text style={styles.nota}>
-          El mapa interactivo de Danko se conectará aquí. Esta pantalla solo
-          muestra lo que ya produce el módulo de backend.
-        </Text>
-      </ScrollView>
+        <View style={styles.info}>
+          <Text style={styles.texto} numberOfLines={2}>
+            {ultimaPosicion}
+          </Text>
+          <Text style={styles.texto} numberOfLines={2}>
+            {estadisticas}
+          </Text>
+          <Text style={styles.alerta} accessibilityLiveRegion="polite">
+            {alerta}
+          </Text>
+        </View>
+      </View>
     </View>
   )
 }
@@ -130,59 +159,53 @@ export default function App() {
 const styles = StyleSheet.create({
   contenedor: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: '#e2e8f0',
   },
-  contenido: {
-    padding: 24,
-    paddingTop: 64,
-    gap: 16,
+  mapa: {
+    flex: 1,
+    backgroundColor: '#e2e8f0',
   },
-  titulo: {
-    color: '#f8fafc',
-    fontSize: 30,
-    fontWeight: '700',
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: 12,
+    gap: 8,
   },
-  subtitulo: {
-    color: '#94a3b8',
-    fontSize: 15,
-    marginBottom: 8,
-  },
-  tarjeta: {
-    backgroundColor: '#1e293b',
-    borderRadius: 12,
-    padding: 16,
-  },
-  tarjetaAlerta: {
-    backgroundColor: '#3f2d1a',
-    borderRadius: 12,
-    padding: 16,
-  },
-  etiqueta: {
-    color: '#93c5fd',
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    marginBottom: 6,
-  },
-  valor: {
-    color: '#e2e8f0',
-    fontSize: 16,
-  },
-  valorAlerta: {
-    color: '#fcd34d',
-    fontSize: 16,
-  },
-  botones: {
+  barra: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(15, 23, 42, 0.92)',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
-  boton: {
+  estado: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '600',
     flex: 1,
   },
-  nota: {
-    color: '#64748b',
+  boton: {
+    width: 84,
+  },
+  info: {
+    backgroundColor: 'rgba(15, 23, 42, 0.92)',
+    borderRadius: 12,
+    padding: 10,
+    gap: 4,
+    alignSelf: 'flex-start',
+    maxWidth: '92%',
+  },
+  texto: {
+    color: '#e2e8f0',
     fontSize: 13,
-    marginTop: 16,
+  },
+  alerta: {
+    color: '#fcd34d',
+    fontSize: 13,
   },
 })
