@@ -23,6 +23,14 @@ El servidor arranca en `http://localhost:19006` (opción **web**) y también
 puedes abrirlo en Android/iOS con `npm run android` / `npm run ios`.
 `App.tsx` es el punto de entrada; el mapa de Danko se conectará ahí.
 
+Si editas `front/index.html`, regenera el HTML embebido con:
+
+```sh
+npm run build:mapa
+```
+
+Eso actualiza `front/mapa-html.ts` conservando UTF-8 (evita el mojibake).
+
 ---
 
 ## 1. Qué ya existe

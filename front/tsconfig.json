@@ -6,7 +6,12 @@
       "react": ["./node_modules/@types/react/index.d.ts"],
       "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime.d.ts"],
       "react-native": ["./node_modules/react-native/types_generated/index.d.ts"],
-      "*": ["./node_modules/*"]
+      "react-native-webview": ["./node_modules/react-native-webview/index.d.ts"],
+      "expo": ["./node_modules/expo"],
+      "expo-status-bar": ["./node_modules/expo-status-bar"],
+      "expo-location": ["./node_modules/expo-location"],
+      "expo-task-manager": ["./node_modules/expo-task-manager"],
+      "expo-haptics": ["./node_modules/expo-haptics"]
     }
   }
 }
