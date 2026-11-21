@@ -165,8 +165,8 @@ Para no depender de compilar el APK, el export web queda listo para
 - `front/public/icon-192.png`, `icon-180.png` e `icon-512.png`: generados con
   `python3 front/scripts/generate-icons.py` usando la misma foto y el logo
   **Orienta** del splash (fondo blanco, letras amarillo/rojo/azul). El ícono de
-  180 px es el `apple-touch-icon`. Los URLs llevan `?v=4` y el service worker
-  subió a `campus-accesible-v4` para no reutilizar el ícono viejo. Como Android
+  180 px es el `apple-touch-icon`. Los URLs llevan `?v=5` y el service worker
+  subió a `campus-accesible-v5` para no reutilizar el ícono viejo. Como Android
   guarda el ícono al instalar, hay que borrar el acceso directo y volver a
   agregar la PWA para verlo.
 - `front/public/sw.js`: service worker con caché del cascarón
@@ -202,8 +202,8 @@ para saltarlo. El `<Splash />` está en el `View` raíz, por fuera del condicion
 de modo, para que cubra también la pantalla de selección. Esto evita el problema
 de que una PWA **ya instalada** conserva el `apple-touch-startup-image` con el
 que se instaló: el overlay siempre muestra la versión nueva. El service worker
-subió a `campus-accesible-v3` y ahora cachea también el splash y la foto con
-un URL versionado (`/splash-1080x1920.png?v=3`), para que un PWA instalado con
+subió a `campus-accesible-v5` y ahora cachea también el splash y la foto con
+un URL versionado (`/splash-1080x1920.png?v=5`), para que un PWA instalado con
 el pin de respaldo no siga sirviendo esa imagen vieja desde el caché.
 
 Si el splash del sistema no cambia después de un deploy, hay que **borrar la

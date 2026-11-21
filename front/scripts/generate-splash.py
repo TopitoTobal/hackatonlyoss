@@ -67,6 +67,12 @@ def foto_contenida(canvas_w, canvas_h):
         d.polygon([(cx - r // 2, cy - r // 4), (cx + r // 2, cy - r // 4),
                    (cx, cy + r)], fill=BLANCO)
 
+    # Componer sobre blanco: si no, los píxeles transparentes tienen RGB negro
+    # y al pegar con máscara salen líneas negras en los bordes/inferior.
+    caja = Image.alpha_composite(
+        Image.new('RGBA', (caja_w, caja_h), (255, 255, 255, 255)), caja
+    )
+
     # Bordes redondeados para que no corte el fondo blanco.
     radio = int(caja_w * 0.06)
     mask = Image.new('L', (caja_w, caja_h), 0)

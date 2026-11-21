@@ -114,9 +114,14 @@ function Selector({
           pressed && styles.opcionPresionada,
         ]}
       >
-        <View style={styles.filaBoton}>
-          <Icono name="visibility" size={30} color="#ffffff" />
-          <Text style={styles.opcionTextoClaro}>Soy vidente</Text>
+        <View style={styles.filaOpcion}>
+          <View style={styles.iconoVidente}>
+            <Icono name="visibility" size={26} color="#1d4ed8" />
+          </View>
+          <View style={styles.opcionContenido}>
+            <Text style={styles.opcionTexto}>Soy vidente</Text>
+            <Text style={styles.opcionDetalle}>Mapa visual con GPS y rutas</Text>
+          </View>
         </View>
       </Pressable>
 
@@ -130,9 +135,14 @@ function Selector({
           pressed && styles.opcionPresionada,
         ]}
       >
-        <View style={styles.filaBoton}>
-          <Icono name="visibility_off" size={30} color="#000000" />
-          <Text style={styles.opcionTextoOscuro}>Soy no vidente</Text>
+        <View style={styles.filaOpcion}>
+          <View style={styles.iconoNoVidente}>
+            <Icono name="visibility_off" size={26} color="#92400e" />
+          </View>
+          <View style={styles.opcionContenido}>
+            <Text style={styles.opcionTexto}>Soy no vidente</Text>
+            <Text style={styles.opcionDetalle}>Mapa con voz y alertas</Text>
+          </View>
         </View>
       </Pressable>
 
@@ -141,8 +151,10 @@ function Selector({
         onPress={() => hablar(opciones)}
         style={({ pressed }) => [styles.escuchar, pressed && styles.opcionPresionada]}
       >
-        <View style={styles.filaBoton}>
-          <Icono name="volume_up" size={24} color="#000000" />
+        <View style={styles.filaOpcion}>
+          <View style={styles.iconoEscuchar}>
+            <Icono name="volume_up" size={22} color="#1d4ed8" />
+          </View>
           <Text style={styles.escucharTexto}>Escuchar las opciones</Text>
         </View>
       </Pressable>
@@ -225,7 +237,7 @@ function Splash() {
       style={styles.splash}
     >
       <Image
-        source={{ uri: '/splash-1080x1920.png?v=3' }}
+        source={{ uri: '/splash-1080x1920.png?v=5' }}
         style={styles.splashImagen}
         resizeMode="contain"
       />
@@ -252,6 +264,7 @@ export default function App() {
   const [muestras, setMuestras] = useState(0)
   const [velocidad, setVelocidad] = useState('—')
   const [pidiendoAyuda, setPidiendoAyuda] = useState(false)
+  const [infoAbierta, setInfoAbierta] = useState(false)
   const arrancandoRef = useRef(false)
   const origenRef = useRef<Origen | null>(null)
 
@@ -465,24 +478,65 @@ export default function App() {
         </View>
 
         <View style={styles.info}>
-          <Text style={styles.texto} numberOfLines={2}>
-            Velocidad: {velocidad}
-          </Text>
-          <Text style={styles.texto} numberOfLines={2}>
-            {ultimaPosicion}
-          </Text>
-          <Text style={styles.texto} numberOfLines={2}>
-            {estadisticas}
-          </Text>
-          <Text style={styles.alerta} accessibilityLiveRegion="polite">
-            {alerta}
-          </Text>
-          {modo === 'no-vidente' && (
-            <Text style={styles.texto} accessibilityLiveRegion="assertive">
-              {pidiendoAyuda
-                ? 'Petición de ayuda activa: los videntes pueden verte.'
-                : 'Sin petición de ayuda.'}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              infoAbierta
+                ? 'Ocultar información detallada de GPS'
+                : 'Mostrar información detallada de GPS: muestra, posición y estadísticas'
+            }
+            accessibilityState={{ expanded: infoAbierta }}
+            onPress={() => setInfoAbierta((abierta) => !abierta)}
+            style={({ pressed }) => [
+              styles.infoBoton,
+              pressed && styles.opcionPresionada,
+            ]}
+          >
+            <View style={styles.iconoInfo}>
+              <Icono name="info" size={20} color="#1d4ed8" />
+            </View>
+            <Text style={styles.infoTitulo}>Información</Text>
+            <Text style={styles.infoValor}>{velocidad}</Text>
+            <Icono
+              name={infoAbierta ? 'expand_less' : 'expand_more'}
+              size={20}
+              color="#64748b"
+            />
+          </Pressable>
+
+          {alerta ? (
+            <Text style={styles.alerta} accessibilityLiveRegion="polite">
+              {alerta}
             </Text>
+          ) : null}
+          {modo === 'no-vidente' && pidiendoAyuda && (
+            <Text style={styles.alerta} accessibilityLiveRegion="assertive">
+              Petición de ayuda activa: los videntes pueden verte.
+            </Text>
+          )}
+
+          {infoAbierta && (
+            <View style={styles.infoDetalle}>
+              <Text style={styles.texto} numberOfLines={2}>
+                Velocidad: {velocidad}
+              </Text>
+              <Text style={styles.texto} numberOfLines={2}>
+                Muestras: {muestras}
+              </Text>
+              <Text style={styles.texto} numberOfLines={2}>
+                {ultimaPosicion}
+              </Text>
+              <Text style={styles.texto} numberOfLines={2}>
+                {estadisticas}
+              </Text>
+              {modo === 'no-vidente' && (
+                <Text style={styles.texto} accessibilityLiveRegion="assertive">
+                  {pidiendoAyuda
+                    ? 'Petición de ayuda activa: los videntes pueden verte.'
+                    : 'Sin petición de ayuda.'}
+                </Text>
+              )}
+            </View>
           )}
           </View>
         </View>
@@ -512,96 +566,146 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   instalar: {
-    marginTop: 10,
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#cbd2d9',
+    backgroundColor: '#ffffff',
     alignItems: 'center',
     gap: 6,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 1,
   },
   instalarBoton: {
-    minHeight: 44,
+    minHeight: 38,
     paddingHorizontal: 14,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#065f46',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#2a91d1',
+    backgroundColor: '#e8f1fb',
     alignItems: 'center',
     justifyContent: 'center',
   },
   instalarTexto: {
-    color: '#065f46',
+    color: '#1d4ed8',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   instalarAyuda: {
-    color: '#334155',
+    color: '#4b5563',
     fontSize: 13,
+    lineHeight: 18,
     textAlign: 'center',
     maxWidth: 320,
   },
   selector: {
     flex: 1,
-    backgroundColor: '#ffffff',
-    padding: 16,
+    backgroundColor: '#eff0f1',
+    padding: 18,
     paddingTop: 56,
     paddingBottom: 32,
-    gap: 12,
+    gap: 10,
     justifyContent: 'center',
   },
   selectorEyebrow: {
-    color: '#0369a1',
-    fontSize: 16,
-    fontWeight: '700',
+    color: '#6b7280',
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.8,
     textAlign: 'center',
+    textTransform: 'uppercase',
   },
   selectorTitulo: {
-    color: '#000000',
-    fontSize: 32,
-    lineHeight: 38,
-    fontWeight: '800',
+    color: '#1c1c1c',
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   opcion: {
-    minHeight: 128,
-    borderRadius: 16,
-    borderWidth: 4,
-    borderColor: '#000000',
-    alignItems: 'center',
+    minHeight: 96,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#cbd2d9',
+    backgroundColor: '#ffffff',
     justifyContent: 'center',
     padding: 16,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.07,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  opcionVidente: { backgroundColor: '#1e3a8a' },
-  opcionNoVidente: { backgroundColor: '#facc15' },
-  opcionPresionada: { opacity: 0.75 },
-  opcionTextoClaro: {
-    color: '#ffffff',
-    fontSize: 30,
-    fontWeight: '800',
-    textAlign: 'center',
+  opcionVidente: { borderLeftWidth: 4, borderLeftColor: '#2a91d1' },
+  opcionNoVidente: { borderLeftWidth: 4, borderLeftColor: '#f59e0b' },
+  opcionPresionada: { opacity: 0.7 },
+  filaOpcion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
   },
-  opcionTextoOscuro: {
-    color: '#000000',
-    fontSize: 30,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-  escuchar: {
-    minHeight: 64,
-    borderRadius: 16,
-    borderWidth: 4,
-    borderColor: '#000000',
-    backgroundColor: '#ffffff',
+  opcionContenido: { flex: 1 },
+  iconoVidente: {
+    width: 52,
+    height: 52,
+    borderRadius: 8,
+    backgroundColor: '#e8f1fb',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 12,
+  },
+  iconoNoVidente: {
+    width: 52,
+    height: 52,
+    borderRadius: 8,
+    backgroundColor: '#fef3c7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconoEscuchar: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#e8f1fb',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  opcionTexto: {
+    color: '#1c1c1c',
+    fontSize: 21,
+    fontWeight: '700',
+  },
+  opcionDetalle: {
+    color: '#6b7280',
+    fontSize: 13,
+    marginTop: 2,
+  },
+  escuchar: {
+    minHeight: 56,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#cbd2d9',
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
   escucharTexto: {
-    color: '#000000',
-    fontSize: 20,
-    fontWeight: '800',
-    textAlign: 'center',
+    color: '#1c1c1c',
+    fontSize: 16,
+    fontWeight: '600',
   },
   contenedor: {
     flex: 1,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: '#eff0f1',
   },
   overlay: {
     position: 'absolute',
@@ -617,28 +721,37 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: 'rgba(15, 23, 42, 0.92)',
-    borderRadius: 12,
-    paddingHorizontal: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.96)',
+    borderColor: '#cbd2d9',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 8,
     paddingVertical: 6,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   estado: {
-    color: '#f8fafc',
+    color: '#1c1c1c',
     fontSize: 14,
     fontWeight: '600',
     flex: 1,
   },
   botonVolver: {
-    minHeight: 40,
+    minHeight: 36,
     minWidth: 84,
-    borderRadius: 10,
-    backgroundColor: '#0f172a',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#2a91d1',
+    backgroundColor: '#e8f1fb',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 8,
   },
   textoBoton: {
-    color: '#f8fafc',
+    color: '#1d4ed8',
     fontSize: 14,
     fontWeight: '700',
   },
@@ -655,36 +768,80 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   botonAccion: {
-    minHeight: 40,
+    minHeight: 36,
     minWidth: 84,
-    borderRadius: 10,
+    borderRadius: 6,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 8,
   },
-  botonGps: { backgroundColor: '#065f46' },
-  botonDetener: { backgroundColor: '#991b1b' },
-  botonAyuda: { backgroundColor: '#7c3aed' },
-  botonAyudaActivo: { backgroundColor: '#4c1d95' },
+  botonGps: { backgroundColor: '#065f46', borderColor: '#065f46' },
+  botonDetener: { backgroundColor: '#991b1b', borderColor: '#991b1b' },
+  botonAyuda: { backgroundColor: '#6d28d9', borderColor: '#6d28d9' },
+  botonAyudaActivo: { backgroundColor: '#4c1d95', borderColor: '#4c1d95' },
   textoBotonAccion: {
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '700',
   },
   info: {
-    backgroundColor: 'rgba(15, 23, 42, 0.92)',
-    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.96)',
+    borderColor: '#cbd2d9',
+    borderWidth: 1,
+    borderRadius: 8,
     padding: 10,
     gap: 4,
     alignSelf: 'flex-start',
     maxWidth: '92%',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  infoBoton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    minHeight: 40,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#cbd2d9',
+    backgroundColor: '#f8fafc',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  iconoInfo: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: '#e8f1fb',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoTitulo: {
+    color: '#1c1c1c',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  infoValor: {
+    color: '#1d4ed8',
+    fontSize: 13,
+    fontWeight: '700',
+    flex: 1,
+    textAlign: 'right',
+  },
+  infoDetalle: {
+    gap: 4,
+    paddingTop: 2,
   },
   texto: {
-    color: '#e2e8f0',
+    color: '#334155',
     fontSize: 13,
   },
   alerta: {
-    color: '#fcd34d',
+    color: '#b45309',
     fontSize: 13,
   },
 })

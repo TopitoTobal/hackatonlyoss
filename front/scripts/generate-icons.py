@@ -58,6 +58,10 @@ def dibujar(tamano=512):
             [(cx - r // 2, cy - r // 4), (cx + r // 2, cy - r // 4), (cx, cy + r)],
             fill=BLANCO,
         )
+    # Fondo blanco debajo de la foto para evitar el filete negro al enmascarar.
+    caja = Image.alpha_composite(
+        Image.new('RGBA', (caja_w, caja_h), (255, 255, 255, 255)), caja
+    )
     mask = Image.new('L', (caja_w, caja_h), 0)
     ImageDraw.Draw(mask).rounded_rectangle(
         [0, 0, caja_w - 1, caja_h - 1], radius=int(36 * k), fill=255
