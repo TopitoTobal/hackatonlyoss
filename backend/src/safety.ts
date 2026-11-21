@@ -26,7 +26,18 @@ const DEFAULT_CONFIG: SafetyMonitorConfig = {
 /** Avisos de proximidad a pared y de salida del camino. */
 export const safetyAlerts = createEmitter<SafetyAlert>()
 
-export type SafetyMonitor = ReturnType<typeof createSafetyMonitor>
+export interface SafetyMonitor {
+  evaluate(point: GpsPoint): Promise<SafetyAlert | null>
+  updateConfig(partial: Partial<SafetyMonitorConfig>): void
+  setWalls(walls: WallSegment[]): void
+  setRoutes(routes: RoutePath[]): void
+  setActiveRoute(routeId: string | null): void
+  setWallAlertsEnabled(enabled: boolean): void
+  setOffPathAlertsEnabled(enabled: boolean): void
+  setVibrationEnabled(enabled: boolean): void
+  reset(): void
+  getState(): { config: SafetyMonitorConfig; offPathConsecutive: number }
+}
 
 export function createSafetyMonitor(
   overrides: Partial<SafetyMonitorConfig> = {},
